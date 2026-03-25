@@ -8,6 +8,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const isDashboard = location.pathname.startsWith('/dashboard');
+  const isAppPage = location.pathname !== '/';
 
   const scrollToSection = (sectionId) => {
     if (location.pathname !== '/') {
@@ -33,7 +34,7 @@ export default function Navbar() {
       style={{
         background: 'var(--theme-nav-bg)',
         borderColor: 'var(--theme-border)',
-        width: isDashboard ? '38%' : '90%',
+        width: isAppPage ? '38%' : '90%',
         maxWidth: '1200px',
         transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
       }}
@@ -42,7 +43,7 @@ export default function Navbar() {
         Focus<span style={{ color: 'var(--color-primary)' }}>Forge</span>
       </Link>
       
-      {!isDashboard && (
+      {!isAppPage && (
         <div className="hidden md:flex gap-10 items-center">
           <button onClick={() => scrollToSection('features')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400" style={{ color: 'var(--theme-nav-link)' }}>Features</button>
           <button onClick={() => scrollToSection('pipeline')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400" style={{ color: 'var(--theme-nav-link)' }}>Pipeline</button>
