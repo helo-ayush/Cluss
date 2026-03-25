@@ -3,29 +3,48 @@ import { useUser, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-rea
 import Navbar from '../components/Navbar';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { BlurFade } from '../components/magicui/BlurFade';
 
 const API_BASE = 'http://localhost:3000';
 
 const FORGE_STEPS = [
-  { icon: 'psychology',     text: 'Analyzing your learning goal...',       color: '#a78bfa' },
-  { icon: 'auto_awesome',   text: 'Designing personalized curriculum...',  color: '#22c55e' },
-  { icon: 'travel_explore', text: 'Finding best YouTube tutorials...',     color: '#3b82f6' },
-  { icon: 'video_library',  text: 'Curating top-rated video lessons...',   color: '#f59e0b' },
-  { icon: 'checklist',      text: 'Building your learning planner...',     color: '#ec4899' },
-  { icon: 'rocket_launch',  text: 'Launching your course!',               color: '#22c55e' },
+  { icon: 'psychology',     text: 'Analyzing your learning goal...',       color: '#818cf8' },
+  { icon: 'auto_awesome',   text: 'Designing personalized curriculum...',  color: '#6366f1' },
+  { icon: 'travel_explore', text: 'Finding best YouTube tutorials...',     color: '#4f46e5' },
+  { icon: 'video_library',  text: 'Curating top-rated video lessons...',   color: '#a78bfa' },
+  { icon: 'checklist',      text: 'Building your learning planner...',     color: '#34d399' },
+  { icon: 'rocket_launch',  text: 'Launching your course!',               color: '#818cf8' },
 ];
 
-const CARD_GRADIENTS = [
-  'linear-gradient(135deg,#0c8de4 0%,#22c9d0 100%)',
-  'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)',
-  'linear-gradient(135deg,#059669 0%,#34d399 100%)',
-  'linear-gradient(135deg,#db2777 0%,#f472b6 100%)',
-  'linear-gradient(135deg,#d97706 0%,#fcd34d 100%)',
-  'linear-gradient(135deg,#0284c7 0%,#67e8f9 100%)',
+const CARD_PALETTES = [
+  { from: '#1e1b4b', to: '#4338ca', icon: '⚡' },
+  { from: '#0f172a', to: '#3730a3', icon: '🔮' },
+  { from: '#022c22', to: '#059669', icon: '🌿' },
+  { from: '#2e1065', to: '#6d28d9', icon: '✨' },
+  { from: '#0f172a', to: '#0284c7', icon: '🚀' },
+  { from: '#3b0764', to: '#7e22ce', icon: '💎' },
 ];
 
-/* ──────────── Forge Progress Panel ──────────── */
+// ─── Animated progress ring ───
+function ProgressRing({ pct, size = 56, stroke = 4, color = '#6366f1' }) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(99,102,241,0.1)" strokeWidth={stroke} />
+      <motion.circle
+        cx={size/2} cy={size/2} r={r} fill="none"
+        stroke={color} strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={circ}
+        initial={{ strokeDashoffset: circ }}
+        animate={{ strokeDashoffset: offset }}
+        transition={{ duration: 1.2, ease: 'easeOut' }}
+      />
+    </svg>
+  );
+}
+
+// ─── Forge Progress Panel ───
 function ForgeProgressPanel() {
   const [activeStep, setActiveStep] = useState(0);
   useEffect(() => {
@@ -34,115 +53,146 @@ function ForgeProgressPanel() {
     return () => clearInterval(iv);
   }, []);
   const pct = ((activeStep + 1) / FORGE_STEPS.length) * 100;
+  const step = FORGE_STEPS[activeStep];
+
   return (
-    <div className="panel-card p-6 h-full">
-      <div className="flex items-center gap-2 mb-5">
-        <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
-          style={{ borderColor: FORGE_STEPS[activeStep].color, borderTopColor: 'transparent' }} />
-        <span className="font-label text-xs font-bold uppercase tracking-widest" style={{ color: FORGE_STEPS[activeStep].color }}>
-          AI Forging Path
-        </span>
-      </div>
-      <div className="space-y-3 mb-5">
-        {FORGE_STEPS.map((step, i) => (
-          <div key={i} className="flex items-center gap-3 transition-all duration-500"
-            style={{ opacity: i <= activeStep ? 1 : 0.2 }}>
-            <span className="material-symbols-outlined text-base" style={{
-              color: i < activeStep ? '#22c55e' : i === activeStep ? step.color : 'var(--theme-text-faint)'
-            }}>{i < activeStep ? 'check_circle' : step.icon}</span>
-            <span className="font-body text-sm" style={{
-              color: i === activeStep ? 'var(--theme-text-heading)' : 'var(--theme-text-muted)',
-              fontWeight: i === activeStep ? 600 : 400
-            }}>{step.text}</span>
+    <div className="relative overflow-hidden rounded-2xl p-8" style={{
+      background: 'var(--dash-card-bg)',
+      border: '1px solid var(--dash-card-border)',
+      backdropFilter: 'blur(24px)',
+    }}>
+      <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full pointer-events-none" style={{
+        background: `radial-gradient(circle, ${step.color}15, transparent 70%)`,
+        filter: 'blur(60px)', transition: 'background 0.8s ease'
+      }} />
+      <div className="relative z-10">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="relative w-10 h-10 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full animate-ping" style={{ background: `${step.color}20` }} />
+            <div className="w-3 h-3 rounded-full" style={{ background: step.color }} />
           </div>
-        ))}
-      </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-border)' }}>
-        <div className="h-full rounded-full progress-bar-fill" style={{ width: `${pct}%` }} />
+          <div>
+            <p className="font-label text-xs uppercase tracking-[0.2em] font-bold" style={{ color: step.color }}>AI is forging your path</p>
+            <p className="font-body text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>This usually takes 15-30 seconds</p>
+          </div>
+        </div>
+
+        <div className="space-y-2 mb-6">
+          {FORGE_STEPS.map((s, i) => (
+            <div key={i} className="flex items-center gap-3 transition-all duration-500" style={{ opacity: i <= activeStep ? 1 : 0.2 }}>
+              <span className="material-symbols-outlined text-base shrink-0" style={{
+                color: i < activeStep ? '#34d399' : i === activeStep ? s.color : 'var(--theme-text-faint)',
+                fontSize: '16px'
+              }}>{i < activeStep ? 'check_circle' : s.icon}</span>
+              <span className="font-body text-sm" style={{
+                color: i === activeStep ? 'var(--theme-text-heading)' : 'var(--theme-text-muted)',
+                fontWeight: i === activeStep ? 600 : 400
+              }}>{s.text}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--theme-border)' }}>
+          <motion.div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #4f46e5, #6366f1, #818cf8)' }}
+            animate={{ width: `${pct}%` }} transition={{ duration: 0.4 }} />
+        </div>
+        <p className="text-right font-label text-xs mt-1.5" style={{ color: 'var(--theme-text-faint)' }}>{Math.round(pct)}%</p>
       </div>
     </div>
   );
 }
 
-/* ──────────── Course Card ──────────── */
-function CourseCard({ course, gradient, onOpen }) {
+// ─── Course Card ───
+function CourseCard({ course, palette, onOpen, index }) {
   const pct = course.progress;
   const isCompleted = pct === 100;
   const isActive = pct > 0 && pct < 100;
-  const statusLabel = isCompleted ? 'Completed' : isActive ? 'On Progress' : 'New';
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: (index % 10) * 0.05, duration: 0.4, ease: 'easeOut' }}
       onClick={onOpen}
-      className="course-card shrink-0 w-[220px] rounded-2xl overflow-hidden cursor-pointer flex flex-col"
-      style={{ background: gradient, minHeight: '220px' }}
+      className="relative w-full cursor-pointer group"
     >
-      <div className="flex-1 p-5">
-        <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-4">
-          <span className="material-symbols-outlined text-white text-xl">
-            {isCompleted ? 'emoji_events' : isActive ? 'play_circle' : 'school'}
-          </span>
-        </div>
-        <h3 className="font-headline text-base font-bold italic text-white leading-tight mb-3 line-clamp-3">
-          {course.course_title}
-        </h3>
-        <div className="flex flex-wrap gap-1.5">
-          <span className="px-2 py-0.5 rounded-full bg-white/20 text-white/90 text-[10px] font-label">
-            {course.totalModules} Modules
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-white/20 text-white/90 text-[10px] font-label">
-            {course.completedSubtopics}/{course.totalSubtopics} done
-          </span>
+      <div className="relative overflow-hidden rounded-2xl transition-all duration-300 group-hover:-translate-y-1.5"
+        style={{
+          background: `linear-gradient(150deg, ${palette.from} 0%, ${palette.to} 100%)`,
+          boxShadow: `0 8px 28px ${palette.from}30`,
+          height: '240px'
+        }}>
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%)',
+        }} />
+        <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full" style={{ background: 'rgba(255,255,255,0.04)' }} />
+        <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full" style={{ background: 'rgba(0,0,0,0.1)' }} />
+
+        <div className="relative z-10 p-6 h-full flex flex-col justify-between">
+          <div>
+            <div className="text-3xl mb-4">{palette.icon}</div>
+            <h3 className="font-headline text-base md:text-lg font-bold text-white leading-snug line-clamp-3">
+              {course.course_title}
+            </h3>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-white/60 text-[11px] font-label uppercase tracking-wider">
+                {isCompleted ? 'Complete' : isActive ? 'In Progress' : 'New'}
+              </span>
+              <span className="text-white font-label text-sm font-bold">{pct}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-black/20 overflow-hidden">
+              <motion.div className="h-full rounded-full bg-white/90"
+                initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: (index % 10) * 0.1 }} />
+            </div>
+            <p className="text-white/50 text-xs font-label mt-3">
+              {course.completedSubtopics}/{course.totalSubtopics} topics
+            </p>
+          </div>
         </div>
       </div>
-      <div className="px-5 pb-5">
-        <div className="h-1.5 rounded-full bg-white/25 overflow-hidden mb-2">
-          <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${pct}%` }} />
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-white/75 text-[10px] font-label">{statusLabel}</span>
-          <span className="text-white font-label text-xs font-bold">{pct}%</span>
-        </div>
-      </div>
-    </div>
+    </motion.div>
   );
 }
 
-/* ──────────── CSS Activity Bar Chart ──────────── */
+// ─── Activity Bars ───
 function ActivityBars({ activityData }) {
   const last7 = activityData.slice(-7);
   const maxVal = Math.max(...last7.map(d => d.subtopicsCompleted), 1);
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
-    <div className="flex items-end justify-between gap-1.5 h-28 px-1">
+    <div className="flex items-end gap-2.5 h-28">
       {last7.map((day, i) => {
         const pct = (day.subtopicsCompleted / maxVal) * 100;
-        const dateObj = new Date(day.date + 'T00:00:00');
-        const dayLabel = days[(dateObj.getDay() + 6) % 7];
         const todayStr = new Date().toISOString().slice(0, 10);
         const isToday = day.date === todayStr;
+        const dateObj = new Date(day.date + 'T00:00:00');
+        const dayLabel = days[(dateObj.getDay() + 6) % 7];
 
         return (
-          <div key={i} className="flex flex-col items-center gap-1 flex-1">
-            <span className="font-label text-[9px] font-bold" style={{ color: isToday ? '#22c55e' : 'var(--theme-text-muted)' }}>
-              {day.subtopicsCompleted > 0 ? day.subtopicsCompleted : ''}
-            </span>
-            <div className="relative w-full rounded-lg overflow-hidden" style={{ height: '80px', background: 'var(--theme-border)' }}>
-              <motion.div
-                className="absolute bottom-0 left-0 right-0 rounded-lg"
-                style={{ background: isToday ? '#22c55e' : 'rgba(129,140,248,0.7)' }}
-                initial={{ height: 0 }}
-                animate={{ height: `${pct}%` }}
-                transition={{ duration: 0.6, delay: i * 0.06, ease: 'easeOut' }}
+          <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+            {day.subtopicsCompleted > 0 && (
+              <span className="font-label text-[9px] font-bold" style={{ color: isToday ? '#818cf8' : 'var(--theme-text-muted)' }}>
+                {day.subtopicsCompleted}
+              </span>
+            )}
+            <div className="w-full relative rounded-lg overflow-hidden" style={{ height: '80px', background: 'var(--theme-border)' }}>
+              <motion.div className="absolute bottom-0 left-0 right-0 rounded-lg"
+                style={{ background: isToday ? 'linear-gradient(180deg, #818cf8, #4f46e5)' : 'linear-gradient(180deg, rgba(99,102,241,0.5), rgba(99,102,241,0.2))' }}
+                initial={{ height: 0 }} animate={{ height: `${Math.max(pct, day.subtopicsCompleted > 0 ? 10 : 0)}%` }}
+                transition={{ duration: 0.7, delay: i * 0.07, ease: 'easeOut' }}
               />
               {isToday && (
-                <div className="absolute top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white" />
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white animate-pulse" />
               )}
             </div>
-            <span className="font-label text-[9px]" style={{ color: isToday ? '#22c55e' : 'var(--theme-text-faint)', fontWeight: isToday ? 700 : 400 }}>
-              {dayLabel}
-            </span>
+            <span className="font-label text-[9px]" style={{
+              color: isToday ? '#818cf8' : 'var(--theme-text-faint)',
+              fontWeight: isToday ? 700 : 400
+            }}>{dayLabel}</span>
           </div>
         );
       })}
@@ -150,28 +200,20 @@ function ActivityBars({ activityData }) {
   );
 }
 
-/* ──────────── Mini Calendar ──────────── */
+// ─── Mini Calendar ───
 function MiniCalendar({ activityData }) {
   const [date, setDate] = useState(new Date());
   const today = new Date();
-  const year = date.getFullYear();
-  const month = date.getMonth();
+  const year = date.getFullYear(), month = date.getMonth();
   const monthName = date.toLocaleString('default', { month: 'long' });
   const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  // Build lookup: date string → subtopics completed
   const activityByDate = {};
   activityData.forEach(a => { activityByDate[a.date] = a.subtopicsCompleted; });
 
-  const getDateStr = (d) => {
-    const m = String(month + 1).padStart(2, '0');
-    const dd = String(d).padStart(2, '0');
-    return `${year}-${m}-${dd}`;
-  };
-
-  const isToday = (d) =>
-    d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+  const getDateStr = d => `${year}-${String(month + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const isToday = d => d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
 
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
@@ -179,46 +221,40 @@ function MiniCalendar({ activityData }) {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <span className="font-label text-sm font-bold" style={{ color: 'var(--theme-text-heading)' }}>
-          {monthName} {year}
-        </span>
-        <div className="flex gap-1.5">
+      <div className="flex items-center justify-between mb-3">
+        <span className="font-label text-xs font-bold" style={{ color: 'var(--theme-text-heading)' }}>{monthName} {year}</span>
+        <div className="flex gap-1">
           <button onClick={() => setDate(new Date(year, month - 1, 1))} className="calender-nav-btn">
-            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>chevron_left</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>chevron_left</span>
           </button>
           <button onClick={() => setDate(new Date(year, month + 1, 1))} className="calender-nav-btn">
-            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>chevron_right</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>chevron_right</span>
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-7 mb-1.5">
-        {['Mo','Tu','We','Th','Fr','Sa','Su'].map(d => (
-          <div key={d} className="text-center font-label text-[10px]" style={{ color: 'var(--theme-text-faint)' }}>{d}</div>
+      <div className="grid grid-cols-7 mb-1">
+        {['M','T','W','T','F','S','S'].map((d, i) => (
+          <div key={i} className="text-center font-label text-[9px]" style={{ color: 'var(--theme-text-faint)' }}>{d}</div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-y-1 flex-1">
+      <div className="grid grid-cols-7 gap-y-0.5 flex-1">
         {cells.map((d, i) => {
           if (!d) return <div key={i} />;
-          const dateStr = getDateStr(d);
-          const count = activityByDate[dateStr] || 0;
-          const hasActivity = count > 0;
+          const ds = getDateStr(d);
+          const count = activityByDate[ds] || 0;
           const todayCell = isToday(d);
-
           return (
-            <div key={i} className="flex items-center justify-center">
-              <div className="relative w-7 h-7 rounded-full flex items-center justify-center"
-                style={{
-                  background: todayCell ? 'var(--color-primary)' : hasActivity ? 'rgba(34,197,94,0.18)' : 'transparent',
-                  boxShadow: todayCell ? '0 0 10px rgba(34,197,94,0.5)' : 'none',
-                }}>
-                <span className="font-label text-[11px]" style={{
-                  color: todayCell ? '#fff' : hasActivity ? 'var(--color-primary)' : 'var(--theme-text-body)',
-                  fontWeight: todayCell || hasActivity ? 700 : 400,
+            <div key={i} className="flex items-center justify-center py-0.5">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center relative" style={{
+                background: todayCell ? 'var(--color-primary)' : count > 0 ? 'rgba(99,102,241,0.12)' : 'transparent',
+                boxShadow: todayCell ? '0 0 10px rgba(99,102,241,0.5)' : 'none',
+              }}>
+                <span className="font-label text-[10px]" style={{
+                  color: todayCell ? '#fff' : count > 0 ? 'var(--color-primary)' : 'var(--theme-text-body)',
+                  fontWeight: todayCell || count > 0 ? 700 : 400
                 }}>{d}</span>
-                {hasActivity && !todayCell && (
-                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
-                    style={{ background: 'var(--color-primary)' }} />
+                {count > 0 && !todayCell && (
+                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: 'var(--color-primary)' }} />
                 )}
               </div>
             </div>
@@ -229,45 +265,43 @@ function MiniCalendar({ activityData }) {
   );
 }
 
-/* ──────────── Course Progress Rows ──────────── */
+// ─── Section Header ───
+function SectionHeader({ icon, title, subtitle, color = 'var(--color-primary)' }) {
+  return (
+    <div className="flex items-center gap-3 mb-5">
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}12` }}>
+        <span className="material-symbols-outlined" style={{ color, fontSize: '20px' }}>{icon}</span>
+      </div>
+      <div>
+        <h3 className="font-headline text-[15px] font-bold" style={{ color: 'var(--theme-text-heading)' }}>{title}</h3>
+        {subtitle && <p className="font-body text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Course Progress Rows ───
 function CourseProgressRows({ courses }) {
   if (!courses.length) return (
-    <p className="text-center py-8 font-body text-sm" style={{ color: 'var(--theme-text-faint)' }}>No courses yet</p>
+    <p className="text-center py-6 font-body text-xs" style={{ color: 'var(--theme-text-faint)' }}>No courses yet</p>
   );
-
-  const statusColor = (c) => c.progress === 100 ? '#22c55e' : c.progress > 0 ? '#818cf8' : '#64748b';
-
+  const statusColor = c => c.progress === 100 ? '#34d399' : c.progress > 0 ? '#818cf8' : '#64748b';
   return (
-    <div className="space-y-4 overflow-y-auto max-h-52 custom-scroll pr-1">
+    <div className="space-y-3.5 max-h-52 overflow-y-auto custom-scroll pr-1">
       {courses.map((course, i) => {
         const color = statusColor(course);
         return (
           <div key={course._id}>
             <div className="flex items-center justify-between mb-1.5">
-              <p className="font-label text-xs font-semibold truncate max-w-[70%]" style={{ color: 'var(--theme-text-heading)' }}>
-                {course.course_title}
-              </p>
-              <span className="font-label text-xs font-bold shrink-0 ml-2" style={{ color }}>{course.progress}%</span>
+              <p className="font-body text-xs font-medium truncate max-w-[72%]" style={{ color: 'var(--theme-text-heading)' }}>{course.course_title}</p>
+              <span className="font-label text-xs font-bold ml-2" style={{ color }}>{course.progress}%</span>
             </div>
-            <div className="relative h-2 rounded-full overflow-hidden" style={{ background: 'var(--theme-border)' }}>
+            <div className="relative h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-border)' }}>
               <motion.div className="absolute inset-y-0 left-0 rounded-full"
                 style={{ background: color }}
-                initial={{ width: 0 }}
-                animate={{ width: `${course.progress}%` }}
+                initial={{ width: 0 }} animate={{ width: `${course.progress}%` }}
                 transition={{ duration: 0.8, delay: i * 0.08, ease: 'easeOut' }}
               />
-            </div>
-            <div className="flex gap-2 mt-1">
-              {course.progress === 100 ? (
-                <span className="text-[10px] font-label" style={{ color: '#22c55e' }}>● Completed</span>
-              ) : course.progress > 0 ? (
-                <span className="text-[10px] font-label" style={{ color: '#818cf8' }}>● In Progress</span>
-              ) : (
-                <span className="text-[10px] font-label" style={{ color: '#64748b' }}>● New</span>
-              )}
-              <span className="text-[10px] font-label" style={{ color: 'var(--theme-text-faint)' }}>
-                {course.completedSubtopics}/{course.totalSubtopics} subtopics
-              </span>
             </div>
           </div>
         );
@@ -276,7 +310,32 @@ function CourseProgressRows({ courses }) {
   );
 }
 
-/* ──────────── MAIN ──────────── */
+// ─── Stat Card ───
+function StatCard({ icon, label, value, color, delay }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.4 }}>
+      <div className="relative overflow-hidden rounded-2xl p-5 h-full transition-all duration-300 hover:scale-[1.02]"
+        style={{
+          background: 'var(--dash-stat-bg)',
+          border: '1px solid var(--dash-card-border)',
+          backdropFilter: 'blur(20px)',
+        }}>
+        <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full pointer-events-none" style={{ background: `radial-gradient(circle, ${color}10, transparent 70%)` }} />
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}12` }}>
+            <span className="material-symbols-outlined" style={{ color, fontSize: '20px' }}>{icon}</span>
+          </div>
+          <div>
+            <p className="font-headline text-2xl font-bold tracking-tight" style={{ color: 'var(--theme-text-heading)' }}>{value}</p>
+            <p className="font-label text-[10px] font-semibold tracking-wider uppercase" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── MAIN DASHBOARD ───
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
   const [courses, setCourses] = useState([]);
@@ -287,6 +346,7 @@ export default function Dashboard() {
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState('');
   const nav = useNavigate();
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (!isLoaded || !user) return;
@@ -304,18 +364,15 @@ export default function Dashboard() {
       const res = await fetch(`${API_BASE}/api/course/user/${user.id}`);
       const data = await res.json();
       if (data.success) { setCourses(data.courses); setStats(data.stats); }
-    } catch (err) { console.error('Failed to fetch courses:', err); }
+    } catch (err) { console.error(err); }
   };
 
   const fetchActivity = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/activity/${user.id}?days=30`);
       const data = await res.json();
-      if (data.success) {
-        setActivityData(data.activity);
-        setActivityMeta({ streak: data.streak, totalThisWeek: data.totalThisWeek });
-      }
-    } catch (err) { console.error('Failed to fetch activity:', err); }
+      if (data.success) { setActivityData(data.activity); setActivityMeta({ streak: data.streak, totalThisWeek: data.totalThisWeek }); }
+    } catch (err) { console.error(err); }
   };
 
   const handleCreateCourse = async () => {
@@ -346,306 +403,259 @@ export default function Dashboard() {
       });
       const saveData = await saveRes.json();
       if (saveData.success) { setQuery(''); await fetchCourses(); }
-    } catch (err) { console.error('Failed to create course:', err); }
+    } catch (err) { console.error(err); }
     finally { setCreating(false); }
   };
 
   if (!isLoaded) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-background)' }}>
-      <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
-        style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }} />
+      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }} />
     </div>
   );
 
   const completedCourses = courses.filter(c => c.progress === 100).length;
   const activeCourses = courses.filter(c => c.progress > 0 && c.progress < 100).length;
-  const progressPct = stats.totalSubtopics > 0
-    ? Math.round((stats.completedSubtopics / stats.totalSubtopics) * 100) : 0;
+  const progressPct = stats.totalSubtopics > 0 ? Math.round((stats.completedSubtopics / stats.totalSubtopics) * 100) : 0;
+  const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
 
   return (
     <>
       <Navbar />
       <SignedIn>
+        {/* ── Background ── */}
         <div className="fixed inset-0 z-0" style={{ background: 'var(--color-background)' }} />
+        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 60%)', filter: 'blur(80px)' }} />
+          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(79,70,229,0.04) 0%, transparent 60%)', filter: 'blur(80px)' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(129,140,248,0.03) 0%, transparent 60%)', filter: 'blur(60px)' }} />
+        </div>
 
-        <main className="relative z-10 min-h-screen pt-24 pb-20 px-6 max-w-[1400px] mx-auto">
+        <main className="relative z-10 min-h-screen pt-28 pb-20 px-6 lg:px-8 max-w-[1200px] mx-auto">
 
-          {/* ══════════════════════════════════════
-            HEADER
-          ══════════════════════════════════════ */}
-          <BlurFade delay={0} duration={0.5}>
-            <div className="flex items-end justify-between flex-wrap gap-4 mb-10">
+          {/* ══ HERO HEADER ══ */}
+          <motion.section initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+            className="mb-10">
+            <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
               <div>
-                <p className="font-body text-sm mb-1 flex items-center gap-2" style={{ color: 'var(--theme-text-muted)' }}>
-                  Welcome back, {user?.firstName || 'Learner'} 👋
+                <p className="font-label text-xs uppercase tracking-[0.25em] mb-2" style={{ color: 'var(--theme-text-muted)' }}>
+                  {greeting}
                 </p>
-                <h1 className="font-headline text-4xl md:text-5xl font-bold italic forge-gradient-text leading-tight">
-                  Let's Make Learning Fun!
+                <h1 className="font-serif text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]" style={{ color: 'var(--theme-text-heading)' }}>
+                  {user?.firstName || 'Learner'}<span style={{ color: 'var(--color-primary)' }}>.</span>
                 </h1>
               </div>
-
-              {/* Streak badge */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full"
-                  style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)' }}>
-                  <span className="text-lg">🔥</span>
+              {activityMeta.streak > 0 && (
+                <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3 }}
+                  className="flex items-center gap-2.5 px-5 py-2.5 rounded-full"
+                  style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)' }}>
+                  <span className="text-xl">🔥</span>
                   <div>
-                    <p className="font-label text-xs font-bold leading-none" style={{ color: '#22c55e' }}>
-                      {activityMeta.streak} day streak
-                    </p>
-                    <p className="font-label text-[10px] leading-none mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                      {activityMeta.totalThisWeek} topics this week
-                    </p>
+                    <p className="font-label text-sm font-black leading-none" style={{ color: '#818cf8' }}>{activityMeta.streak} day streak</p>
+                    <p className="font-label text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{activityMeta.totalThisWeek} topics this week</p>
                   </div>
-                </div>
-              </div>
-            </div>
-          </BlurFade>
-
-          {/* ══════════════════════════════════════
-            HERO SECTION 1: ONGOING COURSES
-          ══════════════════════════════════════ */}
-          <BlurFade delay={0.06} duration={0.5}>
-            <div className="panel-card p-6 mb-5">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                    style={{ background: 'rgba(12,141,228,0.12)' }}>
-                    <span className="material-symbols-outlined text-xl" style={{ color: '#0c8de4' }}>school</span>
-                  </div>
-                  <div>
-                    <h2 className="font-label text-base font-bold" style={{ color: 'var(--theme-text-heading)' }}>
-                      Ongoing Courses
-                    </h2>
-                    <p className="font-body text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                      {courses.length} total · {activeCourses} active · {completedCourses} completed
-                    </p>
-                  </div>
-                </div>
-                <span className="px-3 py-1.5 rounded-full font-label text-xs font-bold"
-                  style={{ background: 'rgba(12,141,228,0.1)', color: '#0c8de4', border: '1px solid rgba(12,141,228,0.2)' }}>
-                  +{courses.length} Class
-                </span>
-              </div>
-
-              {/* Cards scroll */}
-              {loading ? (
-                <div className="flex gap-4">
-                  {[0,1,2].map(i => (
-                    <div key={i} className="w-[220px] shrink-0 rounded-2xl skeleton" style={{ height: '220px' }} />
-                  ))}
-                </div>
-              ) : courses.length === 0 ? (
-                <div className="py-12 text-center">
-                  <span className="material-symbols-outlined text-5xl mb-3 block" style={{ color: 'var(--theme-text-faint)' }}>school</span>
-                  <p className="font-body text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-                    No courses yet — forge your first path below!
-                  </p>
-                </div>
-              ) : (
-                <div className="flex gap-4 overflow-x-auto pb-2 custom-scroll-x">
-                  {courses.map((course, i) => (
-                    <CourseCard
-                      key={course._id}
-                      course={course}
-                      gradient={CARD_GRADIENTS[i % CARD_GRADIENTS.length]}
-                      onOpen={() => nav(`/course/${course._id}`)}
-                    />
-                  ))}
-                </div>
+                </motion.div>
               )}
             </div>
-          </BlurFade>
 
-          {/* ══════════════════════════════════════
-            HERO SECTION 2: FORGE A NEW PATH
-          ══════════════════════════════════════ */}
-          <BlurFade delay={0.1} duration={0.5}>
+            {/* ── Forge Input (Hero) ── */}
             <AnimatePresence mode="wait">
               {creating ? (
-                <motion.div key="progress"
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                  className="mb-5">
+                <motion.div key="progress" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}>
                   <ForgeProgressPanel />
                 </motion.div>
               ) : (
-                <motion.div key="forge-input"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="mb-5">
-                  <div className="panel-card p-6 relative overflow-hidden"
-                    style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.07) 0%, rgba(139,92,246,0.07) 100%)' }}>
-                    {/* Ambient glow */}
-                    <div className="absolute inset-0 pointer-events-none"
-                      style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(34,197,94,0.06), transparent 60%)' }} />
-                    <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-5">
-                      {/* Left copy */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                            style={{ background: 'rgba(34,197,94,0.12)' }}>
-                            <span className="material-symbols-outlined text-xl" style={{ color: '#22c55e' }}>bolt</span>
-                          </div>
-                          <h2 className="font-label text-base font-bold" style={{ color: 'var(--theme-text-heading)' }}>
-                            Forge a New Path
-                          </h2>
-                        </div>
-                        <p className="font-body text-sm ml-11" style={{ color: 'var(--theme-text-muted)' }}>
-                          Type any topic — AI will design a complete adaptive curriculum just for you.
-                        </p>
-                      </div>
+                <motion.div key="forge" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="relative overflow-hidden rounded-2xl p-8 md:p-10" style={{
+                    background: 'var(--dash-card-bg)',
+                    border: '1px solid var(--dash-card-border)',
+                    backdropFilter: 'blur(24px)',
+                  }}>
+                  {/* Subtle gradient accent */}
+                  <div className="absolute top-0 right-0 w-72 h-72 pointer-events-none" style={{
+                    background: 'radial-gradient(circle at top right, rgba(99,102,241,0.06), transparent 60%)',
+                  }} />
 
-                      {/* Input + button */}
-                      <div className="flex gap-3 w-full md:w-auto md:flex-1 md:max-w-xl">
+                  <div className="relative z-10">
+                    <p className="font-label text-[11px] uppercase tracking-[0.25em] font-bold mb-2" style={{ color: 'var(--color-primary)' }}>
+                      Forge a New Path
+                    </p>
+                    <h2 className="font-serif text-2xl md:text-3xl font-bold mb-6" style={{ color: 'var(--theme-text-heading)' }}>
+                      What do you want to <span className="italic" style={{ color: 'var(--color-primary)' }}>learn</span> today?
+                    </h2>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-2xl">
+                      <div className="flex-1 flex items-center rounded-xl px-4 py-3" style={{
+                        background: 'var(--dash-input-bg)',
+                        border: '1px solid var(--dash-input-border)',
+                      }}>
+                        <span className="material-symbols-outlined mr-3" style={{ color: 'var(--theme-text-faint)', fontSize: '20px' }}>search</span>
                         <input
-                          type="text"
-                          className="flex-1 px-5 py-3.5 rounded-2xl font-body text-sm outline-none transition-all border"
-                          placeholder="What do you want to master today?  e.g. Machine Learning, React..."
-                          value={query}
-                          onChange={e => setQuery(e.target.value)}
+                          ref={inputRef} type="text"
+                          className="flex-1 bg-transparent border-none outline-none font-body text-sm"
+                          style={{ color: 'var(--theme-text-heading)' }}
+                          placeholder="e.g. Machine Learning, Web Development, Data Science..."
+                          value={query} onChange={e => setQuery(e.target.value)}
                           onKeyDown={e => e.key === 'Enter' && handleCreateCourse()}
-                          style={{
-                            background: 'var(--theme-glass-bg)',
-                            borderColor: 'var(--theme-border-strong)',
-                            color: 'var(--theme-text-heading)',
-                          }}
                         />
-                        <button
-                          onClick={handleCreateCourse}
-                          disabled={!query.trim()}
-                          className="forge-btn-primary px-7 py-3.5 rounded-2xl font-label text-sm font-black text-on-primary disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-transform cursor-pointer flex items-center gap-2 shrink-0 whitespace-nowrap"
-                        >
-                          <span className="material-symbols-outlined text-sm">rocket_launch</span>
-                          Forge Path
-                        </button>
                       </div>
+                      <button onClick={handleCreateCourse} disabled={!query.trim()}
+                        className="forge-btn-primary px-7 py-3 rounded-xl font-label text-sm font-bold text-white disabled:opacity-30 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shrink-0">
+                        <span className="material-symbols-outlined text-base">rocket_launch</span> Forge
+                      </button>
                     </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-          </BlurFade>
+          </motion.section>
 
-          {/* ══════════════════════════════════════
-            BOTTOM GRID: Stats, Activity, Calendar, Progress
-          ══════════════════════════════════════ */}
-          <div className="grid grid-cols-12 gap-5">
-
-            {/* ── Stat cards column ── */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3 flex flex-col gap-4">
-              {[
-                { icon: 'auto_stories', label: 'Total Courses', value: courses.length, color: '#0c8de4', bg: 'rgba(12,141,228,0.1)' },
-                { icon: 'task_alt',     label: 'Topics Done',   value: stats.completedSubtopics, color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
-                { icon: 'emoji_events', label: 'Completed',     value: completedCourses, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-                { icon: 'local_fire_department', label: 'Day Streak', value: activityMeta.streak, color: '#ec4899', bg: 'rgba(236,72,153,0.1)' },
-              ].map(({ icon, label, value, color, bg }, i) => (
-                <BlurFade key={label} delay={0.13 + i * 0.04} duration={0.4}>
-                  <div className="panel-card p-4 flex items-center gap-4">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: bg }}>
-                      <span className="material-symbols-outlined text-xl" style={{ color }}>{icon}</span>
-                    </div>
-                    <div>
-                      <p className="font-headline text-2xl font-bold italic leading-none" style={{ color: 'var(--theme-text-heading)' }}>{value}</p>
-                      <p className="font-label text-[10px] uppercase tracking-wide mt-1" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
+          {/* ══ OVERALL PROGRESS ══ */}
+          <section className="mb-6">
+            <div className="rounded-2xl p-6 md:px-8 md:py-7" style={{
+              background: 'var(--dash-card-bg)',
+              border: '1px solid var(--dash-card-border)',
+              backdropFilter: 'blur(20px)',
+            }}>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <SectionHeader icon="donut_large" title="Overall Progress" subtitle="Your journey so far" color="#6366f1" />
+                <div className="flex items-center gap-6">
+                  <div className="relative shrink-0">
+                    <ProgressRing pct={progressPct} size={88} stroke={6} color="#6366f1" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="font-headline text-xl font-black" style={{ color: 'var(--color-primary)' }}>{progressPct}%</span>
                     </div>
                   </div>
-                </BlurFade>
-              ))}
-            </div>
-
-            {/* ── Learning Activity Chart ── */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3">
-              <BlurFade delay={0.18} duration={0.4}>
-                <div className="panel-card p-5 h-full">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(129,140,248,0.12)' }}>
-                        <span className="material-symbols-outlined text-sm" style={{ color: '#818cf8' }}>bar_chart_4_bars</span>
-                      </div>
-                      <span className="font-label text-sm font-bold" style={{ color: 'var(--theme-text-heading)' }}>Learning Hours</span>
+                  <div>
+                    <p className="font-body text-balance" style={{ color: 'var(--theme-text-body)' }}>
+                      <span className="font-bold text-lg" style={{ color: 'var(--theme-text-heading)' }}>{stats.completedSubtopics}</span> of {stats.totalSubtopics} topics completed
+                    </p>
+                    <div className="flex gap-2.5 mt-2.5 flex-wrap">
+                      <span className="inline-block px-3 py-1 rounded-full font-label text-[11px] font-bold"
+                        style={{ background: 'rgba(99,102,241,0.08)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.12)' }}>
+                        {activeCourses} active
+                      </span>
+                      <span className="inline-block px-3 py-1 rounded-full font-label text-[11px] font-bold"
+                        style={{ background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.12)' }}>
+                        {completedCourses} done
+                      </span>
                     </div>
-                    <span className="font-label text-[10px] px-2.5 py-1 rounded-full"
-                      style={{ background: 'var(--theme-glass-bg)', border: '1px solid var(--theme-border)', color: 'var(--theme-text-muted)' }}>
-                      Weekly
-                    </span>
-                  </div>
-
-                  {activityData.length > 0 ? (
-                    <ActivityBars activityData={activityData} />
-                  ) : (
-                    <div className="h-28 flex items-center justify-center">
-                      <p className="font-body text-xs" style={{ color: 'var(--theme-text-faint)' }}>No activity yet</p>
-                    </div>
-                  )}
-
-                  <div className="mt-4 pt-4 flex gap-3" style={{ borderTop: '1px solid var(--theme-border)' }}>
-                    {courses.slice(0, 2).map((c, i) => {
-                      const colors = ['#0c8de4', '#818cf8'];
-                      return (
-                        <div key={c._id} className="flex items-center gap-2 flex-1">
-                          <div className="w-6 h-6 rounded-lg shrink-0 flex items-center justify-center"
-                            style={{ background: `${colors[i]}18` }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 12, color: colors[i] }}>school</span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-label text-[10px] font-bold truncate" style={{ color: 'var(--theme-text-heading)' }}>
-                              {c.course_title.split(' ').slice(0, 2).join(' ')}
-                            </p>
-                            <p className="font-label text-[9px]" style={{ color: 'var(--theme-text-muted)' }}>
-                              {c.completedSubtopics} done
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
                   </div>
                 </div>
-              </BlurFade>
+              </div>
             </div>
+          </section>
 
-            {/* ── Calendar ── */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3">
-              <BlurFade delay={0.22} duration={0.4}>
-                <div className="panel-card p-5 h-full">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(59,130,246,0.1)' }}>
-                      <span className="material-symbols-outlined text-sm" style={{ color: '#3b82f6' }}>calendar_month</span>
-                    </div>
-                    <span className="font-label text-sm font-bold" style={{ color: 'var(--theme-text-heading)' }}>Calendar</span>
-                  </div>
-                  <MiniCalendar activityData={activityData} />
+          {/* ══ MY COURSES ══ */}
+          <section className="mb-10">
+            <div className="rounded-2xl p-6 md:p-8" style={{
+              background: 'var(--dash-card-bg)',
+              border: '1px solid var(--dash-card-border)',
+              backdropFilter: 'blur(20px)',
+            }}>
+              <SectionHeader icon="auto_stories" title="My Courses" subtitle="Continue where you left off" color="#818cf8" />
+              
+              {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {[1,2,3,4].map(i => <div key={i} className="w-full h-[240px] skeleton rounded-2xl shrink-0" />)}
                 </div>
-              </BlurFade>
-            </div>
-
-            {/* ── Course Progress ── */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3">
-              <BlurFade delay={0.26} duration={0.4}>
-                <div className="panel-card p-5 h-full">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.1)' }}>
-                        <span className="material-symbols-outlined text-sm" style={{ color: '#f59e0b' }}>timeline</span>
-                      </div>
-                      <span className="font-label text-sm font-bold" style={{ color: 'var(--theme-text-heading)' }}>Course Progress</span>
-                    </div>
-                    <span className="font-label text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
-                      {progressPct}% overall
-                    </span>
-                  </div>
-                  {loading ? (
-                    <div className="space-y-3">
-                      {[0,1,2].map(i => <div key={i} className="h-8 skeleton rounded-xl" />)}
-                    </div>
-                  ) : (
-                    <CourseProgressRows courses={courses} />
-                  )}
+              ) : courses.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 opacity-60">
+                  <span className="material-symbols-outlined text-4xl mb-3" style={{ color: 'var(--theme-text-faint)' }}>sentiment_satisfied</span>
+                  <p className="font-body text-sm" style={{ color: 'var(--theme-text-muted)' }}>No courses yet. Forge one above!</p>
                 </div>
-              </BlurFade>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 max-h-[760px] overflow-y-auto custom-scroll pr-2 -mr-2">
+                  {courses.map((course, i) => (
+                    <CourseCard key={course._id} course={course} palette={CARD_PALETTES[i % CARD_PALETTES.length]} index={i} onOpen={() => nav(`/course/${course._id}`)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ══ ACTIVITY + CALENDAR + PROGRESS + ACTIONS ══ */}
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 mb-10">
+
+            {/* Weekly Activity */}
+            <div className="lg:col-span-4">
+              <div className="rounded-2xl p-6 h-full" style={{
+                background: 'var(--dash-card-bg)',
+                border: '1px solid var(--dash-card-border)',
+                backdropFilter: 'blur(20px)',
+              }}>
+                <SectionHeader icon="bar_chart_4_bars" title="This Week" subtitle="7 days of focus" color="#a78bfa" />
+                {activityData.length > 0 ? <ActivityBars activityData={activityData} /> : <div className="h-28 flex items-center justify-center"><p className="font-body text-xs" style={{ color: 'var(--theme-text-faint)' }}>No activity</p></div>}
+              </div>
             </div>
 
-          </div>
+            {/* Mini Calendar */}
+            <div className="lg:col-span-3">
+              <div className="rounded-2xl p-6 h-full" style={{
+                background: 'var(--dash-card-bg)',
+                border: '1px solid var(--dash-card-border)',
+                backdropFilter: 'blur(20px)',
+              }}>
+                <MiniCalendar activityData={activityData} />
+              </div>
+            </div>
+
+            {/* Progress Breakdown */}
+            <div className="lg:col-span-5">
+              <div className="rounded-2xl p-6 h-full" style={{
+                background: 'var(--dash-card-bg)',
+                border: '1px solid var(--dash-card-border)',
+                backdropFilter: 'blur(20px)',
+              }}>
+                <SectionHeader icon="timeline" title="Progress Breakdown" color="#fbbf24" />
+                {loading ? (
+                  <div className="space-y-3 pt-2">{[1,2,3].map(i => <div key={i} className="h-6 skeleton rounded-full" />)}</div>
+                ) : (
+                  <CourseProgressRows courses={courses} />
+                )}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="lg:col-span-12">
+              <div className="rounded-2xl px-6 py-5" style={{
+                background: 'var(--dash-card-bg)',
+                border: '1px solid var(--dash-card-border)',
+                backdropFilter: 'blur(20px)',
+              }}>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <p className="font-label text-xs font-bold uppercase tracking-[0.15em] shrink-0" style={{ color: 'var(--theme-text-muted)' }}>Quick Actions</p>
+                  <div className="flex flex-wrap gap-3 flex-1">
+                    {[
+                      { icon: 'play_circle', label: activeCourses > 0 ? 'Continue Learning' : 'Start a Course', color: '#6366f1', action: () => activeCourses > 0 && nav(`/course/${courses.find(c => c.progress > 0 && c.progress < 100)?._id}`) },
+                      { icon: 'add_circle', label: 'New Course', color: '#818cf8', action: () => { window.scrollTo({top: 0, behavior: 'smooth'}); setTimeout(() => inputRef.current?.focus(), 500); } },
+                      { icon: 'emoji_events', label: `${completedCourses} Completed`, color: '#fbbf24', action: () => {} },
+                    ].map((item, i) => (
+                      <button key={i} onClick={item.action}
+                        className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.03]"
+                        style={{
+                          background: 'var(--theme-hover-bg)',
+                          border: '1px solid var(--theme-border)',
+                        }}>
+                        <span className="material-symbols-outlined" style={{ color: item.color, fontSize: '18px' }}>{item.icon}</span>
+                        <span className="font-label text-xs font-semibold" style={{ color: 'var(--theme-text-heading)' }}>{item.label}</span>
+                        <span className="material-symbols-outlined text-sm" style={{ color: 'var(--theme-text-faint)' }}>arrow_forward</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </section>
+          
+          {/* ══ STATS ROW (MOVED TO BOTTOM) ══ */}
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard icon="school" label="Courses" value={courses.length} color="#6366f1" delay={0.08} />
+            <StatCard icon="task_alt" label="Topics Done" value={stats.completedSubtopics} color="#34d399" delay={0.12} />
+            <StatCard icon="emoji_events" label="Completed" value={completedCourses} color="#fbbf24" delay={0.16} />
+            <StatCard icon="local_fire_department" label="Streak Days" value={activityMeta.streak} color="#f472b6" delay={0.20} />
+          </section>
+
         </main>
       </SignedIn>
       <SignedOut><RedirectToSignIn redirectUrl="/" /></SignedOut>

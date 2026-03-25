@@ -1,159 +1,193 @@
 @import "tailwindcss";
 
+/* ══════════════════════════════════════════════════
+   FocusForge — DeepSeek-Inspired Design System
+   ══════════════════════════════════════════════════ */
+
 /* ── Dark theme (default) ── */
 .dark {
-  --color-surface-variant: #1c1921;
-  --color-secondary-fixed-dim: #4ade80;
+  --color-surface-variant: #111827;
+  --color-secondary-fixed-dim: #818cf8;
   --color-on-error: #690005;
-  --color-primary-fixed: #22c55e;
-  --color-inverse-surface: #f3f4f6;
-  --color-secondary-fixed: #86efac;
-  --color-tertiary-fixed: #ffddba;
-  --color-on-primary-fixed-variant: #052e16;
-  --color-on-secondary-container: #4ade80;
+  --color-primary-fixed: #6366f1;
+  --color-inverse-surface: #f1f5f9;
+  --color-secondary-fixed: #a5b4fc;
+  --color-tertiary-fixed: #fde68a;
+  --color-on-primary-fixed-variant: #1e1b4b;
+  --color-on-secondary-container: #818cf8;
   --color-on-error-container: #ffdad6;
-  --color-outline: #4b5563;
-  --color-on-tertiary: #412c13;
-  --color-on-primary: #052e16;
+  --color-outline: #374151;
+  --color-on-tertiary: #78350f;
+  --color-on-primary: #ffffff;
   --color-error-container: #93000a;
-  --color-tertiary-fixed-dim: #e3c19d;
-  --color-surface-container: #0c0a0f;
-  --color-primary: #22c55e;
-  --color-on-secondary-fixed-variant: #14532d;
-  --color-on-tertiary-container: #795f41;
-  --color-on-surface-variant: #9ca3af;
-  --color-tertiary: #f3f4f6;
-  --color-secondary-container: #064e3b;
+  --color-tertiary-fixed-dim: #fbbf24;
+  --color-surface-container: #0d1117;
+  --color-primary: #6366f1;
+  --color-on-secondary-fixed-variant: #312e81;
+  --color-on-tertiary-container: #92400e;
+  --color-on-surface-variant: #94a3b8;
+  --color-tertiary: #f1f5f9;
+  --color-secondary-container: #1e1b4b;
   --color-error: #ef4444;
-  --color-inverse-on-surface: #111827;
-  --color-on-secondary: #052e16;
-  --color-secondary: #22c55e;
-  --color-surface-tint: #22c55e;
-  --color-tertiary-container: #334155;
-  --color-on-surface: #f9fafb;
-  --color-on-secondary-fixed: #022c22;
-  --color-on-background: #f9fafb;
-  --color-surface-dim: #050406;
-  --color-surface-container-highest: #17151a;
-  --color-on-primary-container: #86efac;
-  --color-background: #050406;
-  --color-primary-container: #14532d;
-  --color-surface-bright: #1a181d;
-  --color-on-tertiary-fixed-variant: #5a4227;
-  --color-surface-container-low: #08070a;
-  --color-on-tertiary-fixed: #2a1802;
-  --color-surface: #050406;
-  --color-outline-variant: #374151;
-  --color-surface-container-high: #110f14;
-  --color-surface-container-lowest: #020203;
-  --color-on-primary-fixed: #022c22;
-  --color-inverse-primary: #16a34a;
-  --color-primary-fixed-dim: #22c55e;
+  --color-inverse-on-surface: #0f172a;
+  --color-on-secondary: #1e1b4b;
+  --color-secondary: #818cf8;
+  --color-surface-tint: #6366f1;
+  --color-tertiary-container: #1e293b;
+  --color-on-surface: #f1f5f9;
+  --color-on-secondary-fixed: #1e1b4b;
+  --color-on-background: #f1f5f9;
+  --color-surface-dim: #030712;
+  --color-surface-container-highest: #1e293b;
+  --color-on-primary-container: #a5b4fc;
+  --color-background: #06080f;
+  --color-primary-container: #312e81;
+  --color-surface-bright: #1e293b;
+  --color-on-tertiary-fixed-variant: #92400e;
+  --color-surface-container-low: #0a0e1a;
+  --color-on-tertiary-fixed: #78350f;
+  --color-surface: #06080f;
+  --color-outline-variant: #1e293b;
+  --color-surface-container-high: #111827;
+  --color-surface-container-lowest: #020308;
+  --color-on-primary-fixed: #1e1b4b;
+  --color-inverse-primary: #4f46e5;
+  --color-primary-fixed-dim: #6366f1;
 
-  /* ── Semantic theme tokens ── */
-  --theme-text-heading: #ffffff;
-  --theme-text-body: rgba(255, 255, 255, 0.50);
-  --theme-text-body-strong: rgba(255, 255, 255, 0.60);
-  --theme-text-muted: rgba(255, 255, 255, 0.30);
-  --theme-text-faint: rgba(255, 255, 255, 0.20);
-  --theme-nav-bg: rgba(0, 0, 0, 0.40);
-  --theme-nav-link: rgba(255, 255, 255, 0.60);
+  /* Semantic tokens */
+  --theme-text-heading: #f1f5f9;
+  --theme-text-body: rgba(226, 232, 240, 0.70);
+  --theme-text-body-strong: rgba(226, 232, 240, 0.85);
+  --theme-text-muted: rgba(148, 163, 184, 0.60);
+  --theme-text-faint: rgba(148, 163, 184, 0.30);
+  --theme-nav-bg: rgba(6, 8, 15, 0.70);
+  --theme-nav-link: rgba(226, 232, 240, 0.60);
   --theme-overlay: rgba(0, 0, 0, 0.60);
-  --theme-border: rgba(255, 255, 255, 0.10);
-  --theme-border-strong: rgba(255, 255, 255, 0.12);
-  --theme-border-faint: rgba(255, 255, 255, 0.05);
-  --theme-glass-bg: rgba(255, 255, 255, 0.04);
-  --theme-glass-bg-end: rgba(255, 255, 255, 0.01);
-  --theme-glass-pill: rgba(255, 255, 255, 0.03);
-  --theme-glass-pill-border: rgba(255, 255, 255, 0.15);
-  --theme-glass-pill-shadow: rgba(255, 255, 255, 0.1);
-  --theme-glass-shine: rgba(255, 255, 255, 0.2);
-  --theme-glass-shine-edge: rgba(255, 255, 255, 0.05);
-  --theme-glass-gradient-start: rgba(255, 255, 255, 0.4);
-  --theme-glass-gradient-end: rgba(255, 255, 255, 0.1);
-  --theme-glass-outer-shadow: rgba(0, 0, 0, 0.8);
-  --theme-gradient-text-start: #f9fafb;
-  --theme-gradient-text-end: #22c55e;
+  --theme-border: rgba(148, 163, 184, 0.08);
+  --theme-border-strong: rgba(148, 163, 184, 0.12);
+  --theme-border-faint: rgba(148, 163, 184, 0.04);
+  --theme-glass-bg: rgba(15, 23, 42, 0.50);
+  --theme-glass-bg-end: rgba(15, 23, 42, 0.20);
+  --theme-glass-pill: rgba(30, 41, 59, 0.50);
+  --theme-glass-pill-border: rgba(148, 163, 184, 0.12);
+  --theme-glass-pill-shadow: rgba(0, 0, 0, 0.3);
+  --theme-glass-shine: rgba(148, 163, 184, 0.08);
+  --theme-glass-shine-edge: rgba(148, 163, 184, 0.04);
+  --theme-glass-gradient-start: rgba(148, 163, 184, 0.15);
+  --theme-glass-gradient-end: rgba(148, 163, 184, 0.05);
+  --theme-glass-outer-shadow: rgba(0, 0, 0, 0.5);
+  --theme-gradient-text-start: #f1f5f9;
+  --theme-gradient-text-end: #818cf8;
   --theme-code-bg: transparent;
-  --theme-hover-bg: rgba(255, 255, 255, 0.05);
+  --theme-hover-bg: rgba(148, 163, 184, 0.06);
+
+  /* Dashboard specific */
+  --dash-card-bg: rgba(15, 23, 42, 0.40);
+  --dash-card-border: rgba(99, 102, 241, 0.08);
+  --dash-card-hover: rgba(99, 102, 241, 0.04);
+  --dash-hero-from: #0c1029;
+  --dash-hero-to: #06080f;
+  --dash-accent: #818cf8;
+  --dash-accent-dim: #6366f1;
+  --dash-success: #34d399;
+  --dash-success-dim: #10b981;
+  --dash-warn: #fbbf24;
+  --dash-stat-bg: rgba(15, 23, 42, 0.60);
+  --dash-input-bg: rgba(15, 23, 42, 0.80);
+  --dash-input-border: rgba(99, 102, 241, 0.15);
 }
 
 /* ── Light theme ── */
 .light {
-  --color-surface-variant: #f1f0f5;
-  --color-secondary-fixed-dim: #16a34a;
+  --color-surface-variant: #f1f5f9;
+  --color-secondary-fixed-dim: #4f46e5;
   --color-on-error: #ffffff;
-  --color-primary-fixed: #16a34a;
-  --color-inverse-surface: #1f2937;
-  --color-secondary-fixed: #bbf7d0;
+  --color-primary-fixed: #4f46e5;
+  --color-inverse-surface: #1e293b;
+  --color-secondary-fixed: #c7d2fe;
   --color-tertiary-fixed: #fde68a;
-  --color-on-primary-fixed-variant: #052e16;
-  --color-on-secondary-container: #166534;
+  --color-on-primary-fixed-variant: #312e81;
+  --color-on-secondary-container: #4338ca;
   --color-on-error-container: #7f1d1d;
-  --color-outline: #9ca3af;
+  --color-outline: #94a3b8;
   --color-on-tertiary: #78350f;
   --color-on-primary: #ffffff;
   --color-error-container: #fee2e2;
   --color-tertiary-fixed-dim: #fbbf24;
-  --color-surface-container: #f3f4f6;
-  --color-primary: #16a34a;
-  --color-on-secondary-fixed-variant: #14532d;
+  --color-surface-container: #f8fafc;
+  --color-primary: #4f46e5;
+  --color-on-secondary-fixed-variant: #312e81;
   --color-on-tertiary-container: #92400e;
-  --color-on-surface-variant: #6b7280;
-  --color-tertiary: #374151;
-  --color-secondary-container: #dcfce7;
+  --color-on-surface-variant: #64748b;
+  --color-tertiary: #1e293b;
+  --color-secondary-container: #e0e7ff;
   --color-error: #dc2626;
-  --color-inverse-on-surface: #f9fafb;
+  --color-inverse-on-surface: #f8fafc;
   --color-on-secondary: #ffffff;
-  --color-secondary: #16a34a;
-  --color-surface-tint: #16a34a;
-  --color-tertiary-container: #e5e7eb;
-  --color-on-surface: #111827;
-  --color-on-secondary-fixed: #022c22;
-  --color-on-background: #111827;
-  --color-surface-dim: #e5e7eb;
-  --color-surface-container-highest: #d1d5db;
-  --color-on-primary-container: #166534;
+  --color-secondary: #4f46e5;
+  --color-surface-tint: #4f46e5;
+  --color-tertiary-container: #e2e8f0;
+  --color-on-surface: #0f172a;
+  --color-on-secondary-fixed: #312e81;
+  --color-on-background: #0f172a;
+  --color-surface-dim: #e2e8f0;
+  --color-surface-container-highest: #cbd5e1;
+  --color-on-primary-container: #4338ca;
   --color-background: #ffffff;
-  --color-primary-container: #dcfce7;
-  --color-surface-bright: #f9fafb;
-  --color-on-tertiary-fixed-variant: #5a4227;
-  --color-surface-container-low: #f9fafb;
-  --color-on-tertiary-fixed: #2a1802;
+  --color-primary-container: #e0e7ff;
+  --color-surface-bright: #f8fafc;
+  --color-on-tertiary-fixed-variant: #92400e;
+  --color-surface-container-low: #f8fafc;
+  --color-on-tertiary-fixed: #78350f;
   --color-surface: #ffffff;
-  --color-outline-variant: #d1d5db;
-  --color-surface-container-high: #e5e7eb;
+  --color-outline-variant: #e2e8f0;
+  --color-surface-container-high: #f1f5f9;
   --color-surface-container-lowest: #ffffff;
-  --color-on-primary-fixed: #022c22;
-  --color-inverse-primary: #22c55e;
-  --color-primary-fixed-dim: #16a34a;
+  --color-on-primary-fixed: #312e81;
+  --color-inverse-primary: #6366f1;
+  --color-primary-fixed-dim: #4f46e5;
 
-  /* ── Semantic theme tokens ── */
-  --theme-text-heading: #111827;
-  --theme-text-body: rgba(17, 24, 39, 0.60);
-  --theme-text-body-strong: rgba(17, 24, 39, 0.70);
-  --theme-text-muted: rgba(17, 24, 39, 0.40);
-  --theme-text-faint: rgba(17, 24, 39, 0.20);
-  --theme-nav-bg: rgba(255, 255, 255, 0.80);
-  --theme-nav-link: rgba(17, 24, 39, 0.60);
+  /* Semantic tokens */
+  --theme-text-heading: #0f172a;
+  --theme-text-body: rgba(30, 41, 59, 0.70);
+  --theme-text-body-strong: rgba(30, 41, 59, 0.85);
+  --theme-text-muted: rgba(100, 116, 139, 0.70);
+  --theme-text-faint: rgba(100, 116, 139, 0.40);
+  --theme-nav-bg: rgba(255, 255, 255, 0.85);
+  --theme-nav-link: rgba(30, 41, 59, 0.60);
   --theme-overlay: rgba(255, 255, 255, 0.70);
-  --theme-border: rgba(17, 24, 39, 0.08);
-  --theme-border-strong: rgba(17, 24, 39, 0.10);
-  --theme-border-faint: rgba(17, 24, 39, 0.05);
-  --theme-glass-bg: rgba(255, 255, 255, 0.60);
-  --theme-glass-bg-end: rgba(255, 255, 255, 0.30);
-  --theme-glass-pill: rgba(255, 255, 255, 0.50);
-  --theme-glass-pill-border: rgba(17, 24, 39, 0.10);
-  --theme-glass-pill-shadow: rgba(17, 24, 39, 0.05);
-  --theme-glass-shine: rgba(255, 255, 255, 0.6);
-  --theme-glass-shine-edge: rgba(255, 255, 255, 0.3);
-  --theme-glass-gradient-start: rgba(255, 255, 255, 0.8);
-  --theme-glass-gradient-end: rgba(255, 255, 255, 0.4);
-  --theme-glass-outer-shadow: rgba(0, 0, 0, 0.08);
-  --theme-gradient-text-start: #111827;
-  --theme-gradient-text-end: #16a34a;
-  --theme-code-bg: rgba(17, 24, 39, 0.04);
-  --theme-hover-bg: rgba(17, 24, 39, 0.05);
+  --theme-border: rgba(15, 23, 42, 0.06);
+  --theme-border-strong: rgba(15, 23, 42, 0.10);
+  --theme-border-faint: rgba(15, 23, 42, 0.03);
+  --theme-glass-bg: rgba(255, 255, 255, 0.70);
+  --theme-glass-bg-end: rgba(255, 255, 255, 0.40);
+  --theme-glass-pill: rgba(255, 255, 255, 0.60);
+  --theme-glass-pill-border: rgba(15, 23, 42, 0.08);
+  --theme-glass-pill-shadow: rgba(15, 23, 42, 0.04);
+  --theme-glass-shine: rgba(255, 255, 255, 0.7);
+  --theme-glass-shine-edge: rgba(255, 255, 255, 0.4);
+  --theme-glass-gradient-start: rgba(255, 255, 255, 0.9);
+  --theme-glass-gradient-end: rgba(255, 255, 255, 0.5);
+  --theme-glass-outer-shadow: rgba(0, 0, 0, 0.04);
+  --theme-gradient-text-start: #1e293b;
+  --theme-gradient-text-end: #4f46e5;
+  --theme-code-bg: rgba(15, 23, 42, 0.04);
+  --theme-hover-bg: rgba(15, 23, 42, 0.03);
+
+  /* Dashboard specific */
+  --dash-card-bg: rgba(255, 255, 255, 0.80);
+  --dash-card-border: rgba(79, 70, 229, 0.08);
+  --dash-card-hover: rgba(79, 70, 229, 0.03);
+  --dash-hero-from: #eef2ff;
+  --dash-hero-to: #ffffff;
+  --dash-accent: #4f46e5;
+  --dash-accent-dim: #4338ca;
+  --dash-success: #10b981;
+  --dash-success-dim: #059669;
+  --dash-warn: #f59e0b;
+  --dash-stat-bg: rgba(248, 250, 252, 0.90);
+  --dash-input-bg: rgba(241, 245, 249, 0.80);
+  --dash-input-border: rgba(79, 70, 229, 0.12);
 }
 
 @theme {
@@ -205,10 +239,15 @@
   --color-inverse-primary: var(--color-inverse-primary);
   --color-primary-fixed-dim: var(--color-primary-fixed-dim);
 
-  --font-headline: "Instrument Serif", "Newsreader", serif;
-  --font-body: "Manrope", system-ui, sans-serif;
-  --font-label: "Space Grotesk", sans-serif;
+  --font-headline: "Outfit", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-label: "Outfit", system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
 }
+
+/* ══════════════════════════════════════════════════
+   Global Utilities
+   ══════════════════════════════════════════════════ */
 
 @layer utilities {
   .liquid-glass {
@@ -254,13 +293,13 @@
 
   .forge-btn-primary {
     background: var(--color-primary);
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .forge-btn-primary:hover {
-    background: #4ade80;
-    box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
+    background: #818cf8;
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
     transform: translateY(-1px);
   }
 
@@ -324,7 +363,7 @@ video {
 
 .theme-toggle:hover {
   border-color: var(--color-primary);
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.2);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
 }
 
 .theme-toggle-knob {
@@ -336,7 +375,7 @@ video {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
 }
 
 .theme-toggle-knob.dark {
@@ -352,43 +391,24 @@ html.dark, html.light {
   transition: background-color 0.4s ease, color 0.4s ease;
 }
 
-/* ── Dashboard utilities ── */
+/* ══════════════════════════════════════════════════
+   Dashboard Styles
+   ══════════════════════════════════════════════════ */
+
 .dashboard-card {
   position: relative;
-  background: linear-gradient(135deg, var(--theme-glass-bg) 0%, var(--theme-glass-bg-end) 100%);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid var(--theme-border-strong);
-  box-shadow: 
-      0 8px 32px 0 var(--theme-glass-outer-shadow), 
-      inset 0 1px 2px var(--theme-glass-shine),
-      inset 0 0 0 1px var(--theme-glass-shine-edge);
+  background: var(--dash-card-bg);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid var(--dash-card-border);
+  box-shadow: 0 1px 3px var(--theme-glass-outer-shadow);
   overflow: hidden;
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dashboard-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 
-      0 16px 48px 0 var(--theme-glass-outer-shadow), 
-      inset 0 1px 2px var(--theme-glass-shine),
-      inset 0 0 0 1px var(--theme-glass-shine-edge),
-      0 0 24px rgba(34, 197, 94, 0.08);
-}
-
-.dashboard-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  padding: 1px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, var(--theme-glass-gradient-start) 0%, rgba(255,255,255,0) 50%, var(--theme-glass-gradient-end) 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  opacity: 0.6;
+  border-color: rgba(99, 102, 241, 0.15);
+  box-shadow: 0 4px 24px var(--theme-glass-outer-shadow);
 }
 
 .progress-bar-track {
@@ -397,8 +417,8 @@ html.dark, html.light {
 }
 
 .progress-bar-fill {
-  background: linear-gradient(90deg, #16a34a 0%, #22c55e 50%, #4ade80 100%);
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.4), 0 0 4px rgba(34, 197, 94, 0.6);
+  background: linear-gradient(90deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4), 0 0 4px rgba(99, 102, 241, 0.6);
   transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -418,13 +438,11 @@ html.dark, html.light {
    Cyberpunk / Gamified Course Pages
    ══════════════════════════════════════════════════ */
 
-/* Dot grid background for map page */
 .grid-bg {
   background-image: radial-gradient(circle, var(--theme-border) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
-/* Base neon node card */
 .neon-node {
   position: relative;
   background: linear-gradient(135deg, var(--theme-glass-bg) 0%, var(--theme-glass-bg-end) 100%);
@@ -451,7 +469,6 @@ html.dark, html.light {
   transition: opacity 0.4s ease;
 }
 
-/* ── Completed (Green Glow) ── */
 .neon-node-completed {
   border-color: rgba(34, 197, 94, 0.35);
   box-shadow: 0 0 20px rgba(34, 197, 94, 0.12), 0 0 4px rgba(34, 197, 94, 0.2), inset 0 1px 2px rgba(34, 197, 94, 0.06);
@@ -465,7 +482,6 @@ html.dark, html.light {
   box-shadow: 0 0 32px rgba(34, 197, 94, 0.2), 0 0 8px rgba(34, 197, 94, 0.3), inset 0 1px 2px rgba(34, 197, 94, 0.06);
 }
 
-/* ── Active (Violet Pulse) ── */
 .neon-node-active {
   border-color: rgba(139, 92, 246, 0.5);
   box-shadow: 0 0 24px rgba(139, 92, 246, 0.18), 0 0 6px rgba(139, 92, 246, 0.3), inset 0 1px 2px rgba(139, 92, 246, 0.06);
@@ -480,20 +496,17 @@ html.dark, html.light {
   box-shadow: 0 0 40px rgba(139, 92, 246, 0.25), 0 0 12px rgba(139, 92, 246, 0.4), inset 0 1px 2px rgba(139, 92, 246, 0.06);
 }
 
-/* ── Locked (Gray / Dim) ── */
 .neon-node-locked {
   border-color: var(--theme-border);
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-/* Pulse keyframes */
 @keyframes neonPulse {
   0%, 100% { box-shadow: 0 0 24px rgba(139, 92, 246, 0.18), 0 0 6px rgba(139, 92, 246, 0.3); }
   50% { box-shadow: 0 0 36px rgba(139, 92, 246, 0.28), 0 0 12px rgba(139, 92, 246, 0.45); }
 }
 
-/* Connector line between nodes */
 .node-connector {
   width: 3px;
   margin: 0 auto;
@@ -512,7 +525,6 @@ html.dark, html.light {
   background: var(--theme-border);
 }
 
-/* Video iframe neon wrapper */
 .video-glow {
   border-radius: 16px;
   overflow: hidden;
@@ -524,7 +536,6 @@ html.dark, html.light {
   box-shadow: 0 0 40px rgba(139, 92, 246, 0.25), 0 0 80px rgba(56, 189, 248, 0.12), 0 8px 32px rgba(0,0,0,0.4);
 }
 
-/* Quiz trigger pulse */
 @keyframes quizPulse {
   0%, 100% { box-shadow: 0 0 16px rgba(34, 197, 94, 0.3); }
   50% { box-shadow: 0 0 32px rgba(34, 197, 94, 0.5), 0 0 64px rgba(34, 197, 94, 0.2); }
@@ -533,7 +544,6 @@ html.dark, html.light {
   animation: quizPulse 2s ease-in-out infinite;
 }
 
-/* Subtopic list item */
 .subtopic-item {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
@@ -553,50 +563,45 @@ html.dark, html.light {
 }
 
 /* ══════════════════════════════════════════════════
-   New Dashboard Panel Styles
+   Dashboard Panel Styles
    ══════════════════════════════════════════════════ */
 
 .panel-card {
   position: relative;
-  background: linear-gradient(135deg, var(--theme-glass-bg) 0%, var(--theme-glass-bg-end) 100%);
+  background: var(--dash-card-bg);
   backdrop-filter: blur(32px) saturate(160%);
   -webkit-backdrop-filter: blur(32px) saturate(160%);
-  border: 1px solid var(--theme-border-strong);
+  border: 1px solid var(--dash-card-border);
   border-radius: 20px;
-  box-shadow:
-    0 4px 24px 0 var(--theme-glass-outer-shadow),
-    inset 0 1px 1px var(--theme-glass-shine-edge);
+  box-shadow: 0 1px 3px var(--theme-glass-outer-shadow);
   overflow: hidden;
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .panel-card:hover {
-  box-shadow:
-    0 8px 36px 0 var(--theme-glass-outer-shadow),
-    inset 0 1px 1px var(--theme-glass-shine-edge);
+  border-color: rgba(99, 102, 241, 0.15);
+  box-shadow: 0 4px 20px var(--theme-glass-outer-shadow);
 }
 
-/* Horizontal scrollable course cards */
 .course-card {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
 }
 
 .course-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.20);
 }
 
-/* Calendar cell styles */
 .today-cell {
   background: var(--color-primary);
   color: #fff;
   font-weight: 700;
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
 }
 
 .active-day-cell {
-  background: rgba(34, 197, 94, 0.15);
+  background: rgba(99, 102, 241, 0.12);
   color: var(--color-primary);
   font-weight: 600;
 }
@@ -610,7 +615,6 @@ html.dark, html.light {
   background: var(--theme-hover-bg);
 }
 
-/* Calendar nav button */
 .calender-nav-btn {
   width: 24px;
   height: 24px;
@@ -663,4 +667,3 @@ html.dark, html.light {
   background: var(--theme-border-strong);
   border-radius: 4px;
 }
-

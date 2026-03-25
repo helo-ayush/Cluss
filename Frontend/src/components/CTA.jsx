@@ -29,19 +29,19 @@ export default function CTA() {
         ></video>
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background"></div>
       </div>
-      <div className="max-w-5xl mx-auto liquid-glass p-20 md:p-32 rounded-[3rem] text-center relative z-10">
+      <div className="max-w-5xl mx-auto liquid-glass p-20 md:p-32 rounded-[3rem] text-center relative z-10" style={{ borderColor: 'var(--theme-border-strong)' }}>
         <h2 className="font-headline text-6xl md:text-8xl mb-10 leading-[0.95] italic transition-colors duration-400" style={{ color: 'var(--theme-text-heading)' }}>Ready to escape tutorial hell?</h2>
         <p className="text-xl mb-16 max-w-xl mx-auto font-body transition-colors duration-400" style={{ color: 'var(--theme-text-body)' }}>Join thousands of crafters forging their professional paths through focused, agent-assisted learning.</p>
         <div className="flex flex-col md:flex-row gap-6 justify-center">
           <ShimmerButton
-            background={isDark ? "#22c55e" : "#16a34a"}
+            background={isDark ? "#6366f1" : "#4f46e5"}
             shimmerColor="rgba(255,255,255,0.45)"
             borderRadius="9999px"
             className="font-label text-sm font-black px-12 py-5 text-on-primary active:scale-95"
           >
             Start Your First Forge
           </ShimmerButton>
-          <button className="glass-pill px-12 py-5 rounded-full font-label text-sm font-bold transition-all" style={{ color: 'var(--theme-text-heading)', borderColor: 'var(--theme-border)' }}>
+          <button className="glass-pill px-12 py-5 rounded-full font-label text-sm font-bold transition-all hover:bg-white/5" style={{ color: 'var(--theme-text-heading)', borderColor: 'var(--theme-border)' }}>
             View Enterprise Impact
           </button>
         </div>

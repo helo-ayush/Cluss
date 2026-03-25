@@ -1,12 +1,31 @@
 import { useTheme } from './ThemeProvider';
 import { ShimmerButton } from './magicui/ShimmerButton';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 export default function Navbar() {
   const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const isDashboard = location.pathname.startsWith('/dashboard');
+
+  const scrollToSection = (sectionId) => {
+    if (location.pathname !== '/') {
+      navigate('/');
+      // Wait for navigation
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
 
   return (
     <nav
@@ -14,19 +33,24 @@ export default function Navbar() {
       style={{
         background: 'var(--theme-nav-bg)',
         borderColor: 'var(--theme-border)',
-        width: isDashboard ? '38%' : '95%',
+        width: isDashboard ? '38%' : '90%',
+        maxWidth: '1200px',
         transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
       }}
     >
-      <Link to="/" className="text-2xl font-bold tracking-tighter font-headline italic transition-colors duration-400" style={{ color: 'var(--theme-text-heading)' }}>Focus Forge</Link>
+      <Link to="/" className="text-2xl font-bold tracking-tighter font-headline transition-colors duration-400" style={{ color: 'var(--theme-text-heading)' }}>
+        Focus<span style={{ color: 'var(--color-primary)' }}>Forge</span>
+      </Link>
+      
       {!isDashboard && (
         <div className="hidden md:flex gap-10 items-center">
-          <a className="text-primary font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#">Features</a>
-          <a className="font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#" style={{ color: 'var(--theme-nav-link)' }}>Pipeline</a>
-          <a className="font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#" style={{ color: 'var(--theme-nav-link)' }}>Impact</a>
-          <a className="font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#" style={{ color: 'var(--theme-nav-link)' }}>Team</a>
+          <button onClick={() => scrollToSection('features')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400" style={{ color: 'var(--theme-nav-link)' }}>Features</button>
+          <button onClick={() => scrollToSection('pipeline')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400" style={{ color: 'var(--theme-nav-link)' }}>Pipeline</button>
+          <button onClick={() => scrollToSection('impact')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400" style={{ color: 'var(--theme-nav-link)' }}>Impact</button>
+          <button onClick={() => scrollToSection('team')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400" style={{ color: 'var(--theme-nav-link)' }}>Team</button>
         </div>
       )}
+      
       <div className="flex items-center gap-4">
         {/* Theme Toggle */}
         <button
@@ -36,7 +60,7 @@ export default function Navbar() {
           title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           <div className={`theme-toggle-knob ${isDark ? 'dark' : 'light'}`}>
-            <span className="material-symbols-outlined" style={{ fontSize: '12px', color: 'var(--color-on-primary)' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '12px', color: '#ffffff' }}>
               {isDark ? 'dark_mode' : 'light_mode'}
             </span>
           </div>
@@ -46,10 +70,10 @@ export default function Navbar() {
           <SignInButton mode="modal">
             <div className="cursor-pointer">
               <ShimmerButton
-                background={isDark ? "#22c55e" : "#16a34a"}
-                shimmerColor="rgba(255,255,255,0.45)"
+                background={isDark ? "#6366f1" : "#4f46e5"}
+                shimmerColor="rgba(255,255,255,0.35)"
                 borderRadius="9999px"
-                className="font-label text-xs font-bold px-6 py-2 text-on-primary active:scale-95 flex items-center gap-2 group"
+                className="font-label text-xs font-bold px-6 py-2 text-white active:scale-95 flex items-center gap-2 group"
               >
                 Sign In
                 <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">login</span>
@@ -63,10 +87,10 @@ export default function Navbar() {
           {!isDashboard && (
             <Link to="/dashboard">
               <ShimmerButton
-                background={isDark ? "#22c55e" : "#16a34a"}
-                shimmerColor="rgba(255,255,255,0.45)"
+                background={isDark ? "#6366f1" : "#4f46e5"}
+                shimmerColor="rgba(255,255,255,0.35)"
                 borderRadius="9999px"
-                className="font-label text-xs font-bold px-4 py-2 text-on-primary active:scale-95 flex items-center gap-2 group ml-2"
+                className="font-label text-xs font-bold px-4 py-2 text-white active:scale-95 flex items-center gap-2 group ml-2"
               >
                 Dashboard
                 <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>

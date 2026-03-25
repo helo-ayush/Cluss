@@ -38,13 +38,13 @@ export default function Features() {
             <MagicCard
               key={i}
               className="liquid-glass rounded-2xl"
-              gradientColor="rgba(34, 197, 94, 0.12)"
-              gradientFrom="#22c55e"
-              gradientTo="#052e16"
+              gradientColor="rgba(99, 102, 241, 0.12)"
+              gradientFrom="#6366f1"
+              gradientTo="#1e1b4b"
             >
               <div className="p-12 flex flex-col gap-8">
                 <div className="w-14 h-14 glass-pill flex items-center justify-center rounded-xl bg-primary/10">
-                  <span className="material-symbols-outlined text-primary text-3xl">{card.icon}</span>
+                  <span className="material-symbols-outlined text-3xl" style={{ color: 'var(--color-primary)' }}>{card.icon}</span>
                 </div>
                 <div>
                   <h3 className="font-headline text-4xl mb-4 italic transition-colors duration-400" style={{ color: 'var(--theme-text-heading)' }}>{card.title}</h3>

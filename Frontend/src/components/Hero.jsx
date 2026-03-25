@@ -10,7 +10,7 @@ export default function Hero() {
       </div>
       <div className="relative z-10 max-w-5xl px-6 text-center mt-32 md:mt-40">
         <h1 
-          className="font-headline text-7xl md:text-[10rem] tracking-[-0.04em] leading-[0.9] animate-blur-text italic transition-colors duration-400" 
+          className="font-serif text-7xl md:text-[10rem] tracking-[-0.04em] leading-[0.9] animate-blur-text italic transition-colors duration-400" 
           style={{ animationDelay: '0.1s', color: 'var(--theme-text-heading)' }}
         >
           Escape Tutorial Hell

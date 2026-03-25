@@ -38,20 +38,21 @@ const smallAvatars = [
 
 export default function Team() {
   return (
-    <section id="team" className="relative w-full pt-40 pb-20 px-4 md:px-8 bg-background flex flex-col items-center overflow-hidden">
-      {/* Background ambient glow matching neon green */}
-      <div className="absolute inset-0 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <section id="team" className="relative w-full pt-40 pb-20 px-4 md:px-8 flex flex-col items-center overflow-hidden" style={{ background: 'var(--color-background)' }}>
+      {/* Background ambient glow matching indigo */}
+      <div className="absolute inset-0 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)' }}></div>
 
       <div className="max-w-6xl w-full flex flex-col items-center text-center z-10 space-y-8">
-        <span className="glass-pill text-primary font-label uppercase tracking-[0.3em] text-xs font-bold px-4 py-1.5 rounded-full inline-block">
+        <span className="glass-pill font-label uppercase tracking-[0.3em] text-xs font-bold px-4 py-1.5 rounded-full inline-block" style={{ color: 'var(--color-primary)' }}>
           The Minds Behind Focus Forge
         </span>
 
-        <h2 className="text-4xl md:text-6xl font-headline italic forge-gradient-text tracking-tighter">
-          Meet Our Team
+        <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight">
+          <span style={{ color: 'var(--theme-text-heading)' }}>Meet Our </span>
+          <span className="italic" style={{ color: 'var(--color-primary)' }}>Team</span>
         </h2>
 
-        <p className="font-body text-white/50 text-lg md:text-xl max-w-2xl leading-relaxed">
+        <p className="font-body text-lg md:text-xl max-w-2xl leading-relaxed" style={{ color: 'var(--theme-text-muted)' }}>
           We are a group of developers committed to revolutionizing how you learn.
         </p>
 
@@ -61,18 +62,18 @@ export default function Team() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-10 w-full">
           {teamMembers.map((member, index) => (
-            <NeonGradientCard key={index} className="max-w-xs mx-auto w-full" borderRadius={20} borderSize={2}>
-              <div className="flex flex-col items-center text-center space-y-4 p-4 liquid-glass rounded-2xl h-full">
-                <img src={member.imageUrl} alt={member.name} className="w-20 h-20 md:w-24 md:h-24 rounded-full border-2 border-primary/50 object-cover shadow-[0_0_20px_rgba(34,197,94,0.3)]" />
+            <NeonGradientCard key={index} className="max-w-xs mx-auto w-full" borderRadius={20} borderSize={2} neonColors={{ firstColor: '#6366f1', secondColor: '#818cf8' }}>
+              <div className="flex flex-col items-center text-center space-y-4 p-5 liquid-glass rounded-2xl h-full">
+                <img src={member.imageUrl} alt={member.name} className="w-20 h-20 md:w-24 md:h-24 rounded-full border-2 object-cover" style={{ borderColor: 'rgba(99,102,241,0.5)', boxShadow: '0 0 20px rgba(99,102,241,0.3)' }} />
                 <div>
-                  <h3 className="text-lg md:text-xl font-headline text-white tracking-tight leading-tight">{member.name}</h3>
-                  <p className="text-primary font-label text-[10px] md:text-xs uppercase tracking-wider mt-2">{member.role}</p>
+                  <h3 className="text-lg md:text-xl font-headline tracking-tight leading-tight" style={{ color: 'var(--theme-text-heading)' }}>{member.name}</h3>
+                  <p className="font-label text-[10px] md:text-xs uppercase tracking-wider mt-2" style={{ color: 'var(--color-primary)' }}>{member.role}</p>
                 </div>
-                <p className="font-body text-white/50 text-xs md:text-sm leading-relaxed mb-4">
+                <p className="font-body text-xs md:text-sm leading-relaxed mb-4" style={{ color: 'var(--theme-text-body)' }}>
                   {member.description}
                 </p>
                 <div className="mt-auto w-full">
-                  <a href={smallAvatars[index].profileUrl} target="_blank" rel="noopener noreferrer" className="forge-btn-primary w-full block text-center py-2 text-sm">
+                  <a href={smallAvatars[index].profileUrl} target="_blank" rel="noopener noreferrer" className="forge-btn-primary w-full block text-center py-2.5 rounded-xl font-label text-sm font-bold text-white transition-all hover:scale-[1.02]">
                     Connect
                   </a>
                 </div>

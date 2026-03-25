@@ -19,6 +19,7 @@ export default function Impact() {
         <video 
           ref={videoRef}
           className="opacity-20 mix-blend-screen" 
+          style={{ filter: 'hue-rotate(-40deg)' }}
           loop 
           muted 
           playsInline
@@ -26,7 +27,7 @@ export default function Impact() {
         ></video>
       </div>
       <div className="max-w-6xl mx-auto text-center">
-        <span className="font-label text-primary text-xs font-bold tracking-[0.3em] uppercase">Global Reach</span>
+        <span className="font-label text-xs font-bold tracking-[0.3em] uppercase" style={{ color: 'var(--color-primary)' }}>Global Reach</span>
         <div className="mt-8 font-headline text-[10rem] md:text-[14rem] leading-none forge-gradient-text font-black tracking-tighter italic">
           <NumberTicker value={130} className="forge-gradient-text" />M+
         </div>
