@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import SubtopicListItem from '../components/SubtopicListItem';
+import { ShimmerButton } from '../components/magicui/ShimmerButton';
 
 const API_BASE = 'http://localhost:3000';
 
@@ -361,175 +362,190 @@ export default function LearnHub() {
         />
       )}
 
-      <div className="relative z-10 min-h-screen pt-28 pb-12 px-4 md:px-6 max-w-7xl mx-auto font-body flex flex-col md:flex-row gap-6">
+      <div className="relative z-10 min-h-screen pt-28 pb-20 px-4 md:px-6 lg:px-8 max-w-[1400px] mx-auto font-body">
 
-        {/* ═══ Sidebar ═══ */}
-        <aside className="w-full md:w-[32%] shrink-0">
-          <div className="neon-node neon-node-active p-5 md:sticky md:top-28" style={{ animation: 'none' }}>
-            <Link to={`/course/${courseId}`}
-              className="inline-flex items-center gap-1 text-xs font-label uppercase tracking-widest mb-4 hover:opacity-80 transition-opacity"
-              style={{ color: 'var(--theme-text-muted)' }}>
-              <span className="material-symbols-outlined text-sm">arrow_back</span>
-              Course Map
-            </Link>
-
-            <h2 className="font-headline text-xl font-bold italic mb-1" style={{ color: 'var(--theme-text-heading)' }}>
-              {currentModule.module_title}
-            </h2>
-            <p className="text-xs font-label mb-1" style={{ color: 'var(--theme-text-muted)' }}>
-              Module {moduleIndex + 1} • {subtopics.length} subtopics
-            </p>
-
-            {/* Prep status indicator */}
-            {isPreparing && (
-              <div className="flex items-center gap-2 text-xs font-label mb-4 px-3 py-2 rounded-lg" style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
-                <div className="w-3 h-3 rounded-full border-2 border-violet-500 border-t-transparent animate-spin"></div>
-                <span style={{ color: '#8b5cf6' }}>AI is preparing videos & quizzes...</span>
+        {/* ─── Breadcrumb & Header ─── */}
+        <div className="mb-8 animate-blur-text" style={{ animationDelay: '0.1s' }}>
+          <Link to={`/course/${courseId}`}
+            className="inline-flex items-center gap-1.5 text-[11px] font-label uppercase tracking-[0.15em] mb-4 transition-colors hover:scale-[1.02]"
+            style={{ color: 'var(--theme-text-muted)' }}>
+            <span className="material-symbols-outlined text-[14px]">arrow_back</span>
+            Back to Course Map
+          </Link>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.6)] animate-pulse"></div>
+                <span className="font-label text-xs uppercase tracking-widest font-bold" style={{ color: 'var(--theme-text-muted)' }}>
+                  Module {moduleIndex + 1}
+                </span>
+                <span className="text-xs" style={{ color: 'var(--theme-text-faint)' }}>•</span>
+                <span className="font-label text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                  {watchedCount}/{subtopics.length} Watched
+                </span>
               </div>
-            )}
-
-            {/* Progress */}
-            <div className="flex items-center gap-2 text-xs font-label mb-4" style={{ color: 'var(--theme-text-muted)' }}>
-              <span style={{ color: '#22c55e' }}>{watchedCount}/{subtopics.length}</span> lectures watched
-            </div>
-
-            {/* Subtopic playlist */}
-            <div className="space-y-1 max-h-[40vh] overflow-y-auto pr-1">
-              {subtopics.map((sub, i) => (
-                <SubtopicListItem
-                  key={sub._id || i}
-                  subtopic={sub}
-                  index={i}
-                  isActive={i === activeSubIdx}
-                  status={sub.status}
-                  onClick={(idx) => setActiveSubIdx(idx)}
-                />
-              ))}
-            </div>
-
-            {/* Quiz trigger */}
-            <div className="mt-6 pt-4" style={{ borderTop: '1px solid var(--theme-border)' }}>
-              <button
-                disabled={isPreparing || allQuizQuestions.length === 0}
-                onClick={handleQuizClick}
-                className={`w-full py-3.5 rounded-xl font-label text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  !isPreparing && allQuizQuestions.length > 0
-                    ? 'bg-[#22c55e] text-white quiz-trigger-pulse hover:bg-[#16a34a] active:scale-[0.97]'
-                    : 'opacity-30 cursor-not-allowed'
-                }`}
-                style={isPreparing || allQuizQuestions.length === 0 ? { background: 'var(--theme-glass-bg)', color: 'var(--theme-text-muted)' } : {}}
-              >
-                <span className="material-symbols-outlined text-lg">psychology</span>
-                Take Module Quiz 🧠
-              </button>
-              {isPreparing && (
-                <p className="text-center text-xs mt-2" style={{ color: 'var(--theme-text-faint)' }}>
-                  Quiz will be available once preparation completes
-                </p>
-              )}
+              <h1 className="font-serif text-3xl md:text-5xl lg:text-5xl font-bold italic leading-tight" style={{ color: 'var(--theme-text-heading)' }}>
+                {activeSubtopic?.subtopic_title || currentModule.module_title}
+              </h1>
             </div>
           </div>
-        </aside>
+        </div>
 
-        {/* ═══ Main Content ═══ */}
-        <section className="flex-1 min-w-0">
-          {/* Subtopic header */}
-          <div className="mb-6 animate-blur-text" style={{ animationDelay: '0.1s' }}>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-2 h-2 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]"></div>
-              <span className="font-label text-xs uppercase tracking-widest" style={{ color: 'var(--theme-text-muted)' }}>
-                Subtopic {activeSubIdx + 1} of {subtopics.length}
-              </span>
-            </div>
-            <h1 className="font-headline text-3xl md:text-4xl font-bold italic leading-snug" style={{ color: 'var(--theme-text-heading)' }}>
-              {activeSubtopic?.subtopic_title}
-            </h1>
-          </div>
+        {/* ─── Main Grid Layout ─── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-          {/* Video player */}
-          <div className="mb-6 animate-blur-text" style={{ animationDelay: '0.2s' }}>
-            {activeSubtopic?.videoId && activeSubtopic.videoId !== 'none' ? (
-              <div className="video-glow">
-                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+          {/* ═══ LEFT: VIDEO PLAYER (8 Cols) ═══ */}
+          <div className="lg:col-span-8 xl:col-span-8 lg:sticky lg:top-28 flex flex-col gap-6">
+            
+            {/* Video Container */}
+            <div className="animate-blur-text" style={{ animationDelay: '0.2s' }}>
+              {activeSubtopic?.videoId && activeSubtopic.videoId !== 'none' ? (
+                <div className="video-glow aspect-video w-full rounded-2xl overflow-hidden shadow-2xl relative" style={{ background: '#000' }}>
                   <iframe
                     className="absolute inset-0 w-full h-full"
-                    src={`https://www.youtube.com/embed/${activeSubtopic.videoId}?rel=0&modestbranding=1`}
+                    src={`https://www.youtube.com/embed/${activeSubtopic.videoId}?rel=0&modestbranding=1&autohide=1&showinfo=0`}
                     title={activeSubtopic?.subtopic_title}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   ></iframe>
                 </div>
-              </div>
-            ) : isPreparing ? (
-              <div className="video-glow" style={{ background: 'var(--theme-glass-bg)' }}>
-                <div className="flex flex-col items-center justify-center py-24 px-8 text-center">
-                  <div className="w-12 h-12 rounded-full border-3 border-violet-500 border-t-transparent animate-spin mb-4"></div>
-                  <h3 className="font-headline text-xl italic mb-2" style={{ color: 'var(--theme-text-heading)' }}>
-                    Finding the best video...
+              ) : isPreparing ? (
+                <div className="video-glow aspect-video w-full rounded-2xl overflow-hidden relative flex flex-col items-center justify-center p-8 text-center glass-pill">
+                  <div className="w-14 h-14 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin mb-6"></div>
+                  <h3 className="font-serif text-2xl italic mb-3" style={{ color: 'var(--theme-text-heading)' }}>
+                    Forging the perfect video lesson...
                   </h3>
-                  <p className="text-sm max-w-sm" style={{ color: 'var(--theme-text-body)' }}>
-                    Our AI is searching YouTube, evaluating transcripts, and selecting the highest-quality tutorial for this topic.
+                  <p className="text-sm max-w-md" style={{ color: 'var(--theme-text-body)' }}>
+                    Our AI is currently scouring YouTube, reading transcripts, and curating the absolute best tutorial for this exact topic.
                   </p>
                 </div>
-              </div>
-            ) : (
-              <div className="video-glow" style={{ background: 'var(--theme-glass-bg)' }}>
-                <div className="flex flex-col items-center justify-center py-24 px-8 text-center">
-                  <span className="material-symbols-outlined text-5xl mb-4" style={{ color: 'var(--theme-text-faint)' }}>videocam_off</span>
-                  <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>No video found for this subtopic.</p>
+              ) : (
+                <div className="video-glow aspect-video w-full rounded-2xl overflow-hidden relative flex flex-col items-center justify-center p-8 text-center glass-pill">
+                  <span className="material-symbols-outlined text-6xl mb-4" style={{ color: 'var(--theme-text-faint)' }}>videocam_off</span>
+                  <p className="font-label text-sm uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>No video found for this subtopic.</p>
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Video info bar */}
-          {activeSubtopic?.videoId && activeSubtopic.videoId !== 'none' && (
-            <div className="mb-6 flex items-center gap-3 text-xs font-label" style={{ color: 'var(--theme-text-muted)' }}>
-              <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">person</span>
-                {activeSubtopic.channelTitle || 'Unknown channel'}
-              </span>
-              <span>•</span>
-              <span className="truncate">{activeSubtopic.videoTitle}</span>
+              )}
             </div>
-          )}
 
-          {/* Mark as watched button */}
-          {activeSubtopic?.status !== 'completed' && activeSubtopic?.videoId && activeSubtopic.videoId !== 'none' && (
-            <div className="animate-blur-text" style={{ animationDelay: '0.3s' }}>
-              <button
-                onClick={handleMarkWatched}
-                disabled={markingComplete}
-                className="w-full py-3.5 rounded-xl font-label text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
-                style={{
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  border: '1.5px solid rgba(34, 197, 94, 0.3)',
-                  color: '#22c55e'
-                }}
-              >
-                {markingComplete ? (
+            {/* Video Controls & Info Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-blur-text" style={{ animationDelay: '0.3s' }}>
+              
+              {/* Channel Meta */}
+              <div className="flex-1 min-w-0 flex items-center gap-3 px-5 py-3.5 rounded-2xl" style={{ background: 'var(--dash-card-bg)', border: '1px solid var(--theme-border-strong)', backdropFilter: 'blur(20px)' }}>
+                {activeSubtopic?.videoId && activeSubtopic.videoId !== 'none' ? (
                   <>
-                    <div className="w-4 h-4 rounded-full border-2 border-green-500 border-t-transparent animate-spin"></div>
-                    Marking...
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(99,102,241,0.1)' }}>
+                      <span className="material-symbols-outlined text-lg" style={{ color: '#6366f1' }}>smart_display</span>
+                    </div>
+                    <div className="truncate">
+                      <p className="font-label text-[10px] uppercase tracking-widest font-bold mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Source</p>
+                      <p className="font-body text-xs font-semibold truncate" style={{ color: 'var(--theme-text-heading)' }}>{activeSubtopic.channelTitle || 'YouTube Tutorial'}</p>
+                    </div>
                   </>
                 ) : (
-                  <>
-                    <span className="material-symbols-outlined text-lg">check_circle</span>
-                    Mark as Watched
-                  </>
+                   <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Waiting for video source...</span>
                 )}
-              </button>
-            </div>
-          )}
+              </div>
 
-          {/* Completed badge */}
-          {activeSubtopic?.status === 'completed' && (
-            <div className="flex items-center gap-2 px-4 py-3 rounded-xl" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
-              <span className="material-symbols-outlined text-lg" style={{ color: '#22c55e' }}>check_circle</span>
-              <span className="font-label text-sm font-bold" style={{ color: '#22c55e' }}>Lecture completed!</span>
+              {/* Mark Button */}
+              {activeSubtopic?.status !== 'completed' && activeSubtopic?.videoId && activeSubtopic.videoId !== 'none' && (
+                <button
+                  onClick={handleMarkWatched}
+                  disabled={markingComplete}
+                  className="relative shrink-0 px-8 py-3.5 rounded-2xl font-label text-sm font-bold flex items-center justify-center gap-2.5 transition-all duration-300 active:scale-[0.98] cursor-pointer disabled:opacity-50 group overflow-hidden"
+                  style={{
+                    background: 'var(--theme-glass-bg)',
+                    border: '1px solid var(--theme-border-strong)',
+                    color: 'var(--theme-text-heading)'
+                  }}
+                >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, transparent 100%)' }}></div>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" style={{ boxShadow: 'inset 0 0 12px rgba(99,102,241,0.2)' }}></div>
+                  
+                  {markingComplete ? (
+                    <><div className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin relative z-10 block"></div><span className="relative z-10">Saving...</span></>
+                  ) : (
+                    <><span className="material-symbols-outlined text-[18px] text-indigo-400 relative z-10 group-hover:scale-110 transition-transform duration-300">task_alt</span><span className="relative z-10">Mark as Watched</span></>
+                  )}
+                </button>
+              )}
+              {activeSubtopic?.status === 'completed' && (
+                <div className="shrink-0 px-8 py-3.5 rounded-2xl flex items-center justify-center gap-2" style={{ background: 'var(--theme-glass-bg)', border: '1px solid rgba(99,102,241,0.3)' }}>
+                  <span className="material-symbols-outlined text-[18px]" style={{ color: '#818cf8' }}>check_circle</span>
+                  <span className="font-label text-sm font-bold" style={{ color: '#818cf8' }}>Completed</span>
+                </div>
+              )}
             </div>
-          )}
-        </section>
+          </div>
+
+          {/* ═══ RIGHT: CURRICULUM SIDEBAR (4 Cols) ═══ */}
+          <aside className="lg:col-span-4 xl:col-span-4 animate-blur-text" style={{ animationDelay: '0.4s' }}>
+            <div className="panel-card p-6 h-full flex flex-col" style={{ maxHeight: 'calc(100vh - 140px)', position: 'sticky', top: '112px' }}>
+              
+              <div className="mb-5">
+                <h2 className="font-headline text-lg font-bold mb-1" style={{ color: 'var(--theme-text-heading)' }}>
+                  Module Curriculum
+                </h2>
+                <p className="text-xs font-body" style={{ color: 'var(--theme-text-muted)' }}>
+                  {currentModule.module_title}
+                </p>
+              </div>
+
+              {/* Prep Loading Banner */}
+              {isPreparing && (
+                <div className="flex items-center gap-3 text-xs font-label mb-5 px-4 py-3 rounded-xl" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  <div className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin shrink-0"></div>
+                  <span style={{ color: '#818cf8', lineHeight: 1.4 }}>AI is structuring content...</span>
+                </div>
+              )}
+
+              {/* Subtopic Playlist */}
+              <div className="flex-1 overflow-y-auto custom-scroll pr-2 -mr-2 space-y-2 mb-6">
+                {subtopics.map((sub, i) => (
+                  <SubtopicListItem
+                    key={sub._id || i}
+                    subtopic={sub}
+                    index={i}
+                    isActive={i === activeSubIdx}
+                    status={sub.status}
+                    onClick={(idx) => setActiveSubIdx(idx)}
+                  />
+                ))}
+              </div>
+
+              {/* Quiz Trigger Container at Bottom */}
+              <div className="pt-5" style={{ borderTop: '1px solid var(--theme-border)' }}>
+                {!isPreparing && allQuizQuestions.length > 0 ? (
+                  <div onClick={handleQuizClick} className="cursor-pointer">
+                    <ShimmerButton
+                      background="#312e81"
+                      shimmerColor="rgba(255,255,255,0.4)"
+                      shimmerSize="2em"
+                      borderRadius="16px"
+                      className="w-full py-4 font-label text-sm font-black uppercase tracking-widest flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <div className="flex items-center gap-2.5 text-white">
+                        <span className="material-symbols-outlined text-[20px]">psychology</span>
+                        Take Module Quiz
+                      </div>
+                    </ShimmerButton>
+                  </div>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full py-4 rounded-2xl font-label text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2 opacity-40 cursor-not-allowed"
+                    style={{ background: 'var(--theme-glass-bg)', color: 'var(--theme-text-muted)', border: '1px solid var(--theme-border)' }}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">psychology</span>
+                    Quiz Unavailable
+                  </button>
+                )}
+              </div>
+              
+            </div>
+          </aside>
+
+        </div>
       </div>
     </>
   );
