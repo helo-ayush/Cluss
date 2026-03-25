@@ -15,7 +15,7 @@ export default function Pipeline() {
   }, []);
 
   return (
-    <section className="py-40 px-6">
+    <section id="pipeline" className="py-40 px-6">
       <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-24 items-center">
         <div className="relative aspect-square rounded-2xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)]" style={{ borderColor: 'var(--theme-border-faint)', borderWidth: '1px' }}>
           <video 

@@ -5,6 +5,7 @@ import Features from '../components/Features';
 import Pipeline from '../components/Pipeline';
 import TutorAgent from '../components/TutorAgent';
 import Impact from '../components/Impact';
+import Team from '../components/Team';
 import CTA from '../components/CTA';
 
 export default function Home() {
@@ -16,6 +17,7 @@ export default function Home() {
       <Pipeline />
       <TutorAgent />
       <Impact />
+      <Team />
       <CTA />
     </>
   );

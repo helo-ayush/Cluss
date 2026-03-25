@@ -14,7 +14,7 @@ export default function Impact() {
   }, []);
 
   return (
-    <section className="relative py-48 px-6 overflow-hidden bg-background">
+    <section id="impact" className="relative py-48 px-6 overflow-hidden bg-background">
       <div className="absolute inset-0 -z-10">
         <video 
           ref={videoRef}

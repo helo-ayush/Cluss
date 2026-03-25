@@ -10,10 +10,10 @@ export default function Navbar() {
     <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center px-8 py-3 w-[95%] max-w-6xl rounded-full backdrop-blur-2xl border shadow-2xl transition-colors duration-400" style={{ background: 'var(--theme-nav-bg)', borderColor: 'var(--theme-border)' }}>
       <Link to="/" className="text-2xl font-bold tracking-tighter font-headline italic transition-colors duration-400" style={{ color: 'var(--theme-text-heading)' }}>Focus Forge</Link>
       <div className="hidden md:flex gap-10 items-center">
-        <a className="text-primary font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#">Features</a>
-        <a className="font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#" style={{ color: 'var(--theme-nav-link)' }}>Pipeline</a>
-        <a className="font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#" style={{ color: 'var(--theme-nav-link)' }}>Impact</a>
-        <a className="font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#" style={{ color: 'var(--theme-nav-link)' }}>Team</a>
+        <a className="text-primary font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#features">Features</a>
+        <a className="font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#pipeline" style={{ color: 'var(--theme-nav-link)' }}>Pipeline</a>
+        <a className="font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#impact" style={{ color: 'var(--theme-nav-link)' }}>Impact</a>
+        <a className="font-medium font-label tracking-wide text-xs uppercase hover:text-primary transition-all duration-300" href="#team" style={{ color: 'var(--theme-nav-link)' }}>Team</a>
       </div>
       <div className="flex items-center gap-4">
         {/* Theme Toggle */}

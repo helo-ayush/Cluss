@@ -20,7 +20,7 @@ export default function Features() {
   ];
 
   return (
-    <section className="relative py-40 px-6 overflow-hidden">
+    <section id="features" className="relative py-40 px-6 overflow-hidden">
       <div className="absolute inset-0 -z-10 h-full w-full">
         <video 
           ref={videoRef}
