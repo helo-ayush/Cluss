@@ -16,6 +16,10 @@ router.post('/:courseId/module/:moduleIndex/grade-module', c.gradeModuleQuiz);
 
 // Module prep status (for polling) & manual trigger
 router.get('/:courseId/module/:moduleIndex/prep-status', c.getModulePrepStatus);
+// Manual trigger
 router.post('/:courseId/module/:moduleIndex/prepare', c.triggerPrepare);
+
+// Delete course
+router.delete('/:courseId', c.deleteCourseHandler);
 
 module.exports = router;

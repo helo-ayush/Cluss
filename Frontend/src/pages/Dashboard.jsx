@@ -102,8 +102,71 @@ function ForgeProgressPanel() {
   );
 }
 
+// ─── Delete Course Modal ───
+function DeleteCourseModal({ course, onConfirm, onCancel }) {
+  const [inputVal, setInputVal] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const handleConfirm = async () => {
+    if (inputVal.toLowerCase() !== 'delete') return;
+    setDeleting(true);
+    await onConfirm(course._id);
+    setDeleting(false);
+  };
+ 
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)' }}>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: -20 }}
+        className="relative overflow-hidden rounded-3xl p-8 max-w-md w-full text-center shadow-[0_32px_64px_rgba(0,0,0,0.5)] border border-white/10"
+        style={{ background: 'linear-gradient(145deg, rgba(30,41,59,0.95) 0%, rgba(15,23,42,0.95) 100%)' }}
+      >
+        {/* Decorative severe background glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-[100px] bg-red-500/20 blur-[50px] rounded-full pointer-events-none" />
+
+        <div className="mx-auto w-16 h-16 rounded-full flex flex-col items-center justify-center mb-6 border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.3)] bg-red-500/10 text-red-500">
+           <span className="material-symbols-outlined text-3xl">delete_forever</span>
+        </div>
+        
+        <h3 className="font-headline text-2xl font-black italic mb-3 text-white tracking-wide">
+          Delete Course
+        </h3>
+        <p className="text-sm mb-6 text-white/60 leading-relaxed">
+          You are about to permanently delete <strong className="text-white/90">"{course.course_title}"</strong>. All associated progress, quizzes, and data will be wiped out.
+        </p>
+
+        <div className="bg-black/30 rounded-2xl p-5 mb-8 border border-white/5">
+           <p className="text-xs font-label text-red-400 mb-3 tracking-widest uppercase font-bold">
+             Type <span className="text-white bg-red-500/20 px-2 py-0.5 rounded ml-1 mr-1 border border-red-500/30">delete</span> below
+           </p>
+           <input 
+             type="text"
+             value={inputVal}
+             onChange={(e) => setInputVal(e.target.value)}
+             placeholder="delete"
+             className="w-full px-4 py-3.5 rounded-xl border-2 border-transparent bg-white/5 text-white font-body text-center outline-none focus:border-red-500/50 focus:bg-white/10 transition-all font-bold tracking-widest uppercase placeholder:normal-case placeholder:tracking-normal placeholder:font-normal placeholder:text-white/20"
+           />
+        </div>
+
+        <div className="flex gap-4">
+          <button onClick={onCancel} disabled={deleting}
+            className="flex-1 py-3.5 rounded-xl font-label text-xs sm:text-sm font-bold uppercase tracking-widest transition-all text-white/70 hover:text-white hover:bg-white/5 border border-white/10"
+          >Cancel</button>
+          
+          <button onClick={handleConfirm} 
+            disabled={deleting || inputVal.toLowerCase() !== 'delete'}
+            className="flex-1 py-3.5 rounded-xl font-label text-xs sm:text-sm font-bold uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+          >{deleting ? <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin"></div> : 'Confirm'}</button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Course Card ───
-function CourseCard({ course, palette, onOpen, index }) {
+function CourseCard({ course, palette, onOpen, index, onDeleteClick }) {
   const pct = course.progress;
   const isCompleted = pct === 100;
   const isActive = pct > 0 && pct < 100;
@@ -113,7 +176,6 @@ function CourseCard({ course, palette, onOpen, index }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: (index % 10) * 0.05, duration: 0.4, ease: 'easeOut' }}
-      onClick={onOpen}
       className="relative w-full cursor-pointer group"
     >
       <div className="relative overflow-hidden rounded-2xl transition-all duration-300 group-hover:-translate-y-1.5"
@@ -128,7 +190,15 @@ function CourseCard({ course, palette, onOpen, index }) {
         <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full" style={{ background: 'rgba(255,255,255,0.04)' }} />
         <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full" style={{ background: 'rgba(0,0,0,0.1)' }} />
 
-        <div className="relative z-10 p-6 h-full flex flex-col justify-between">
+        {/* Delete Button */}
+        <button 
+           onClick={(e) => { e.stopPropagation(); onDeleteClick(course); }}
+           className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center bg-black/20 hover:bg-red-500/80 hover:scale-110 transition-all z-20 opacity-0 group-hover:opacity-100"
+        >
+           <span className="material-symbols-outlined text-[16px] text-white/90">delete</span>
+        </button>
+
+        <div className="relative z-10 p-6 h-full flex flex-col justify-between" onClick={onOpen}>
           <div>
             <div className="text-3xl mb-4">{palette.icon}</div>
             <h3 className="font-headline text-base md:text-lg font-bold text-white leading-snug line-clamp-3">
@@ -344,6 +414,7 @@ export default function Dashboard() {
   const [activityMeta, setActivityMeta] = useState({ streak: 0, totalThisWeek: 0 });
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [courseToDelete, setCourseToDelete] = useState(null);
   const [query, setQuery] = useState('');
   const nav = useNavigate();
   const inputRef = useRef(null);
@@ -407,6 +478,16 @@ export default function Dashboard() {
     finally { setCreating(false); }
   };
 
+  const handleDeleteCourse = async (courseId) => {
+    try {
+      await fetch(`${API_BASE}/api/course/${courseId}`, { method: 'DELETE' });
+      setCourseToDelete(null);
+      await fetchAll(); // Refresh data
+    } catch (err) {
+      console.error('Failed to delete course:', err);
+    }
+  };
+
   if (!isLoaded) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-background)' }}>
       <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }} />
@@ -431,6 +512,17 @@ export default function Dashboard() {
         </div>
 
         <main className="relative z-10 min-h-screen pt-28 pb-20 px-6 lg:px-8 max-w-[1200px] mx-auto">
+
+          {/* Delete Modal Overlay */}
+          <AnimatePresence>
+            {courseToDelete && (
+              <DeleteCourseModal 
+                course={courseToDelete} 
+                onConfirm={handleDeleteCourse} 
+                onCancel={() => setCourseToDelete(null)} 
+              />
+            )}
+          </AnimatePresence>
 
           {/* ══ HERO HEADER ══ */}
           <motion.section initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
@@ -566,7 +658,7 @@ export default function Dashboard() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 max-h-[760px] overflow-y-auto custom-scroll pr-2 -mr-2">
                   {courses.map((course, i) => (
-                    <CourseCard key={course._id} course={course} palette={CARD_PALETTES[i % CARD_PALETTES.length]} index={i} onOpen={() => nav(`/course/${course._id}`)} />
+                    <CourseCard key={course._id} course={course} palette={CARD_PALETTES[i % CARD_PALETTES.length]} index={i} onOpen={() => nav(`/course/${course._id}`)} onDeleteClick={setCourseToDelete} />
                   ))}
                 </div>
               )}

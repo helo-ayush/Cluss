@@ -523,6 +523,24 @@ const triggerPrepare = async (req, res) => {
     }
 };
 
+/**
+ * Express Handler: Deletes a course from the database by ID.
+ * DELETE /api/course/:courseId
+ */
+const deleteCourseHandler = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const course = await Course.findByIdAndDelete(courseId);
+        if (!course) {
+            return res.status(404).json({ success: false, message: "Course not found" });
+        }
+        return res.json({ success: true, message: "Course deleted successfully" });
+    } catch (error) {
+        console.error("Error in deleteCourseHandler:", error);
+        res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+    }
+};
+
 module.exports = {
     initializeCourse,
     updateTrustedCreators,
@@ -534,5 +552,6 @@ module.exports = {
     markSubtopicWatched,
     gradeModuleQuiz,
     getModulePrepStatus,
-    triggerPrepare
+    triggerPrepare,
+    deleteCourseHandler
 };
