@@ -1,4 +1,20 @@
+import { useNavigate } from 'react-router-dom';
+import { SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react';
+
 export default function Hero() {
+  const navigate = useNavigate();
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    if (val.trim() || val.length > 0) {
+      navigate(`/dashboard?q=${encodeURIComponent(val)}`);
+    }
+  };
+
+  const handleForgeClick = () => {
+    navigate('/dashboard');
+  };
+
   return (
     <header className="relative h-screen w-full flex items-center justify-center overflow-hidden">
       <div className="absolute inset-0 z-0">
@@ -10,7 +26,7 @@ export default function Hero() {
       </div>
       <div className="relative z-10 max-w-5xl px-6 text-center mt-32 md:mt-40">
         <h1 
-          className="font-serif text-7xl md:text-[10rem] tracking-[-0.04em] leading-[0.9] animate-blur-text italic transition-colors duration-400" 
+          className="font-serif text-5xl sm:text-7xl md:text-[10rem] tracking-[-0.04em] leading-[0.9] animate-blur-text italic transition-colors duration-400" 
           style={{ animationDelay: '0.1s', color: 'var(--theme-text-heading)' }}
         >
           Escape Tutorial Hell
@@ -22,18 +38,28 @@ export default function Hero() {
           One prompt generates a structured learning path. Cut through the noise and get a distraction-free curriculum curated just for you.
         </p>
         <div 
-          className="mt-14 max-w-2xl mx-auto liquid-glass p-2 rounded-full flex items-center opacity-0 animate-blur-text" 
+          className="mt-10 sm:mt-14 max-w-2xl mx-auto liquid-glass p-2 rounded-3xl sm:rounded-full flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0 opacity-0 animate-blur-text" 
           style={{ animationDelay: '0.7s' }}
         >
           <input 
-            className="bg-transparent border-none focus:ring-0 w-full px-8 font-body text-lg outline-none transition-colors duration-400" 
+            className="bg-transparent border-none focus:ring-0 w-full px-4 sm:px-8 py-3 sm:py-0 font-body text-base sm:text-lg outline-none transition-colors duration-400 text-center sm:text-left" 
             placeholder="What do you want to master today?" 
             type="text"
+            onChange={handleInputChange}
             style={{ color: 'var(--theme-text-heading)', '--tw-placeholder-opacity': 1 }}
           />
-          <button className="forge-btn-primary text-on-primary px-10 py-4 rounded-full font-label text-sm font-black whitespace-nowrap active:scale-95">
-            Forge Your Path
-          </button>
+          <SignedIn>
+            <button onClick={handleForgeClick} className="w-full sm:w-auto forge-btn-primary text-on-primary px-10 py-4 rounded-full font-label text-sm font-black whitespace-nowrap active:scale-95">
+              Forge Your Path
+            </button>
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal" forceRedirectUrl="/dashboard">
+              <button className="w-full sm:w-auto forge-btn-primary text-on-primary px-10 py-4 rounded-full font-label text-sm font-black whitespace-nowrap active:scale-95">
+                Forge Your Path
+              </button>
+            </SignInButton>
+          </SignedOut>
         </div>
       </div>
     </header>

@@ -19,6 +19,9 @@ const topicGenerator = require('./src/utils/topicGenerator');
 const videoFinder = require('./src/routes/videoFinder');
 const courseRoutes = require('./src/routes/course');
 const activityRoutes = require('./src/routes/activity');
+const userRoutes = require('./src/routes/user');
+const leaderboardRoutes = require('./src/routes/leaderboard');
+const tutorChatRoutes = require('./src/routes/tutorChat');
 
 // Base status route
 app.get('/', (req, res) => {
@@ -31,6 +34,9 @@ app.use('/video-finder', videoFinder); // Legacy path
 app.use('/api/search', videoFinder);   // Standard path
 app.use('/api/course', courseRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/tutor-chat', tutorChatRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

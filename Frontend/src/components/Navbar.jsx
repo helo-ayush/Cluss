@@ -30,29 +30,27 @@ export default function Navbar() {
 
   return (
     <nav
-      className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center px-8 py-3 rounded-full backdrop-blur-2xl border shadow-2xl"
+      className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center px-4 md:px-8 py-3 rounded-full backdrop-blur-2xl border shadow-2xl transition-all duration-700 ease-in-out ${isAppPage ? 'w-[95%] sm:w-[85%] md:w-[65%] lg:w-[45%] xl:w-[38%]' : 'w-[95%] md:w-[90%]'}`}
       style={{
         background: 'var(--theme-nav-bg)',
         borderColor: 'var(--theme-border)',
-        width: isAppPage ? '38%' : '90%',
         maxWidth: '1200px',
-        transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
       }}
     >
-      <Link to="/" className="text-2xl font-bold tracking-tighter font-headline transition-colors duration-400" style={{ color: 'var(--theme-text-heading)' }}>
+      <Link to="/" className="text-xl md:text-2xl font-bold tracking-tighter font-headline transition-colors duration-400 shrink-0" style={{ color: 'var(--theme-text-heading)' }}>
         Focus<span style={{ color: 'var(--color-primary)' }}>Forge</span>
       </Link>
       
-      {!isAppPage && (
-        <div className="hidden md:flex gap-10 items-center">
-          <button onClick={() => scrollToSection('features')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400" style={{ color: 'var(--theme-nav-link)' }}>Features</button>
-          <button onClick={() => scrollToSection('pipeline')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400" style={{ color: 'var(--theme-nav-link)' }}>Pipeline</button>
-          <button onClick={() => scrollToSection('impact')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400" style={{ color: 'var(--theme-nav-link)' }}>Impact</button>
-          <button onClick={() => scrollToSection('team')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400" style={{ color: 'var(--theme-nav-link)' }}>Team</button>
-        </div>
-      )}
+      <div 
+        className={`hidden md:flex items-center overflow-hidden transition-all duration-500 ease-in-out ${!isAppPage ? 'opacity-100 max-w-[500px] gap-10' : 'opacity-0 max-w-0 gap-0'}`}
+      >
+        <button onClick={() => scrollToSection('features')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400 whitespace-nowrap" style={{ color: 'var(--theme-nav-link)' }}>Features</button>
+        <button onClick={() => scrollToSection('pipeline')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400 whitespace-nowrap" style={{ color: 'var(--theme-nav-link)' }}>Pipeline</button>
+        <button onClick={() => scrollToSection('impact')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400 whitespace-nowrap" style={{ color: 'var(--theme-nav-link)' }}>Impact</button>
+        <button onClick={() => scrollToSection('pricing')} className="font-medium font-label tracking-wide text-xs uppercase transition-all duration-300 hover:text-indigo-400 whitespace-nowrap" style={{ color: 'var(--theme-nav-link)' }}>Pricing</button>
+      </div>
       
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 shrink-0">
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
@@ -85,19 +83,21 @@ export default function Navbar() {
 
         <SignedIn>
           <UserButton afterSignOutUrl="/" />
-          {!isDashboard && (
-            <Link to="/dashboard">
+          <div 
+            className={`overflow-hidden transition-all duration-500 ease-in-out ${!isDashboard ? 'opacity-100 max-w-[200px] ml-2' : 'opacity-0 max-w-0 ml-0'}`}
+          >
+            <Link to="/dashboard" className="block whitespace-nowrap">
               <ShimmerButton
                 background={isDark ? "#6366f1" : "#4f46e5"}
                 shimmerColor="rgba(255,255,255,0.35)"
                 borderRadius="9999px"
-                className="font-label text-xs font-bold px-4 py-2 text-white active:scale-95 flex items-center gap-2 group ml-2"
+                className="font-label text-xs font-bold px-4 py-2 text-white active:scale-95 flex items-center gap-2 group"
               >
                 Dashboard
                 <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
               </ShimmerButton>
             </Link>
-          )}
+          </div>
         </SignedIn>
 
       </div>

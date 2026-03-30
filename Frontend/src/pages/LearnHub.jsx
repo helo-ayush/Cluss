@@ -1,17 +1,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
+import { useUser } from '@clerk/clerk-react';
 import SubtopicListItem from '../components/SubtopicListItem';
 import { ShimmerButton } from '../components/magicui/ShimmerButton';
+import TutorChatPanel from '../components/TutorChatPanel';
 
 const API_BASE = 'http://localhost:3000';
 
 // ─── Quiz Modal Component ───
-function QuizModal({ questions, onSubmit, onClose }) {
-  const [answers, setAnswers] = useState(Array(questions.length).fill(null));
-  const [submitted, setSubmitted] = useState(false);
-  const [results, setResults] = useState(null);
+// ─── Quiz Modal Component ───
+function QuizModal({ questions, initialResults, onSubmit, onClose }) {
+  const [answers, setAnswers] = useState(initialResults ? initialResults.results.map(r => r.selectedAnswer || null) : Array(questions.length).fill(null));
+  const [submitted, setSubmitted] = useState(!!initialResults);
+  const [results, setResults] = useState(initialResults || null);
   const [submitting, setSubmitting] = useState(false);
+  
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [hintsActive, setHintsActive] = useState({});
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (cooldown > 0) {
+      timer = setInterval(() => setCooldown(c => c - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleSelect = (qIdx, option) => {
     if (submitted) return;
@@ -20,142 +34,236 @@ function QuizModal({ questions, onSubmit, onClose }) {
     setAnswers(newAnswers);
   };
 
+  const handleShowHint = () => {
+    if (cooldown > 0 || submitted) return;
+    setHintsActive(prev => ({ ...prev, [currentIdx]: true }));
+    setCooldown(60);
+  };
+
+  const handleRetake = () => {
+    setAnswers(Array(questions.length).fill(null));
+    setSubmitted(false);
+    setResults(null);
+    setCurrentIdx(0);
+    setHintsActive({});
+    setCooldown(0);
+  };
+
   const handleSubmit = async () => {
-    if (answers.some(a => a === null) || submitting) return;
+    if (submitting) return;
     setSubmitting(true);
     const data = await onSubmit(answers);
     setResults(data);
     setSubmitted(true);
     setSubmitting(false);
+    setCurrentIdx(0); // Go back to first question to review
   };
 
   const answeredCount = answers.filter(a => a !== null).length;
-  const allAnswered = answeredCount === questions.length;
+  const currentQ = questions[currentIdx];
+  const currentResult = submitted ? results?.results?.[currentIdx] : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6"
-      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)' }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6"
+      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
       onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}>
 
-      <div className="liquid-glass rounded-2xl w-full max-w-2xl flex flex-col"
-        style={{ maxHeight: 'calc(100vh - 48px)', border: '1px solid var(--theme-border-strong)' }}>
+      <div className="relative liquid-glass md:rounded-2xl w-full h-full md:h-auto md:max-h-[85vh] max-w-5xl flex flex-col md:flex-row overflow-hidden"
+        style={{ border: '1px solid var(--theme-border-strong)' }}>
 
-        {/* ── Sticky Header ── */}
-        <div className="shrink-0 p-6 pb-4" style={{ borderBottom: '1px solid var(--theme-border)' }}>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-headline text-2xl font-bold italic" style={{ color: 'var(--theme-text-heading)' }}>
-              {submitted ? (results?.passed ? '🎉 Module Complete!' : '📚 Keep Learning') : '🧠 Module Quiz'}
+        {/* ── Close Button (Absolute) ── */}
+        <button onClick={onClose} className="absolute top-3 right-3 md:top-5 md:right-5 z-20 w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all hover:bg-white/10"
+          style={{ background: 'var(--theme-glass-bg)', border: '1px solid var(--theme-border)' }}>
+          <span className="material-symbols-outlined text-sm" style={{ color: 'var(--theme-text-muted)' }}>close</span>
+        </button>
+
+        {/* ── Left Sidebar (Nav Grid) ── */}
+        <div className="shrink-0 flex flex-col md:w-64 lg:w-72 border-b md:border-b-0 md:border-r" style={{ borderColor: 'var(--theme-border)', background: 'rgba(0,0,0,0.3)' }}>
+          
+          {/* Sidebar Header */}
+          <div className="p-4 md:p-6 pb-3" style={{ borderBottom: '1px solid var(--theme-border)' }}>
+            <h2 className="font-headline text-lg md:text-xl font-bold italic truncate pr-8" style={{ color: 'var(--theme-text-heading)' }}>
+              {submitted ? (results?.passed ? '🎉 Complete!' : '📚 Review') : '🧠 Module Quiz'}
             </h2>
-            <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all hover:scale-110"
-              style={{ background: 'var(--theme-glass-bg)', border: '1px solid var(--theme-border)' }}>
-              <span className="material-symbols-outlined text-sm" style={{ color: 'var(--theme-text-muted)' }}>close</span>
-            </button>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-xs font-label" style={{ color: 'var(--theme-text-muted)' }}>
+                {submitted ? 'Review Mode' : `${answeredCount}/${questions.length} Answered`}
+              </span>
+              {submitted && results && (
+                <span className={`font-label text-xs font-bold ${results.passed ? 'text-emerald-400' : 'text-red-400'}`}>
+                   Score: {results.score}%
+                </span>
+              )}
+            </div>
           </div>
 
-          {submitted && results ? (
-            <div className="p-3 rounded-xl" style={{ background: results.passed ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${results.passed ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}` }}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-body text-sm" style={{ color: 'var(--theme-text-body)' }}>{results.message}</span>
-                <span className={`font-label text-lg font-bold ${results.passed ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {results.score}%
-                </span>
-              </div>
-              <p className="font-label text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                {results.correctCount} / {results.totalQuestions} correct
-              </p>
+          {/* Questions Grid */}
+          <div className="p-4 md:p-6 flex-1 overflow-x-auto md:overflow-y-auto custom-scroll flex flex-row md:flex-col" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="flex flex-row md:grid md:grid-cols-5 gap-2 md:gap-2.5 w-max md:w-full">
+              {questions.map((_, i) => {
+                const isActive = i === currentIdx;
+                const isAnswered = answers[i] !== null;
+                let bg = 'var(--theme-glass-bg)';
+                let border = 'var(--theme-border)';
+                let text = 'var(--theme-text-faint)';
+
+                if (submitted && results) {
+                  const res = results.results[i];
+                  if (res.correct) { bg = 'rgba(34,197,94,0.15)'; border = 'rgba(34,197,94,0.4)'; text = '#22c55e'; }
+                  else { bg = 'rgba(239,68,68,0.15)'; border = 'rgba(239,68,68,0.4)'; text = '#ef4444'; }
+                } else if (isAnswered) {
+                  bg = 'rgba(139,92,246,0.15)'; border = 'rgba(139,92,246,0.4)'; text = '#8b5cf6';
+                }
+                
+                if (isActive && !submitted) {
+                  border = '#8b5cf6';
+                } else if (isActive && submitted) {
+                  border = 'var(--theme-text-heading)';
+                }
+
+                return (
+                  <button key={i} onClick={() => setCurrentIdx(i)}
+                    className="shrink-0 w-10 h-10 md:w-full md:aspect-square rounded-lg flex items-center justify-center text-xs font-label font-bold transition-all hover:scale-105 cursor-pointer"
+                    style={{ background: bg, border: `1.5px solid ${border}`, color: text }}>
+                    {i + 1}
+                  </button>
+                );
+              })}
             </div>
-          ) : (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {questions.map((_, i) => (
-                <div key={i} className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-label font-bold transition-all"
+          </div>
+
+          {/* Sidebar Footer (Persistent Submit/Retake) */}
+          <div className="p-4 md:p-6" style={{ borderTop: '1px solid var(--theme-border)', background: 'var(--theme-glass-bg)' }}>
+            {submitted ? (
+               <button onClick={handleRetake} className="w-full py-3.5 rounded-xl font-label text-sm font-bold transition-all hover:bg-white/5 cursor-pointer" style={{ border: '1px solid var(--theme-border)', color: 'var(--theme-text-body)' }}>
+                 Retake Quiz
+               </button>
+            ) : (
+               <button onClick={handleSubmit} disabled={submitting}
+                 className="w-full py-3.5 rounded-xl font-label text-sm font-bold transition-all disabled:opacity-50 forge-btn-primary text-on-primary flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                 {submitting ? (<><div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div> Grading...</>) : 'Submit Quiz'}
+               </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right Panel (Question View) ── */}
+        <div className="flex-1 flex flex-col min-w-0 bg-[rgba(0,0,0,0.1)]">
+          
+          <div className="flex-1 overflow-y-auto p-5 md:p-10 custom-scroll relative">
+            <div className="animate-blur-text max-w-3xl mx-auto" key={`q-${currentIdx}`}>
+              
+              {/* Question Text */}
+              <div className="flex flex-col md:flex-row md:items-start gap-4 mb-6 md:mb-8 mt-2 md:mt-0">
+                <span className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center font-label text-sm font-bold self-start"
                   style={{
-                    background: answers[i] !== null ? 'rgba(139,92,246,0.15)' : 'var(--theme-glass-bg)',
-                    border: `1px solid ${answers[i] !== null ? 'rgba(139,92,246,0.4)' : 'var(--theme-border)'}`,
-                    color: answers[i] !== null ? '#8b5cf6' : 'var(--theme-text-faint)'
+                    background: submitted ? (currentResult?.correct ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)') : 'rgba(139,92,246,0.15)',
+                    border: `1px solid ${submitted ? (currentResult?.correct ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)') : 'rgba(139,92,246,0.4)'}`,
+                    color: submitted ? (currentResult?.correct ? '#22c55e' : '#ef4444') : '#8b5cf6'
                   }}>
-                  {i + 1}
-                </div>
-              ))}
-              <span className="ml-2 text-xs font-label" style={{ color: 'var(--theme-text-muted)' }}>
-                {answeredCount}/{questions.length} answered
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* ── Scrollable Questions ── */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5" style={{ minHeight: 0 }}>
-          {questions.map((q, qIdx) => {
-            const result = submitted ? results?.results?.[qIdx] : null;
-            return (
-              <div key={qIdx} className="p-5 rounded-xl" style={{ background: 'var(--theme-glass-bg)', border: '1px solid var(--theme-border)' }}>
-                <div className="flex items-start gap-3 mb-4">
-                  <span className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center font-label text-xs font-bold"
-                    style={{
-                      background: submitted ? (result?.correct ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)') : (answers[qIdx] !== null ? 'rgba(139,92,246,0.15)' : 'var(--theme-glass-bg)'),
-                      border: `1px solid ${submitted ? (result?.correct ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)') : (answers[qIdx] !== null ? 'rgba(139,92,246,0.4)' : 'var(--theme-border)')}`,
-                      color: submitted ? (result?.correct ? '#22c55e' : '#ef4444') : (answers[qIdx] !== null ? '#8b5cf6' : 'var(--theme-text-faint)')
-                    }}>
-                    {submitted ? (result?.correct ? '✓' : '✗') : qIdx + 1}
-                  </span>
-                  <p className="font-body text-sm font-semibold leading-relaxed" style={{ color: 'var(--theme-text-heading)' }}>
-                    {q.question}
-                  </p>
-                </div>
-                <div className="space-y-2 ml-10">
-                  {q.options.map((opt, oIdx) => {
-                    const isSelected = answers[qIdx] === opt;
-                    let optBg = 'transparent';
-                    let optBorder = 'var(--theme-border)';
-                    let optColor = 'var(--theme-text-body)';
-                    let optIcon = '';
-
-                    if (submitted && result) {
-                      if (opt === result.correctAnswer) { optBg = 'rgba(34,197,94,0.08)'; optBorder = 'rgba(34,197,94,0.4)'; optColor = '#22c55e'; optIcon = 'check_circle'; }
-                      else if (isSelected && !result.correct) { optBg = 'rgba(239,68,68,0.08)'; optBorder = 'rgba(239,68,68,0.4)'; optColor = '#ef4444'; optIcon = 'cancel'; }
-                    } else if (isSelected) { optBg = 'rgba(139,92,246,0.08)'; optBorder = 'rgba(139,92,246,0.4)'; optColor = '#8b5cf6'; }
-
-                    return (
-                      <button key={oIdx} onClick={() => handleSelect(qIdx, opt)} disabled={submitted}
-                        className="w-full text-left px-4 py-3 rounded-xl text-sm font-body transition-all cursor-pointer disabled:cursor-default flex items-center gap-3"
-                        style={{ background: optBg, border: `1px solid ${optBorder}`, color: optColor }}>
-                        <span className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs"
-                          style={{ border: `1.5px solid ${isSelected || (submitted && opt === result?.correctAnswer) ? optColor : 'var(--theme-border)'}`, background: isSelected ? optColor : 'transparent', color: isSelected ? 'white' : 'transparent' }}>
-                          {isSelected && !submitted && '•'}
-                        </span>
-                        <span className="flex-1">{opt}</span>
-                        {optIcon && <span className="material-symbols-outlined text-base" style={{ color: optColor }}>{optIcon}</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-                {submitted && result && (
-                  <div className="mt-3 ml-10 px-3 py-2 rounded-lg text-xs font-body" style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)', color: 'var(--theme-text-muted)' }}>
-                    💡 {result.explanation}
-                  </div>
-                )}
+                  {submitted ? (currentResult?.correct ? '✓' : '✗') : currentIdx + 1}
+                </span>
+                <p className="font-body text-lg md:text-xl font-semibold leading-relaxed pt-1" style={{ color: 'var(--theme-text-heading)' }}>
+                  {currentQ.question}
+                </p>
               </div>
-            );
-          })}
+
+              {/* Options */}
+              <div className="space-y-3 md:ml-13">
+                {currentQ.options.map((opt, oIdx) => {
+                  const isSelected = answers[currentIdx] === opt;
+                  let optBg = 'var(--theme-glass-bg)';
+                  let optBorder = 'var(--theme-border)';
+                  let optColor = 'var(--theme-text-body)';
+                  let optIcon = '';
+
+                  if (submitted && currentResult) {
+                    if (opt === currentResult.correctAnswer) { optBg = 'rgba(34,197,94,0.08)'; optBorder = 'rgba(34,197,94,0.4)'; optColor = '#22c55e'; optIcon = 'check_circle'; }
+                    else if (isSelected && !currentResult.correct) { optBg = 'rgba(239,68,68,0.08)'; optBorder = 'rgba(239,68,68,0.4)'; optColor = '#ef4444'; optIcon = 'cancel'; }
+                  } else if (isSelected) { optBg = 'rgba(139,92,246,0.08)'; optBorder = 'rgba(139,92,246,0.5)'; optColor = '#a78bfa'; }
+
+                  return (
+                    <button key={oIdx} onClick={() => handleSelect(currentIdx, opt)} disabled={submitted}
+                      className="w-full text-left px-5 py-4 rounded-xl text-sm md:text-base font-body transition-all cursor-pointer disabled:cursor-default flex items-start gap-4 hover:border-indigo-500/30 group"
+                      style={{ background: optBg, border: `1px solid ${optBorder}`, color: optColor }}>
+                      <div className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs mt-0.5"
+                        style={{ border: `1.5px solid ${isSelected || (submitted && opt === currentResult?.correctAnswer) ? optColor : 'var(--theme-border)'}`, background: isSelected ? optColor : 'transparent', color: isSelected ? 'white' : 'transparent' }}>
+                        {isSelected && !submitted && '•'}
+                      </div>
+                      <span className="flex-1 leading-relaxed">{opt}</span>
+                      {optIcon && <span className="material-symbols-outlined text-xl shrink-0 mt-0.5" style={{ color: optColor }}>{optIcon}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Hint / Explanation Section (Bottom) */}
+              {!submitted ? (
+                <div className="mt-8 md:ml-13">
+                  {!hintsActive[currentIdx] ? (
+                    <button 
+                      onClick={handleShowHint}
+                      disabled={cooldown > 0}
+                      className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-label font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-full md:w-max justify-center md:justify-start"
+                      style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8' }}
+                    >
+                      <span className="material-symbols-outlined text-base">lightbulb</span>
+                      {cooldown > 0 ? `Hint Available in ${cooldown}s` : 'Reveal Hint (60s cooldown)'}
+                    </button>
+                  ) : (
+                    <div className="px-5 py-5 rounded-xl text-sm font-body leading-relaxed" 
+                      style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)', color: 'var(--theme-text-body)' }}>
+                      <span className="font-bold flex items-center gap-2 mb-3 text-base" style={{ color: '#818cf8' }}>
+                        <span className="material-symbols-outlined text-sm">lightbulb</span>
+                        Hint
+                      </span>
+                      {currentQ.hint || "Review the exact concepts learned in the video for clues."}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                currentResult && (
+                  <div className="mt-8 md:ml-13 px-5 py-5 rounded-xl text-sm font-body leading-relaxed" 
+                    style={{ background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.2)', color: 'var(--theme-text-body)' }}>
+                    <span className="font-bold flex items-center gap-2 mb-3 text-base" style={{ color: '#a78bfa' }}>
+                      <span className="material-symbols-outlined text-sm">lightbulb</span>
+                      Explanation
+                    </span>
+                    {currentResult.explanation}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+
+          {/* ── Footer Navigation (Next/Back) ── */}
+          <div className="shrink-0 p-5 md:p-6 flex items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--theme-border)', background: 'rgba(0,0,0,0.2)' }}>
+            <button 
+              onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))}
+              disabled={currentIdx === 0}
+              className="px-5 md:px-6 py-3 rounded-xl font-label text-sm font-bold transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 hover:bg-white/5"
+              style={{ border: '1px solid var(--theme-border)', color: 'var(--theme-text-body)' }}>
+              <span className="material-symbols-outlined text-sm">arrow_back</span>
+              <span className="hidden sm:inline">Previous</span>
+            </button>
+            
+            {submitted && currentIdx === questions.length - 1 && (
+               <button onClick={onClose} className="px-6 md:px-8 py-3 rounded-xl font-label text-sm font-bold transition-all cursor-pointer forge-btn-primary text-on-primary shadow-[0_0_20px_rgba(34,197,94,0.2)]">
+                 {results?.passed ? 'Continue Course →' : 'Close Review'}
+               </button>
+            )}
+
+            <button 
+              onClick={() => setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1))}
+              disabled={currentIdx === questions.length - 1}
+              className="px-5 md:px-6 py-3 rounded-xl font-label text-sm font-bold transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 hover:bg-white/5"
+              style={{ border: '1px solid var(--theme-border)', color: 'var(--theme-text-body)' }}>
+              <span className="hidden sm:inline">Next</span>
+              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </button>
+          </div>
         </div>
 
-        {/* ── Sticky Footer ── */}
-        <div className="shrink-0 p-6 pt-4 flex gap-3" style={{ borderTop: '1px solid var(--theme-border)' }}>
-          {!submitted ? (
-            <>
-              <button onClick={onClose} className="flex-1 py-3.5 rounded-xl font-label text-sm font-bold transition-all cursor-pointer hover:opacity-80"
-                style={{ background: 'var(--theme-glass-bg)', border: '1px solid var(--theme-border)', color: 'var(--theme-text-body)' }}>Cancel</button>
-              <button onClick={handleSubmit} disabled={!allAnswered || submitting}
-                className="flex-1 py-3.5 rounded-xl font-label text-sm font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed forge-btn-primary text-on-primary flex items-center justify-center gap-2">
-                {submitting ? (<><div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div> Grading...</>) : (<>Submit ({answeredCount}/{questions.length})</>)}
-              </button>
-            </>
-          ) : (
-            <button onClick={onClose} className="w-full py-3.5 rounded-xl font-label text-sm font-bold transition-all cursor-pointer forge-btn-primary text-on-primary">
-              {results?.passed ? 'Continue to Next Module →' : 'Close & Review'}
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -164,23 +272,29 @@ function QuizModal({ questions, onSubmit, onClose }) {
 // ─── Confirmation Modal ───
 function ConfirmModal({ onConfirm, onCancel }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
-      <div className="liquid-glass rounded-2xl p-8 max-w-md w-full text-center">
-        <span className="material-symbols-outlined text-5xl mb-4 block" style={{ color: '#f59e0b' }}>warning</span>
-        <h3 className="font-headline text-xl font-bold italic mb-2" style={{ color: 'var(--theme-text-heading)' }}>
-          Not all lectures watched
-        </h3>
-        <p className="text-sm mb-6" style={{ color: 'var(--theme-text-body)' }}>
-          You haven't completed all the video lectures in this module. Taking the quiz now may be harder. Do you still want to proceed?
-        </p>
-        <div className="flex gap-3">
-          <button onClick={onCancel}
-            className="flex-1 py-3 rounded-xl font-label text-sm font-bold cursor-pointer transition-all"
-            style={{ background: 'var(--theme-glass-bg)', border: '1px solid var(--theme-border)', color: 'var(--theme-text-body)' }}
-          >Go Back</button>
-          <button onClick={onConfirm}
-            className="flex-1 py-3 rounded-xl font-label text-sm font-bold cursor-pointer transition-all forge-btn-primary text-on-primary"
-          >Take Quiz Anyway</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+      <div className="relative group max-w-md w-full">
+        {/* Glow effect */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 to-purple-600/20 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+        <div className="relative liquid-glass rounded-2xl p-8 w-full text-center" style={{ border: '1px solid rgba(99,102,241,0.2)' }}>
+          <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(99,102,241,0.2)]" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)' }}>
+            <span className="material-symbols-outlined text-4xl" style={{ color: '#818cf8' }}>psychology_alt</span>
+          </div>
+          <h3 className="font-headline text-2xl font-bold italic mb-3" style={{ color: 'var(--theme-text-heading)' }}>
+            Incomplete Module
+          </h3>
+          <p className="text-sm md:text-base leading-relaxed mb-8" style={{ color: 'var(--theme-text-body)' }}>
+            You haven't completed all the video lectures in this module. Forging ahead now will be significantly harder. Are you sure you want to proceed to the quiz?
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button onClick={onCancel}
+              className="flex-1 py-3.5 rounded-xl font-label text-sm font-bold cursor-pointer transition-all hover:bg-white/5"
+              style={{ background: 'var(--theme-glass-bg)', border: '1px solid var(--theme-border)', color: 'var(--theme-text-body)' }}
+            >Go Back</button>
+            <button onClick={onConfirm}
+              className="flex-1 py-3.5 rounded-xl font-label text-sm font-bold cursor-pointer transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:scale-[1.02] forge-btn-primary text-on-primary"
+            >Take Quiz Anyway</button>
+          </div>
         </div>
       </div>
     </div>
@@ -192,6 +306,10 @@ export default function LearnHub() {
   const { courseId, moduleIndex: modIdxStr } = useParams();
   const moduleIndex = parseInt(modIdxStr, 10);
   const navigate = useNavigate();
+  const { user, isLoaded } = useUser();
+
+  const [usageData, setUsageData] = useState(null);
+  const [isTutorOpen, setIsTutorOpen] = useState(false);
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -229,6 +347,15 @@ export default function LearnHub() {
   useEffect(() => {
     fetchCourse();
   }, [fetchCourse]);
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      fetch(`${API_BASE}/api/user/${user.id}/usage`)
+        .then(res => res.json())
+        .then(data => data.success && setUsageData(data))
+        .catch(err => console.error(err));
+    }
+  }, [isLoaded, user]);
 
   // Auto-trigger preparation ONLY after initial fetch confirms it's pending (once only)
   useEffect(() => {
@@ -319,7 +446,6 @@ export default function LearnHub() {
   if (loading) {
     return (
       <>
-        <Navbar />
         <div className="fixed inset-0 z-0" style={{ background: 'var(--color-background)' }}></div>
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#8b5cf6', borderTopColor: 'transparent' }}></div>
@@ -331,7 +457,6 @@ export default function LearnHub() {
   if (!currentModule) {
     return (
       <>
-        <Navbar />
         <div className="fixed inset-0 z-0" style={{ background: 'var(--color-background)' }}></div>
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <p className="font-body" style={{ color: 'var(--theme-text-body)' }}>Module not found.</p>
@@ -344,7 +469,6 @@ export default function LearnHub() {
 
   return (
     <>
-      <Navbar />
       <div className="fixed inset-0 z-0" style={{ background: 'var(--color-background)' }}></div>
 
       {/* Modals */}
@@ -357,6 +481,7 @@ export default function LearnHub() {
       {showQuiz && allQuizQuestions.length > 0 && (
         <QuizModal
           questions={allQuizQuestions}
+          initialResults={currentModule?.quizReport}
           onSubmit={handleQuizSubmit}
           onClose={handleQuizClose}
         />
@@ -516,17 +641,18 @@ export default function LearnHub() {
               {/* Quiz Trigger Container at Bottom */}
               <div className="pt-5" style={{ borderTop: '1px solid var(--theme-border)' }}>
                 {!isPreparing && allQuizQuestions.length > 0 ? (
-                  <div onClick={handleQuizClick} className="cursor-pointer">
+                  <div onClick={handleQuizClick} className="cursor-pointer group relative">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/30 to-purple-600/30 rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-500"></div>
                     <ShimmerButton
-                      background="#312e81"
+                      background="linear-gradient(135deg, #312e81, #4c1d95)"
                       shimmerColor="rgba(255,255,255,0.4)"
-                      shimmerSize="2em"
+                      shimmerSize="2.5em"
                       borderRadius="16px"
-                      className="w-full py-4 font-label text-sm font-black uppercase tracking-widest flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      className="w-full relative py-4 font-label text-sm font-black uppercase tracking-widest flex items-center justify-center transition-all group-hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      <div className="flex items-center gap-2.5 text-white">
-                        <span className="material-symbols-outlined text-[20px]">psychology</span>
-                        Take Module Quiz
+                      <div className="flex items-center gap-3 text-white">
+                        <span className="material-symbols-outlined text-[20px] shadow-sm">psychology</span>
+                        {currentModule?.quizReport ? 'Review Quiz Report' : 'Take Module Quiz'}
                       </div>
                     </ShimmerButton>
                   </div>
@@ -547,6 +673,30 @@ export default function LearnHub() {
 
         </div>
       </div>
+
+      {/* Floating AI Tutor Button */}
+      <button
+        onClick={() => setIsTutorOpen(true)}
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-[0_8px_32px_rgba(99,102,241,0.4)] hover:scale-110 active:scale-95 transition-all"
+        style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', border: '1px solid rgba(255,255,255,0.2)' }}
+      >
+        <span className="material-symbols-outlined text-white text-2xl">smart_toy</span>
+        {!usageData || usageData.plan !== 'pro' ? (
+           <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center border-2 border-background">
+             <span className="material-symbols-outlined text-[10px] text-white">lock</span>
+           </span>
+        ) : null}
+      </button>
+
+      <TutorChatPanel
+        isOpen={isTutorOpen}
+        onClose={() => setIsTutorOpen(false)}
+        courseId={courseId}
+        moduleIndex={moduleIndex}
+        subtopicIndex={activeSubIdx}
+        topicTitle={activeSubtopic?.subtopic_title}
+        isPro={usageData?.plan === 'pro'}
+      />
     </>
   );
 }

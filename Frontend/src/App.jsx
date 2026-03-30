@@ -3,10 +3,12 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import CourseMap from './pages/CourseMap';
 import LearnHub from './pages/LearnHub';
+import Navbar from './components/Navbar';
 
 function App() {
   return (
     <BrowserRouter>
+      <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<Dashboard />} />

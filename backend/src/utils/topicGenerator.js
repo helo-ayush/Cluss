@@ -3,7 +3,10 @@ const router = express.Router();
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const model = genAI.getGenerativeModel({ 
+    model: "gemini-2.5-flash",
+    generationConfig: { responseMimeType: "application/json" }
+});
 
 router.post('/', async (req, res) => {
     const query = req.body;
@@ -19,6 +22,7 @@ CRITICAL INSTRUCTIONS:
 2. Do NOT include any conversational text, introductions, or explanations.
 3. Do NOT wrap the output in markdown code blocks (e.g., no \`\`\`json). Output the raw JSON object directly.
 4. Each subtopic should include a highly optimized "youtube_search_query" that will yield the best tutorial videos for that specific concept.
+5. LANGUAGE RULE: ALL output — course_title, module_title, subtopic_title, youtube_search_query — MUST be written in English ONLY. Even if the user's learning goal is in another language, translate everything and generate exclusively in English.
 
 EXPECTED JSON SCHEMA:
 {
@@ -45,10 +49,19 @@ EXPECTED JSON SCHEMA:
 
 Generate the JSON syllabus for the Learning Goal now:`;
 
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-    res.json(JSON.parse(text));
+    try {
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        let text = response.text();
+        
+        // Sanitize output to strip any markdown wrappers just in case
+        text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+        
+        res.json(JSON.parse(text));
+    } catch (err) {
+        console.error("Course Generation Error:", err);
+        res.status(500).json({ error: "Failed to parse generated course plan." });
+    }
 });
 
 module.exports = router;

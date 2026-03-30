@@ -25,7 +25,8 @@ const subtopicSchema = new mongoose.Schema({
         question: String,
         options: [String],
         correctAnswer: String,
-        explanation: String
+        explanation: String,
+        hint: String
     }]
 });
 
@@ -40,6 +41,10 @@ const moduleSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'preparing', 'ready', 'failed'],
         default: 'pending'
+    },
+    quizReport: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null
     },
     subtopics: [subtopicSchema]
 });

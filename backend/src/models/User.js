@@ -16,7 +16,27 @@ const userSchema = new mongoose.Schema({
     trusted_creators: {
         type: [String],
         default: []
-    }
+    },
+    // ── SaaS Plan Fields ──
+    plan: {
+        type: String,
+        enum: ['free', 'pro'],
+        default: 'free'
+    },
+    coursesCreated: {
+        type: Number,
+        default: 0
+    },
+    lastCourseCreatedAt: {
+        type: Date,
+        default: null
+    },
+    // Tracks daily topic unlocks per course for free tier limit
+    topicUnlocks: [{
+        courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
+        date: { type: String },      // "YYYY-MM-DD"
+        count: { type: Number, default: 0 }
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

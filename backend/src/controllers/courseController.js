@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Course = require('../models/Course');
 const Activity = require('../models/Activity');
 const { prepareModule } = require('../utils/modulePreparer');
+const { PLAN_LIMITS, recordTopicUnlock } = require('../middleware/usageLimiter');
 
 /**
  * Logs a subtopic completion event for today's activity record.
@@ -205,12 +206,17 @@ const createCourseHandler = async (req, res) => {
             return res.status(400).json({ success: false, message: "clerkId and llmCurriculum are required" });
         }
 
-        let user = await User.findOne({ clerkId });
+        let user = req.dbUser || await User.findOne({ clerkId });
         if (!user) {
             user = await User.create({ clerkId, name: userName || 'Learner' });
         }
 
         const savedCourse = await initializeCourse(user._id, llmCurriculum);
+
+        // ── Track usage for SaaS limits ──
+        user.coursesCreated = (user.coursesCreated || 0) + 1;
+        user.lastCourseCreatedAt = new Date();
+        await user.save();
 
         // 🔥 Fire-and-forget: Automatically prepare the first module in the background
         const trustedCreators = user.trusted_creators || [];
@@ -335,6 +341,8 @@ const markSubtopicWatched = async (req, res) => {
         // Log activity only if newly completed (not already completed)
         if (!wasAlreadyCompleted) {
             logActivity(course.userId, courseId, course.course_title, 1);
+            // Track daily topic unlock for free tier limits
+            recordTopicUnlock(course.userId, courseId);
         }
 
         return res.json({ success: true, message: "Subtopic marked as completed" });
@@ -377,18 +385,18 @@ const gradeModuleQuiz = async (req, res) => {
             return res.status(400).json({ success: false, message: "No quiz questions found for this module" });
         }
 
-        if (userAnswers.length !== allQuestions.length) {
-            return res.status(400).json({ success: false, message: `Expected ${allQuestions.length} answers but received ${userAnswers.length}` });
-        }
+        // We no longer strictly reject size mismatches, but we enforce grading for all questions.
+        // Unanswered questions (undefined or null) are automatically incorrect.
 
         // Grade
         let correctCount = 0;
         const results = allQuestions.map((q, i) => {
-            const correct = q.correctAnswer === userAnswers[i];
+            const userAnswer = userAnswers[i] || null;
+            const correct = q.correctAnswer === userAnswer;
             if (correct) correctCount++;
             return {
                 question: q.question,
-                selectedAnswer: userAnswers[i],
+                selectedAnswer: userAnswer,
                 correctAnswer: q.correctAnswer,
                 correct,
                 explanation: q.explanation
@@ -397,7 +405,25 @@ const gradeModuleQuiz = async (req, res) => {
 
         const scorePercentage = Math.round((correctCount / allQuestions.length) * 100);
 
-        if (scorePercentage >= 80) {
+        // ── Dynamic pass threshold based on plan ──
+        const quizUser = await User.findById(course.userId);
+        const userPlan = quizUser?.plan || 'free';
+        const passThreshold = PLAN_LIMITS[userPlan].quizPassThreshold;
+
+        const passed = scorePercentage >= passThreshold;
+
+        // ── Cache the latest report card to the module ──
+        targetModule.quizReport = {
+            passed,
+            score: scorePercentage,
+            correctCount,
+            totalQuestions: allQuestions.length,
+            results,
+            passThreshold,
+            message: passed ? `🎉 You scored ${scorePercentage}%! Module completed and next module is being prepared.` : `You scored ${scorePercentage}%. Need ${passThreshold}% to pass. Review the material and try again!`
+        };
+
+        if (passed) {
             // Count newly completed subtopics for activity logging
             const newlyCompleted = targetModule.subtopics.filter(s => s.status !== 'completed').length;
 
@@ -429,25 +455,10 @@ const gradeModuleQuiz = async (req, res) => {
                     .catch(err => console.error(`❌ Background prep failed:`, err));
             }
 
-            return res.json({
-                success: true,
-                passed: true,
-                score: scorePercentage,
-                correctCount,
-                totalQuestions: allQuestions.length,
-                results,
-                message: `🎉 You scored ${scorePercentage}%! Module completed and next module is being prepared.`
-            });
+            return res.json({ success: true, ...targetModule.quizReport });
         } else {
-            return res.json({
-                success: true,
-                passed: false,
-                score: scorePercentage,
-                correctCount,
-                totalQuestions: allQuestions.length,
-                results,
-                message: `You scored ${scorePercentage}%. Need 80% to pass. Review the material and try again!`
-            });
+            await course.save(); // save the failed report card too
+            return res.json({ success: true, ...targetModule.quizReport });
         }
     } catch (error) {
         console.error("Error in gradeModuleQuiz:", error);
@@ -523,6 +534,24 @@ const triggerPrepare = async (req, res) => {
     }
 };
 
+/**
+ * Express Handler: Deletes a course from the database by ID.
+ * DELETE /api/course/:courseId
+ */
+const deleteCourseHandler = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const course = await Course.findByIdAndDelete(courseId);
+        if (!course) {
+            return res.status(404).json({ success: false, message: "Course not found" });
+        }
+        return res.json({ success: true, message: "Course deleted successfully" });
+    } catch (error) {
+        console.error("Error in deleteCourseHandler:", error);
+        res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+    }
+};
+
 module.exports = {
     initializeCourse,
     updateTrustedCreators,
@@ -534,5 +563,6 @@ module.exports = {
     markSubtopicWatched,
     gradeModuleQuiz,
     getModulePrepStatus,
-    triggerPrepare
+    triggerPrepare,
+    deleteCourseHandler
 };
