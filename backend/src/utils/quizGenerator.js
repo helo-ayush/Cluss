@@ -8,43 +8,41 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
  * @param {String} transcript - The YouTube transcript text
  */
 const generateQuizFromTranscript = async (targetTopic, transcript) => {
-    if (!transcript) return null;
-    
-    // Constraint 1: Truncate transcript to first 15k chars to save tokens
-    const limitedTranscript = transcript.substring(0, 15000);
+    // 1. If transcript is missing, we use a different prompt for a General Topic Quiz.
+    const isGeneralQuiz = !transcript;
+    const inputContent = isGeneralQuiz ? "No transcript available. Generate a high-quality quiz based on general knowledge of the topic." : transcript.substring(0, 15000);
 
     const prompt = `
     Create a multiple-choice quiz (3 to 6 questions) to test comprehension of the topic: '${targetTopic}'. 
-    The questions MUST be based STRICTLY on the facts in the provided transcript. 
+    ${isGeneralQuiz 
+        ? "Since no specific lecture transcript is available, generate excellent, standard questions that any student learning this topic should know." 
+        : "The questions MUST be based STRICTLY on the facts in the provided transcript."}
     
-    LANGUAGE RULE: ALL output — every question, every option, every explanation — MUST be written in English ONLY. Even if the transcript is in another language (Hindi, Spanish, Japanese, etc.), you MUST translate all content and generate everything exclusively in English. No exceptions.
+    LANGUAGE RULE: ALL output — every question, every option, every explanation — MUST be written in English ONLY. Even if the content is in another language, you MUST translate and output exclusively in English.
     
-    IMMERSION RULE: NEVER use the word "transcript" or "video" in your questions, options, explanations, or hints. Instead of saying "according to the transcript", just ask the question directly, or say "in this lecture" or "in this course".
-    HINT RULE: The 'hint' MUST be a conceptual clue to help them think about the answer. NEVER say "Review the transcript" or "It is mentioned early on". Give a real, helpful educational hint.
+    IMMERSION RULE: NEVER use the word "transcript" or "video". Instead, say "in this lecture" or "in this course".
+    HINT RULE: The 'hint' MUST be a conceptual clue. NEVER say "Review the transcript". Give a real, helpful educational hint.
     
-    Output ONLY a valid JSON array of objects matching this exact structure:
+    Output ONLY a valid JSON array of objects:
     [
       {
-        "question": "What is the primary function of...?",
-        "options": ["Option A", "Option B", "Option C", "Option D"],
-        "correctAnswer": "Option B",
-        "explanation": "Option B is correct because...",
-        "hint": "A helpful educational clue that guides the student closer to the answer without revealing it directly."
+        "question": "question text",
+        "options": ["A", "B", "C", "D"],
+        "correctAnswer": "A",
+        "explanation": "Why A is correct",
+        "hint": "Conceptual clue"
       }
     ]
     
-    CRITICAL: The 'correctAnswer' string MUST be an exact, character-for-character match with one of the strings in the 'options' array. This is required so the frontend can check the user's answer directly without needing an AI.
-    
-    TRANSCRIPT:
-    ${limitedTranscript}
+    CONTENT TO USE:
+    ${inputContent}
     `;
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash', // Constraint 2: Use 2.5-flash
+            model: 'gemini-2.0-flash-001',
             contents: prompt,
             config: {
-                // Constraint 2: Force strict JSON output
                 responseMimeType: "application/json",
             }
         });

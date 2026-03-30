@@ -30,19 +30,23 @@ async function evaluateWithGemini(videos, targetTopic) {
 
     I am providing you with a list of candidate videos in JSON format. Each contains stats and a transcript snippet.
     
+    IMPORTANT: Some videos may not have transcripts available. In those cases, evaluate based on the **Title** and **Engagement Stats** (views/likes), but give preference to videos WITH transcripts as they are better for our automated quiz generation.
+
     EVALUATION CRITERIA (Out of 100 points total):
-    1. Relevance (40 pts): Does the transcript actually teach "${targetTopic}", or is it just briefly mentioned? 
-    2. Teaching Quality (40 pts): Is the explanation clear, structured, and easy to follow? Does the creator speak clearly without too much fluff?
+    1. Relevance (40 pts): Does the title or transcript suggest it actually teaches "${targetTopic}"?
+    2. Teaching Quality (40 pts): Based on the transcript snippet (if available) or the channel's general reputation implied by stats, is this likely a high-quality explanation?
     3. Community Validation (20 pts): Consider the view count and the like-to-view ratio. A ratio above 0.03 (3%) is generally very good. High views indicate proven quality.
 
     INSTRUCTIONS:
     - Evaluate all candidates.
-    - If NONE of the videos score above 75/100, you must reject them all.
-    - Output ONLY a valid JSON object. Do not include markdown formatting like \`\`\`json.
+    - If a video has NO transcript, you can still score it based on title/stats, but cap its score at 80/100.
+    - If a video HAS a high-quality transcript that perfectly matches the topic, reward it with a higher score.
+    - If NONE of the videos score above 70/100, you must reject them all.
+    - Output ONLY a valid JSON object.
 
     EXPECTED JSON OUTPUT FORMAT:
     {
-        "winnerFound": boolean, // true if a video scored > 75, false if all rejected
+        "winnerFound": boolean, // true if a video scored > 70, false if all rejected
         "winningVideoId": "string" | null, // The ID of the best video, or null
         "winningScore": number | null, // The score out of 100
         "reasoning": "string" // A brief 1-sentence explanation of why it won or why all failed
@@ -55,9 +59,9 @@ async function evaluateWithGemini(videos, targetTopic) {
     try {
         console.log(`Asking Gemini to evaluate ${videos.length} videos for topic: "${targetTopic}"...`);
         
-        // Use Gemini 1.5 Flash for speed and cost-efficiency
+        // Use Gemini 2.0 Flash for speed and intelligence
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.0-flash-001',
             contents: prompt,
             config: {
                 // Enforce JSON output directly at the API level!
@@ -86,8 +90,12 @@ async function evaluateWithGemini(videos, targetTopic) {
                 return null;
             }
         } else {
-            // Gemini rejected everything (score < 75)
-            return null;
+            // Gemini rejected everything (score < 70)
+            console.log(`⚠️ Gemini rejected all candidates. Falling back to the best search result for continuity.`);
+            const fallbackVideo = videos[0];
+            fallbackVideo.aiScore = 0; // Indicate it's a fallback
+            fallbackVideo.aiReasoning = "Automatic fallback: No video met the high-quality threshold.";
+            return fallbackVideo;
         }
 
     } catch (error) {

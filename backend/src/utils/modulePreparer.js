@@ -48,16 +48,14 @@ async function prepareModule(courseId, moduleIndex, trustedCreators = []) {
                     subtopic.transcript = video.transcript || '';
                     console.log(`  ✅ [Sub ${subIdx}] Found video: ${video.title}`);
 
-                    // Step 2: Generate quiz from transcript
-                    if (video.transcript) {
-                        console.log(`  🧠 [Sub ${subIdx}] Generating quiz...`);
-                        const quiz = await generateQuizFromTranscript(subtopic.subtopic_title, video.transcript);
-                        if (quiz && Array.isArray(quiz)) {
-                            subtopic.quiz = quiz;
-                            console.log(`  ✅ [Sub ${subIdx}] Quiz generated (${quiz.length} questions)`);
-                        } else {
-                            console.log(`  ⚠️ [Sub ${subIdx}] Quiz generation returned null`);
-                        }
+                    // Step 2: Generate quiz (from transcript if available, otherwise general topic quiz)
+                    console.log(`  🧠 [Sub ${subIdx}] Generating quiz...`);
+                    const quiz = await generateQuizFromTranscript(subtopic.subtopic_title, video.transcript);
+                    if (quiz && Array.isArray(quiz)) {
+                        subtopic.quiz = quiz;
+                        console.log(`  ✅ [Sub ${subIdx}] Quiz generated (${quiz.length} questions)`);
+                    } else {
+                        console.log(`  ⚠️ [Sub ${subIdx}] Quiz generation returned null`);
                     }
                 } else {
                     // Mark as searched-but-not-found so future checks don't re-trigger
