@@ -57,7 +57,8 @@ async function evaluateWithGemini(videos, targetTopic) {
     `;
 
     try {
-        console.log(`Asking Gemini to evaluate ${videos.length} videos for topic: "${targetTopic}"...`);
+        const promptVersion = "v2-fallback-enabled";
+        console.log(`Asking Gemini (${promptVersion}) to evaluate ${videos.length} videos for topic: "${targetTopic}"...`);
         
         // Use Gemini 2.0 Flash for speed and intelligence
         const response = await ai.models.generateContent({
