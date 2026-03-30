@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { motion } from 'motion/react';
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const MEDAL_ICONS = ['🥇', '🥈', '🥉'];
 const PERIOD_LABELS = { daily: 'Today', weekly: 'This Week', monthly: 'This Month' };

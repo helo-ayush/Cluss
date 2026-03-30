@@ -5,7 +5,7 @@ import { MagicCard } from '../components/magicui/MagicCard';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const FORGE_STEPS = [
   { icon: 'psychology',     text: 'Analyzing your learning goal...',       color: '#818cf8' },
