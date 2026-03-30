@@ -59,10 +59,10 @@ async function evaluateWithGemini(videos, targetTopic) {
     try {
         const promptVersion = "v2-fallback-enabled";
         console.log(`Asking Gemini (${promptVersion}) to evaluate ${videos.length} videos for topic: "${targetTopic}"...`);
-        
-        // Use Gemini 2.0 Flash for speed and intelligence
+
+        // Use Gemini 2.5 Flash for stable performance on Render
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-001',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
                 // Enforce JSON output directly at the API level!
@@ -80,7 +80,7 @@ async function evaluateWithGemini(videos, targetTopic) {
         if (resultData.winnerFound && resultData.winningVideoId) {
             // Find the full original video object that matches the winning ID
             const winningVideo = videos.find(v => v.id === resultData.winningVideoId);
-            
+
             if (winningVideo) {
                 // Attach the Gemini score and reasoning for your database/frontend
                 winningVideo.aiScore = resultData.winningScore;
@@ -102,7 +102,7 @@ async function evaluateWithGemini(videos, targetTopic) {
     } catch (error) {
         console.error("Gemini Evaluation Failed:", error);
         // Fallback: If AI fails due to limits/errors, just return the most viewed one to keep the app running during the demo
-        return videos.length > 0 ? videos[0] : null; 
+        return videos.length > 0 ? videos[0] : null;
     }
 }
 
