@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm install",
-    "postinstall": "python3 -m pip install -r requirements.txt --break-system-packages || python3 -m pip install -r requirements.txt || python -m pip install -r requirements.txt",
+    "postinstall": "python3 -m venv .venv && .venv/bin/pip install -r requirements.txt || python -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt",
     "start": "node server.js"
   },
   "keywords": [],

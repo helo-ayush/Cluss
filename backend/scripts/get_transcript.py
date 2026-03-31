@@ -6,29 +6,60 @@ Returns JSON array to stdout.
 """
 import sys
 import json
+import os
+import random
 
 from youtube_transcript_api import YouTubeTranscriptApi
 
 def main():
     if len(sys.argv) < 2:
-        print(json.dumps({"error": "No video ID provided"}))
+        sys.stdout.buffer.write(json.dumps({"error": "No video ID provided"}).encode('utf-8'))
         sys.exit(1)
 
     video_id = sys.argv[1]
 
-    try:
-        api = YouTubeTranscriptApi()
-        try:
-            # Try to get English transcript first
-            transcript_list = api.list(video_id)
-            transcript = transcript_list.find_transcript(['en'])
-        except Exception:
-            # Fallback: try any available language
-            transcript_list = api.list(video_id)
-            # just get the first transcript available
-            transcript = list(transcript_list)[0]
+    # Enable ScraperAPI proxy if the key is provided
+    api_key = os.environ.get("SCRAPER_API_KEY")
+    if api_key:
+        # Generate a random session ID to force ScraperAPI to rotate IP address
+        session_id = random.randint(1, 1000000)
+        proxy_url = f"http://scraperapi.premium=true.session_number={session_id}:{api_key}@proxy-server.scraperapi.com:8001"
+        os.environ["HTTP_PROXY"] = proxy_url
+        os.environ["HTTPS_PROXY"] = proxy_url
+        os.environ["http_proxy"] = proxy_url
+        os.environ["https_proxy"] = proxy_url
 
-        fetched = transcript.fetch()
+    try:
+        # Check which version of the API we are using
+        if hasattr(YouTubeTranscriptApi, 'list_transcripts'):
+            # Old API (0.6.x)
+            try:
+                # Try to get English transcript first
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                transcript = transcript_list.find_transcript(['en'])
+            except Exception:
+                # Fallback: try any available language
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                transcript = list(transcript_list)[0]
+
+            fetched = transcript.fetch()
+            # In 0.6.x, fetched is a list of dicts
+            snippets = fetched
+        else:
+            # New API (1.x+)
+            api = YouTubeTranscriptApi()
+            try:
+                # Try to get English transcript first
+                transcript_list = api.list(video_id)
+                transcript = transcript_list.find_transcript(['en'])
+            except Exception:
+                # Fallback: try any available language
+                transcript_list = api.list(video_id)
+                transcript = list(transcript_list)[0]
+
+            fetched = transcript.fetch()
+            # In 1.x+, fetched is a FetchedTranscript object with a snippets attribute
+            snippets = fetched.snippets
 
         # Output as JSON array with offset, duration, text
         result = [
@@ -38,14 +69,14 @@ def main():
                 "text": getattr(entry, "text", entry.get("text") if isinstance(entry, dict) else ""),
                 "lang": getattr(transcript, "language_code", "en")
             }
-            for entry in fetched.snippets
+            for entry in snippets
         ]
         
     except Exception as e:
-        print(json.dumps({"error": str(e)}))
+        sys.stdout.buffer.write(json.dumps({"error": str(e)}, ensure_ascii=False).encode('utf-8'))
         sys.exit(1)
 
-    print(json.dumps(result))
+    sys.stdout.buffer.write(json.dumps(result, ensure_ascii=False).encode('utf-8'))
 
 if __name__ == "__main__":
     main()
