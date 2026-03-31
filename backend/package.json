@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npm install",
+    "build": "npm install && sh ./scripts/install_python_deps.sh",
     "postinstall": "sh ./scripts/install_python_deps.sh",
     "start": "node server.js"
   },
