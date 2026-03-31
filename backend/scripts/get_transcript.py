@@ -8,8 +8,12 @@ import sys
 import json
 import os
 import random
+import requests
 
 from youtube_transcript_api import YouTubeTranscriptApi
+
+# Disable SSL verification warnings if we use ScraperAPI
+requests.packages.urllib3.disable_warnings()
 
 def main():
     if len(sys.argv) < 2:
@@ -20,10 +24,21 @@ def main():
 
     # Enable ScraperAPI proxy if the key is provided
     api_key = os.environ.get("SCRAPER_API_KEY")
+    http_client = None
+    
     if api_key:
         # Generate a random session ID to force ScraperAPI to rotate IP address
         session_id = random.randint(1, 1000000)
         proxy_url = f"http://scraperapi.premium=true.session_number={session_id}:{api_key}@proxy-server.scraperapi.com:8001"
+        
+        # Monkey patch requests to ignore SSL verify if we're using proxy
+        # since ScraperAPI uses its own SSL certificates
+        old_request = requests.Session.request
+        def new_request(self, method, url, **kwargs):
+            kwargs['verify'] = False
+            return old_request(self, method, url, **kwargs)
+        requests.Session.request = new_request
+
         os.environ["HTTP_PROXY"] = proxy_url
         os.environ["HTTPS_PROXY"] = proxy_url
         os.environ["http_proxy"] = proxy_url
