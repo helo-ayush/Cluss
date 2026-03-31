@@ -1,1 +1,68 @@
-Object.defineProperty(exports,Symbol.toStringTag,{value:`Module`});var e=/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i,t=`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`,n=/<text start="([^"]*)" dur="([^"]*)">([^<]*)<\/text>/g,r=`https://www.youtube.com/youtubei/v1/player?prettyPrint=false`,i=`19.45.36`,a={client:{clientName:`ANDROID`,clientVersion:i}},o=`com.google.android.youtube/${i} (Linux; U; Android 14)`,s=class extends Error{constructor(e){super(`[YoutubeTranscript] 🚨 ${e}`)}},c=class extends s{constructor(){super(`YouTube is receiving too many requests from this IP and now requires solving a captcha to continue`)}},l=class extends s{constructor(e){super(`The video is no longer available (${e})`)}},u=class extends s{constructor(e){super(`Transcript is disabled on this video (${e})`)}},d=class extends s{constructor(e){super(`No transcripts are available for this video (${e})`)}},f=class extends s{constructor(e,t,n){super(`No transcripts are available in ${e} this video (${n}). Available languages: ${t.join(`, `)}`)}},p=class{static getProxyUrl(e){const t=process.env.SCRAPER_API_KEY;return t?`http://api.scraperapi.com?api_key=${t}&render=false&url=${encodeURIComponent(e)}`:e}static async fetchTranscript(e,t){let n=this.retrieveVideoId(e);return await this.fetchViaInnerTube(n,t)||this.fetchViaWebPage(n,e,t)}static async fetchViaInnerTube(e,t){try{const n=this.getProxyUrl(r);let i=await(t?.fetch??fetch)(n,{method:`POST`,headers:{"Content-Type":`application/json`,"User-Agent":o},body:JSON.stringify({context:a,videoId:e})});if(!i.ok)return;let l=(await i.json())?.captions?.playerCaptionsTracklistRenderer?.captionTracks;return!Array.isArray(l)||l.length===0?void 0:this.fetchTranscriptFromTracks(l,e,t)}catch(e){console.log(`❌ InnerTube Transcript Error:`,e.message);return}}static async fetchViaWebPage(e,n,r){try{const i=this.getProxyUrl(`https://www.youtube.com/watch?v=${e}`);let a=await(await(r?.fetch??fetch)(i,{headers:{...r?.lang&&{"Accept-Language":r.lang},"User-Agent":t}})).text();if(a.includes(`class="g-recaptcha"`))throw new c;if(!a.includes(`"playabilityStatus":`))throw new l(n);let o=this.parseInlineJson(a,`ytInitialPlayerResponse`)?.captions?.playerCaptionsTracklistRenderer?.captionTracks;if(!Array.isArray(o)||o.length===0)throw new u(n);return this.fetchTranscriptFromTracks(o,n,r)}catch(e){console.log(`❌ WebPage Transcript Error:`,e.message);throw e}}static parseInlineJson(e,t){let n=`var ${t} = `,r=e.indexOf(n);if(r===-1)return null;let i=r+n.length,a=0;for(let t=i;t<e.length;t++)if(e[t]===`{`)a++;else if(e[t]===`}`&&(a--,a===0))try{return JSON.parse(e.slice(i,t+1))}catch{return null}return null}static async fetchTranscriptFromTracks(e,n,r){if(r?.lang&&!e.some(e=>e.languageCode===r?.lang))throw new f(r?.lang,e.map(e=>e.languageCode),n);let i=(r?.lang?e.find(e=>e.languageCode===r?.lang):e[0]).baseUrl;try{if(!new URL(i).hostname.endsWith(`.youtube.com`))throw new d(n)}catch(e){throw e instanceof s?e:new d(n)}const a=this.getProxyUrl(i);let o=await(r?.fetch??fetch)(a,{headers:{...r?.lang&&{"Accept-Language":r.lang},"User-Agent":t}});if(!o.ok)throw new d(n);let s=await o.text(),c=r?.lang??e[0].languageCode;return this.parseTranscriptXml(s,c)}static parseTranscriptXml(e,t){let r=[],i=/<p\s+t="(\d+)"\s+d="(\d+)"[^>]*>([\s\S]*?)<\/p>/g,a;for(;(a=i.exec(e))!==null;){let e=parseInt(a[1],10),n=parseInt(a[2],10),i=a[3],o=``,s=/<s[^>]*>([^<]*)<\/s>/g,c;for(;(c=s.exec(i))!==null;)o+=c[1];o||=i.replace(/<[^>]+>/g,``),o=this.decodeEntities(o).trim(),o&&r.push({text:o,duration:n,offset:e,lang:t})}return r.length>0?r:[...e.matchAll(n)].map(e=>({text:this.decodeEntities(e[3]),duration:parseFloat(e[2]),offset:parseFloat(e[1]),lang:t}))}static decodeEntities(e){return e.replace(/&amp;/g,`&`).replace(/&lt;/g,`<`).replace(/&gt;/g,`>`).replace(/&quot;/g,`"`).replace(/&#39;/g,`'`).replace(/&apos;/g,`'`).replace(/&#x([0-9a-fA-F]+);/g,(e,t)=>String.fromCodePoint(parseInt(t,16))).replace(/&#(\d+);/g,(e,t)=>String.fromCodePoint(parseInt(t,10)))}static retrieveVideoId(t){if(t.length===11)return t;let n=t.match(e);if(n&&n.length)return n[1];throw new s(`Impossible to retrieve Youtube video ID.`)}};function m(e,t){return p.fetchTranscript(e,t)}exports.YoutubeTranscript=p,exports.YoutubeTranscriptDisabledError=u,exports.YoutubeTranscriptError=s,exports.YoutubeTranscriptNotAvailableError=d,exports.YoutubeTranscriptNotAvailableLanguageError=f,exports.YoutubeTranscriptTooManyRequestError=c,exports.YoutubeTranscriptVideoUnavailableError=l,exports.fetchTranscript=m;
+const { execFile } = require('child_process');
+const path = require('path');
+
+class YoutubeTranscriptError extends Error {
+    constructor(message) {
+        super(`[YoutubeTranscript] 🚨 ${message}`);
+    }
+}
+
+class YoutubeTranscript {
+    static retrieveVideoId(url) {
+        if (url.length === 11) return url;
+        const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+        if (match && match[1]) return match[1];
+        throw new YoutubeTranscriptError('Impossible to retrieve Youtube video ID.');
+    }
+
+    /**
+     * Executes the Python script to fetch the transcript.
+     * Tries 'python' first, then 'python3' if it fails (useful for Render/Linux environments).
+     */
+    static async fetchTranscript(videoIdOrUrl) {
+        const videoId = this.retrieveVideoId(videoIdOrUrl);
+
+        return new Promise((resolve, reject) => {
+            const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'get_transcript.py');
+            const pythonExecutables = process.env.PYTHON_EXEC ? [process.env.PYTHON_EXEC] : ['python', 'python3'];
+            
+            console.log(`Fetching transcript via Python script for ${videoId}...`);
+            
+            const tryPython = (execIndex) => {
+                if (execIndex >= pythonExecutables.length) {
+                    return reject(new YoutubeTranscriptError('Python script failed to retrieve the transcript.'));
+                }
+                const pythonExecutable = pythonExecutables[execIndex];
+                
+                execFile(pythonExecutable, [scriptPath, videoId], (error, stdout, stderr) => {
+                    if (error) {
+                        console.error(`[YoutubeTranscript] Python script error with '${pythonExecutable}' for ${videoId}:`, error.message);
+                        return tryPython(execIndex + 1); // Try the next executable
+                    }
+                    
+                    try {
+                        const data = JSON.parse(stdout);
+                        if (data.error) {
+                            console.error(`[YoutubeTranscript] Python script returned error for ${videoId}:`, data.error);
+                            return reject(new YoutubeTranscriptError(data.error));
+                        }
+                        if (Array.isArray(data) && data.length > 0) {
+                            return resolve(data);
+                        }
+                        reject(new YoutubeTranscriptError('Transcript array is empty or invalid.'));
+                    } catch (parseError) {
+                        console.error(`[YoutubeTranscript] Failed to parse Python script output for ${videoId}:`, parseError.message);
+                        reject(new YoutubeTranscriptError('Failed to parse Python script output.'));
+                    }
+                });
+            };
+
+            tryPython(0);
+        });
+    }
+}
+
+module.exports = {
+    YoutubeTranscript,
+    YoutubeTranscriptError
+};
