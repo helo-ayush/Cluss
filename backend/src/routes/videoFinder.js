@@ -1,7 +1,6 @@
 const express = require('express');
 const { google } = require('googleapis');
 const { YoutubeTranscript } = require('../utils/youtubeTranscript');
-const { YoutubeTranscript: YT2 } = require('youtube-transcript');
 const { evaluateWithGemini } = require('../utils/geminiEvaluator');
 
 const router = express.Router();
@@ -21,8 +20,9 @@ const withTimeout = (promise, ms, fallback) =>
 
 // ─── New: Multi-provider transcript fetcher ───────────────────────────────
 async function fetchTranscriptSafe(videoId) {
-    // Provider 0: youtube-transcript npm package
+    // Provider 0: youtube-transcript npm package (Dynamic Import for ESM compat)
     try {
+        const { YoutubeTranscript: YT2 } = await import('youtube-transcript');
         const arr = await withTimeout(YT2.fetchTranscript(videoId), 5000, null);
         if (arr && arr.length > 0) {
             const text = arr.map(t => t.text).join(' ');
