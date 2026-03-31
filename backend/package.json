@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm install",
-    "postinstall": "python3 -m venv .venv && .venv/bin/pip install -r requirements.txt || python -m venv .venv && .venv/bin/pip install -r requirements.txt",
+    "postinstall": "sh ./scripts/install_python_deps.sh",
     "start": "node server.js"
   },
   "keywords": [],
