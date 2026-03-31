@@ -68,6 +68,8 @@ async function getVideoStats(videoIds) {
         }
     }
 
+    let foundTranscriptsCount = 0;
+
     const videosWithTranscripts = items.map(item => {
         const transcriptArray = transcriptMap[item.id] || [];
         let transcriptText = "";
@@ -75,8 +77,7 @@ async function getVideoStats(videoIds) {
         if (transcriptArray.length > 0) {
             transcriptText = transcriptArray.map(t => t.text).join(' ');
             if (transcriptText.length > 100) transcriptText = transcriptText.substring(0, 15000);
-        } else {
-            console.log(`  ℹ️ No transcript for ${item.id} — quiz will use general knowledge`);
+            foundTranscriptsCount++;
         }
 
         return {
@@ -91,6 +92,7 @@ async function getVideoStats(videoIds) {
         };
     });
 
+    console.log(`📊 Out of ${items.length} candidate videos, ${foundTranscriptsCount} had transcriptions available.`);
     return videosWithTranscripts;
 }
 
