@@ -53,16 +53,33 @@ async function getVideoStats(videoIds) {
         return (h * 3600 + m * 60 + s) > 60;
     });
 
-    // Run them sequentially (or in small batches) so we don't crash small Render servers
-    // with 20 parallel Python process invocations.
-    const videosWithTranscripts = [];
-    for (const item of items) {
-        const transcriptText = await fetchTranscriptSafe(item.id);
-        if (!transcriptText) {
+    let transcriptMap = {};
+    const extractedIds = items.map(item => item.id);
+    
+    if (extractedIds.length > 0) {
+        try {
+            // Batch process using Python script
+            const result = await YoutubeTranscript.fetchTranscriptsBatch(extractedIds);
+            if (result && result.data) {
+                transcriptMap = result.data;
+            }
+        } catch(err) {
+            console.error("Batch transcript fetch failed:", err.message);
+        }
+    }
+
+    const videosWithTranscripts = items.map(item => {
+        const transcriptArray = transcriptMap[item.id] || [];
+        let transcriptText = "";
+        
+        if (transcriptArray.length > 0) {
+            transcriptText = transcriptArray.map(t => t.text).join(' ');
+            if (transcriptText.length > 100) transcriptText = transcriptText.substring(0, 15000);
+        } else {
             console.log(`  ℹ️ No transcript for ${item.id} — quiz will use general knowledge`);
         }
 
-        videosWithTranscripts.push({
+        return {
             id: item.id,
             title: item.snippet.title,
             channelId: item.snippet.channelId,
@@ -71,8 +88,8 @@ async function getVideoStats(videoIds) {
             likeCount: parseInt(item.statistics.likeCount || 0),
             likeViewRatio: (parseInt(item.statistics.likeCount || 0) / parseInt(item.statistics.viewCount || 1)),
             transcript: transcriptText
-        });
-    }
+        };
+    });
 
     return videosWithTranscripts;
 }
