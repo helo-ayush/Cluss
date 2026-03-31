@@ -18,51 +18,19 @@ const withTimeout = (promise, ms, fallback) =>
         new Promise(resolve => setTimeout(() => resolve(fallback), ms))
     ]);
 
-// ─── New: Multi-provider transcript fetcher ───────────────────────────────
+// ─── New: Simple Proxy transcript fetcher ───────────────────────────────
 async function fetchTranscriptSafe(videoId) {
-    // Provider 0: youtube-transcript npm package (Dynamic Import for ESM compat)
-    try {
-        const { YoutubeTranscript: YT2 } = await import('youtube-transcript');
-        const arr = await withTimeout(YT2.fetchTranscript(videoId), 5000, null);
-        if (arr && arr.length > 0) {
-            const text = arr.map(t => t.text).join(' ');
-            if (text.length > 100) return text.substring(0, 15000);
-        }
-    } catch (err) {}
-
-    // Provider 1: Supadata (Sign up at supadata.ai)
-    if (process.env.SUPADATA_API_KEY) {
-        try {
-            const res = await withTimeout(
-                fetch(`https://api.supadata.ai/v1/youtube/transcript?videoId=${videoId}&lang=en`, {
-                    headers: { 'x-api-key': process.env.SUPADATA_API_KEY }
-                }),
-                5000,
-                { ok: false }
-            );
-            if (res.ok) {
-                const data = await res.json();
-                const text = (data.content || []).map(c => c.text).join(' ');
-                if (text.length > 100) {
-                    console.log(`  ✅ Supadata transcript fetched for ${videoId}`);
-                    return text.substring(0, 15000);
-                }
-            }
-        } catch (err) {
-            console.log(`  ⚠️ Supadata failed for ${videoId}: ${err.message}`);
-        }
-    }
-
-    // Provider 2: Your existing YoutubeTranscript (ScraperAPI fallback)
     try {
         const transcriptArray = await withTimeout(
             YoutubeTranscript.fetchTranscript(videoId),
-            8000,
+            45000,
             []
         );
         const text = (transcriptArray || []).map(t => t.text).join(' ');
         if (text.length > 100) return text.substring(0, 15000);
-    } catch (err) {}
+    } catch (err) {
+        console.error(`  ❌ Proxy Transcript failed for ${videoId}:`, err.message);
+    }
 
     return '';
 }
@@ -85,13 +53,16 @@ async function getVideoStats(videoIds) {
         return (h * 3600 + m * 60 + s) > 60;
     });
 
-    const videosWithTranscripts = await Promise.all(items.map(async (item) => {
+    // Run them sequentially (or in small batches) so we don't crash small Render servers
+    // with 20 parallel Python process invocations.
+    const videosWithTranscripts = [];
+    for (const item of items) {
         const transcriptText = await fetchTranscriptSafe(item.id);
         if (!transcriptText) {
             console.log(`  ℹ️ No transcript for ${item.id} — quiz will use general knowledge`);
         }
 
-        return {
+        videosWithTranscripts.push({
             id: item.id,
             title: item.snippet.title,
             channelId: item.snippet.channelId,
@@ -100,8 +71,8 @@ async function getVideoStats(videoIds) {
             likeCount: parseInt(item.statistics.likeCount || 0),
             likeViewRatio: (parseInt(item.statistics.likeCount || 0) / parseInt(item.statistics.viewCount || 1)),
             transcript: transcriptText
-        };
-    }));
+        });
+    }
 
     return videosWithTranscripts;
 }
