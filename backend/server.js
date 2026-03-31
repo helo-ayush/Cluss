@@ -33,6 +33,47 @@ app.get('/', (req, res) => {
     res.send('AI Adaptive Learning Platform API is running...');
 });
 
+// Debug route — remove after diagnosis
+app.get('/api/debug/video-search', async (req, res) => {
+    try {
+        const { google } = require('googleapis');
+        const youtube = google.youtube({
+            version: 'v3',
+            auth: process.env.YOUTUBE_API_KEY
+        });
+        
+        // Test 1: Can we reach YouTube Data API?
+        const searchRes = await youtube.search.list({
+            part: 'snippet',
+            q: 'javascript tutorial',
+            type: 'video',
+            maxResults: 3
+        });
+        
+        const videoId = searchRes.data.items[0]?.id?.videoId;
+        
+        // Test 2: Can we fetch a transcript?
+        const { YoutubeTranscript } = require('./src/utils/youtubeTranscript');
+        let transcriptStatus = 'not_attempted';
+        try {
+            const t = await YoutubeTranscript.fetchTranscript(videoId);
+            transcriptStatus = `success_${t?.length || 0}_segments`;
+        } catch (err) {
+            transcriptStatus = `failed: ${err.message}`;
+        }
+        
+        res.json({
+            youtube_api: 'ok',
+            videos_found: searchRes.data.items.length,
+            first_video_id: videoId,
+            scraper_api_key_set: !!process.env.SCRAPER_API_KEY,
+            transcript_status: transcriptStatus
+        });
+    } catch (err) {
+        res.json({ error: err.message, stack: err.stack });
+    }
+});
+
 // Mount modular sub-routers
 app.use('/topic-generator', topicGenerator);
 app.use('/video-finder', videoFinder); // Legacy path

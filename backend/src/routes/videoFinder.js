@@ -11,6 +11,13 @@ const youtube = google.youtube({
     auth: process.env.YOUTUBE_API_KEY
 });
 
+// --- HELPERS ---
+const withTimeout = (promise, ms, fallback) =>
+    Promise.race([
+        promise,
+        new Promise(resolve => setTimeout(() => resolve(fallback), ms))
+    ]);
+
 // --- HELPER FUNCTION: Fetch Stats AND Transcripts ---
 async function getVideoStats(videoIds) {
     if (videoIds.length === 0) return [];
@@ -32,10 +39,14 @@ async function getVideoStats(videoIds) {
     const videosWithTranscripts = await Promise.all(items.map(async (item) => {
         let transcriptText = "";
         try {
-            const transcriptArray = await YoutubeTranscript.fetchTranscript(item.id);
-            transcriptText = transcriptArray.map(t => t.text).join(' ').substring(0, 15000);
+            const transcriptArray = await withTimeout(
+                YoutubeTranscript.fetchTranscript(item.id),
+                8000, // 8 second timeout
+                []    // fallback to empty array
+            );
+            transcriptText = (transcriptArray || []).map(t => t.text).join(' ').substring(0, 15000);
         } catch (error) {
-            console.log(`⚠️ No transcript available for video ${item.id}`);
+            console.log(`⚠️ Transcript fetch failed for ${item.id}: ${error.message}`);
             transcriptText = "";
         }
 
