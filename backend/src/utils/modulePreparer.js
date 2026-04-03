@@ -51,8 +51,17 @@ async function prepareModule(courseId, moduleIndex, trustedCreators = []) {
                     subtopic.transcript = video.transcript || '';
                     console.log(`  ✅ [Sub ${subIdx}] Found video: ${video.title}`);
 
-                    // Step 2: Generate quiz (from transcript if available, otherwise general topic quiz)
-                    console.log(`  🧠 [Sub ${subIdx}] Generating quiz...`);
+                    // Unlock subtopic if locked
+                    if (subtopic.status === 'locked') {
+                        subtopic.status = 'active';
+                    }
+
+                    // 🚀 CRITICAL OPTIMIZATION: Save immediately so the frontend can start playing the video!
+                    await course.save();
+                    console.log(`  💾 [Sub ${subIdx}] Video assigned. Frontend can now play it!`);
+
+                    // Step 2: Generate quiz (takes ~10s, happens silently while user can already watch video)
+                    console.log(`  🧠 [Sub ${subIdx}] Generating quiz in background...`);
                     const quiz = await generateQuizFromTranscript(subtopic.subtopic_title, video.transcript);
                     if (quiz && Array.isArray(quiz)) {
                         subtopic.quiz = quiz;
@@ -63,17 +72,15 @@ async function prepareModule(courseId, moduleIndex, trustedCreators = []) {
                 } else {
                     // Mark as searched-but-not-found so future checks don't re-trigger
                     subtopic.videoId = 'none';
+                    if (subtopic.status === 'locked') {
+                        subtopic.status = 'active';
+                    }
                     console.log(`  ❌ [Sub ${subIdx}] No suitable video found for: "${searchQuery}"`);
                 }
 
-                // Unlock all subtopics in the module to 'active' so users can watch in any order
-                if (subtopic.status === 'locked') {
-                    subtopic.status = 'active';
-                }
-
-                // Incrementally save course progress so frontend can stream it
+                // Final save for this subtopic to lock in the quiz (or the "not found" status)
                 await course.save();
-                console.log(`  💾 [Sub ${subIdx}] Progress incrementally saved.`);
+                console.log(`  💾 [Sub ${subIdx}] Final subtopic progress saved (Quiz complete).`);
 
             } catch (err) {
                 failuresCount++;
