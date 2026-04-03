@@ -384,9 +384,10 @@ export default function LearnHub() {
         const data = await res.json();
         if (data.success) {
           setPrepStatus(data.prepStatus);
+          // Fetch the full course every time we poll, to incrementally show ready subtopics
+          fetchCourse(); 
           if (data.prepStatus === 'ready' || data.prepStatus === 'failed') {
             clearInterval(interval);
-            fetchCourse(); // Refresh full data
           }
         }
       } catch (e) { /* ignore */ }

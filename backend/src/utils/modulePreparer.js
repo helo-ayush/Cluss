@@ -32,12 +32,15 @@ async function prepareModule(courseId, moduleIndex, trustedCreators = []) {
 
         const subtopics = targetModule.subtopics;
 
-        // Process all subtopics in parallel
-        const results = await Promise.allSettled(
-            subtopics.map(async (subtopic, subIdx) => {
-                const searchQuery = subtopic.Youtube_query || subtopic.subtopic_title;
-                console.log(`  📹 [Sub ${subIdx}] Searching video for: "${searchQuery}"`);
+        // Process all subtopics sequentially
+        let failuresCount = 0;
 
+        for (let subIdx = 0; subIdx < subtopics.length; subIdx++) {
+            const subtopic = subtopics[subIdx];
+            const searchQuery = subtopic.Youtube_query || subtopic.subtopic_title;
+            console.log(`  📹 [Sub ${subIdx}] Searching video for: "${searchQuery}"`);
+
+            try {
                 // Step 1: Find best video
                 const video = await findBestVideo(searchQuery, trustedCreators);
 
@@ -67,18 +70,19 @@ async function prepareModule(courseId, moduleIndex, trustedCreators = []) {
                 if (subtopic.status === 'locked') {
                     subtopic.status = 'active';
                 }
-            })
-        );
 
-        // Check results
-        const failures = results.filter(r => r.status === 'rejected');
-        if (failures.length > 0) {
-            console.log(`  ⚠️ [ModulePreparer] ${failures.length}/${subtopics.length} subtopics had errors:`);
-            failures.forEach((f, i) => console.log(`    Error: ${f.reason?.message || f.reason}`));
+                // Incrementally save course progress so frontend can stream it
+                await course.save();
+                console.log(`  💾 [Sub ${subIdx}] Progress incrementally saved.`);
+
+            } catch (err) {
+                failuresCount++;
+                console.error(`  ⚠️ [Sub ${subIdx}] Error:`, err.message || err);
+            }
         }
 
         // Mark module as ready
-        targetModule.prepStatus = failures.length === subtopics.length ? 'failed' : 'ready';
+        targetModule.prepStatus = failuresCount === subtopics.length ? 'failed' : 'ready';
 
         // Save all changes
         await course.save();

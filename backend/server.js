@@ -30,7 +30,7 @@ const tutorChatRoutes = require('./src/routes/tutorChat');
 
 // Base status route
 app.get('/', (req, res) => {
-    res.send('AI Adaptive Learning Platform API is running...');
+    res.send('The server is running');
 });
 
 // Debug route — remove after diagnosis
