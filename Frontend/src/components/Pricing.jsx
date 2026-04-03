@@ -308,21 +308,23 @@ export default function Pricing() {
           50% { transform: scale(1.5); opacity: calc(var(--so, 0.3) * 2); }
         }
         .pricing-card-hover {
-          transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.35s ease;
+          transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease, background 0.4s ease, border 0.4s ease;
         }
         .pricing-card-hover:hover { transform: translateY(-6px); }
         .pricing-featured-hover {
-          transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.35s ease;
+          transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease, background 0.4s ease, border 0.4s ease;
         }
         .pricing-featured-hover:hover { transform: translateY(-8px); }
         .pricing-cta-orange {
-          transition: filter 0.2s ease, box-shadow 0.2s ease;
+          transition: filter 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
         }
         .pricing-cta-orange:hover {
           filter: brightness(1.1);
           box-shadow: 0 0 32px rgba(234,88,12,0.5) !important;
+          transform: translateY(-2px);
         }
-        .pricing-cta-ghost { transition: background 0.2s ease, border-color 0.2s ease; }
+        .pricing-cta-ghost { transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease; }
+        .pricing-cta-ghost:hover { transform: translateY(-2px); }
         .pricing-ai-badge {
           display: inline-flex; align-items: center; gap: 3px;
           padding: 2px 8px; border-radius: 999px;
@@ -402,7 +404,7 @@ export default function Pricing() {
           <div className="pricing-card-hover" style={{
             position: 'relative', borderRadius: '20px', overflow: 'hidden',
             background: t.c1Bg, border: t.c1Border, boxShadow: t.c1Shadow,
-            padding: '36px 32px 32px', transition: 'background 0.4s ease, border 0.4s ease, box-shadow 0.4s ease',
+            padding: '36px 32px 32px',
           }}>
             <AbstractShape color={t.c1BlobColor} opacity={t.c1BlobOpacity} />
             <div style={{ position: 'relative', zIndex: 2 }}>
@@ -465,7 +467,6 @@ export default function Pricing() {
             position: 'relative', borderRadius: '22px', overflow: 'hidden',
             background: t.c2Bg, border: t.c2Border, boxShadow: t.c2Shadow,
             padding: '44px 32px 32px',
-            transition: 'background 0.4s ease, border 0.4s ease, box-shadow 0.4s ease',
           }}>
             {/* Inner ambient */}
             <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: t.c2AmbientGlow }} />
@@ -558,7 +559,6 @@ export default function Pricing() {
             position: 'relative', borderRadius: '20px', overflow: 'hidden',
             background: t.c3Bg, border: t.c3Border, boxShadow: t.c3Shadow,
             padding: '36px 32px 32px',
-            transition: 'background 0.4s ease, border 0.4s ease, box-shadow 0.4s ease',
           }}>
             <AbstractShape color={t.c3BlobColor} opacity={t.c3BlobOpacity} />
             <div style={{ position: 'relative', zIndex: 2 }}>
