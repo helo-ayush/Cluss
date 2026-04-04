@@ -53,7 +53,7 @@ const checkCourseCreation = async (req, res, next) => {
                 success: false,
                 limitReached: true,
                 limitType: 'maxCourses',
-                message: `You've reached the maximum of ${limits.maxCourses} courses on the Free plan. Upgrade to Pro for unlimited courses!`,
+                message: `You've reached the maximum of ${limits.maxCourses} Playlist/Courses on the Free plan. Upgrade to Pro for unlimited profile storage!`,
                 currentPlan: user.plan
             });
         }
@@ -64,7 +64,7 @@ const checkCourseCreation = async (req, res, next) => {
                 success: false,
                 limitReached: true,
                 limitType: 'weeklyLimit',
-                message: 'Free users can create 1 course per week. Upgrade to Pro for unlimited course creation!',
+                message: 'Free users can analyze 1 Playlist per week. Upgrade to Pro for unlimited analysis!',
                 currentPlan: user.plan,
                 nextAvailable: new Date(new Date(user.lastCourseCreatedAt).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
             });

@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Course = require('../models/Course');
-const { GoogleGenAI } = require('@google/genai');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 /**
  * POST /api/tutor-chat
@@ -35,66 +35,106 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // Load transcript context
         const course = await Course.findById(courseId);
         if (!course) {
             return res.status(404).json({ success: false, message: 'Course not found' });
         }
 
-        const mod = course.modules[moduleIndex];
-        const subtopic = mod?.subtopics[subtopicIndex];
-        const transcript = subtopic?.transcript || '';
-        const topicTitle = subtopic?.subtopic_title || 'this topic';
+        let transcript = '';
+        let topicTitle = '';
+        let videoId = '';
 
-        // Build conversation for Gemini
-        const systemPrompt = `You are a friendly, knowledgeable tutor helping a student learn about "${topicTitle}".
-
-RULES:
-1. Answer questions using the provided context as your primary knowledge base.
-2. If the answer isn't in the context, use your general knowledge but mention that it goes beyond the main lesson.
-3. Be concise — keep responses under 200 words unless the student asks for detail.
-4. Use examples and analogies to explain complex concepts.
-5. Be encouraging and supportive.
-6. ALL responses MUST be in English only.
-7. IMMERSION: NEVER use the word 'transcript' or 'video' in your responses. Instead of saying 'according to the transcript', just answer the question directly, or say 'in this lesson' or 'in this course'.
-
-COURSE CONTEXT:
-${transcript ? transcript.substring(0, 10000) : 'No context available for this topic.'}`;
-
-        // Build message history for multi-turn
-        const contents = [];
-        
-        // Add system instruction as first user turn
-        contents.push({ role: 'user', parts: [{ text: systemPrompt + '\n\nPlease acknowledge you are ready to help.' }] });
-        contents.push({ role: 'model', parts: [{ text: 'I\'m ready to help you learn! Ask me anything about this topic.' }] });
-
-        // Add conversation history
-        if (history && Array.isArray(history)) {
-            history.forEach(msg => {
-                contents.push({
-                    role: msg.role === 'user' ? 'user' : 'model',
-                    parts: [{ text: msg.text }]
-                });
-            });
+        if (course.sourceType === 'playlist') {
+            const day = course.days[moduleIndex];
+            const video = day?.videos[subtopicIndex];
+            transcript = video?.transcript || '';
+            topicTitle = video?.title || 'this video';
+            videoId = video?.videoId;
+        } else {
+            const mod = course.modules[moduleIndex];
+            const subtopic = mod?.subtopics[subtopicIndex];
+            transcript = subtopic?.transcript || '';
+            topicTitle = subtopic?.subtopic_title || 'this topic';
+            videoId = subtopic?.videoId;
         }
 
-        // Add current message
-        contents.push({ role: 'user', parts: [{ text: message }] });
+        // --- On-Demand Transcript Fetching (Fix for playlist courses) ---
+        if (!transcript && videoId) {
+            console.log(`🔍 AI Tutor: Missing transcript for video ${videoId}. Fetching on-demand...`);
+            try {
+                const { YoutubeTranscript } = require('../utils/youtubeTranscript');
+                const result = await YoutubeTranscript.fetchTranscriptsBatch([videoId]);
+                
+                if (result.data && result.data[videoId]) {
+                    const rawSegments = result.data[videoId];
+                    
+                    // --- FIX: Format array of segments into a single readable string ---
+                    if (Array.isArray(rawSegments)) {
+                        transcript = rawSegments.map(s => s.text).join(' ');
+                    } else if (typeof rawSegments === 'string') {
+                        transcript = rawSegments;
+                    }
+                    
+                    // SAVE TO CACHE (Save back to DB for future use)
+                    if (transcript) {
+                        if (course.sourceType === 'playlist') {
+                            course.days[moduleIndex].videos[subtopicIndex].transcript = transcript;
+                        } else {
+                            course.modules[moduleIndex].subtopics[subtopicIndex].transcript = transcript;
+                        }
+                        await course.save();
+                        console.log(`✅ AI Tutor: Transcript cached successfully for ${videoId} (${transcript.length} chars)`);
+                    }
+                }
+            } catch (err) {
+                console.error(`⚠️ AI Tutor: Failed to fetch/save on-demand transcript for ${videoId}:`, err.message);
+                // Non-fatal, we'll continue with no transcript context if fetching fails
+            }
+        }
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: contents
+        // Build conversation for Gemini
+        const systemPrompt = `You are Lumina, a world-class AI tutor. You are strictly helping the student with the topic: "${topicTitle}".
+        
+        USE THE PROVIDED CONTENT BELOW (from the lecture transcript) as your primary source of truth.
+        If the student asks something outside this content, relate it back to the course.
+        
+        RULES:
+        1. Keep responses educational, encouraging, and clear.
+        2. Use Markdown for formatting (bold, lists, etc).
+        3. Match the language the student is using (Hindi/English).
+        4. Tone: "Cool mentor" - professional but modern.
+        5. IMMERSION: NEVER use 'transcript' or 'video'. Say 'this lesson'.
+
+        LECTURE CONTENT:
+        ${transcript ? transcript.substring(0, 10000) : 'No context available for this topic. Use general knowledge.'}`;
+
+        // Initialize model (Using gemini-2.5-flash as per project standard)
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        // Format history for Gemini chat
+        const chatHistory = (history || []).map(msg => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.text }]
+        }));
+
+        const chat = model.startChat({
+            history: [
+                { role: 'user', parts: [{ text: systemPrompt + "\n\nPlease acknowledge you are Lumina and ready to help." }] },
+                { role: 'model', parts: [{ text: "Hello! I am Lumina, your AI Tutor. I've reviewed the lesson for '" + topicTitle + "' and I'm ready to help! What's on your mind?" }] },
+                ...chatHistory
+            ]
         });
 
-        const reply = response.text || 'I\'m sorry, I couldn\'t generate a response. Please try again.';
+        const result = await chat.sendMessage(message);
+        const aiResponse = result.response.text();
 
         return res.json({
             success: true,
-            reply: reply.trim()
+            reply: aiResponse.trim()
         });
 
     } catch (error) {
-        console.error('Tutor chat error:', error);
+        console.error('AI Tutor Chat Error:', error);
         res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
     }
 });

@@ -95,16 +95,16 @@ const AbstractShape = ({ color, opacity, flip = false }) => (
 
 /* ── Feature data ── */
 const FREE_FEATURES = [
-  '3 courses maximum',
-  '1 new course per week',
+  'Max 3 Playlist/Courses on Profile',
+  '1 Playlist/Course per week',
   '1 topic unlock per day',
   'Full video learning',
   'Progress tracking & streaks',
-  'Community leaderboard',
+  'AI-powered Quizzes',
 ];
 const PRO_FEATURES = [
-  { text: 'Unlimited courses' },
-  { text: 'Unlimited course creation' },
+  { text: 'Unlimited Playlist Analysis' },
+  { text: 'Unlimited Profile Storage' },
   { text: 'Unlimited topic unlocks' },
   { text: 'AI Tutor Chat per topic', badge: 'AI-based' },
   { text: 'Priority video selection' },

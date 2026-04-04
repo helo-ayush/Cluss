@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'motion/react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import TutorChatPanel from '../components/TutorChatPanel';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -309,10 +310,12 @@ export default function PlaylistLearnHub() {
   const [activeVideoIdx, setActiveVideoIdx] = useState(0);
   const [watchedSet, setWatchedSet] = useState(new Set());
 
-  // Checkpoint state
+  // Checkpoint & Chat state
   const [showCheckpoint, setShowCheckpoint] = useState(false);
   const [checkpointData, setCheckpointData] = useState(null);
   const [loadingCheckpoint, setLoadingCheckpoint] = useState(false);
+  const [usageData, setUsageData] = useState(null);
+  const [isTutorOpen, setIsTutorOpen] = useState(false);
 
   const fetchCourse = useCallback(async () => {
     try {
@@ -320,10 +323,8 @@ export default function PlaylistLearnHub() {
       const data = await res.json();
       if (data.success) {
         setCourse(data.course);
-        // Restore watched set from checkpoint or day status
         const day = data.course.days?.[dayIndex];
         if (day?.checkpoint?.status === 'passed' || day?.status === 'ready') {
-          // All watched
           setWatchedSet(new Set(day.videos.map((_, i) => i)));
         }
       }
@@ -331,7 +332,19 @@ export default function PlaylistLearnHub() {
     finally { setLoading(false); }
   }, [courseId, dayIndex]);
 
-  useEffect(() => { fetchCourse(); }, [fetchCourse]);
+  const fetchUsage = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/user/${user.id}/usage`);
+      const data = await res.json();
+      if (data.success) setUsageData(data);
+    } catch (e) { console.error(e); }
+  }, [user]);
+
+  useEffect(() => { 
+    fetchCourse();
+    fetchUsage();
+  }, [fetchCourse, fetchUsage, isLoaded]);
 
   const handleMarkWatched = () => {
     setWatchedSet(prev => {
@@ -633,6 +646,32 @@ export default function PlaylistLearnHub() {
 
         </div>
       </div>
+
+      {/* Floating AI Tutor Button */}
+      <button
+        onClick={() => setIsTutorOpen(true)}
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-[0_8px_32px_rgba(99,102,241,0.4)] hover:scale-110 active:scale-95 transition-all"
+        style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', border: '1px solid rgba(255,255,255,0.2)' }}
+      >
+        <span className="material-symbols-outlined text-white text-2xl">smart_toy</span>
+        {!usageData || usageData.plan !== 'pro' ? (
+           <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center border-2 border-[#06080f]">
+             <span className="material-symbols-outlined text-[10px] text-white">lock</span>
+           </span>
+        ) : null}
+      </button>
+
+      {course && (
+        <TutorChatPanel
+          isOpen={isTutorOpen}
+          onClose={() => setIsTutorOpen(false)}
+          courseId={courseId}
+          moduleIndex={dayIndex}
+          subtopicIndex={activeVideoIdx}
+          topicTitle={activeVideo?.title}
+          isPro={usageData?.plan === 'pro'}
+        />
+      )}
     </>
   );
 }
