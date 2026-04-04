@@ -493,10 +493,17 @@ function PlaylistImportPanel() {
 // ═══════════════════════════════════════════════
 //  TOPIC ANALYSIS MODAL (Outdated only, pre-selected)
 // ═══════════════════════════════════════════════
-function TopicAnalysisModalInline({ blocks, onClose, onRemove }) {
+function TopicAnalysisModalInline({ loading, blocks, onClose, onRemove }) {
   // All outdated topics pre-selected for removal
-  const [selected, setSelected] = useState(() => new Set(blocks.map(b => b.topicName)));
+  const [selected, setSelected] = useState(() => new Set((blocks || []).map(b => b.topicName)));
   const [removing, setRemoving] = useState(false);
+
+  // Synchronize selection if blocks change
+  useEffect(() => {
+    if (blocks && blocks.length > 0) {
+      setSelected(new Set(blocks.map(b => b.topicName)));
+    }
+  }, [blocks]);
 
   const toggle = (name) => {
     setSelected(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; });
@@ -509,6 +516,8 @@ function TopicAnalysisModalInline({ blocks, onClose, onRemove }) {
     setRemoving(false);
   };
 
+  const items = blocks || [];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
@@ -519,7 +528,7 @@ function TopicAnalysisModalInline({ blocks, onClose, onRemove }) {
             <div>
               <h2 className="font-headline text-xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>🧹 Outdated Topics Found</h2>
               <p className="font-body text-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-                {blocks.length > 0 ? 'Uncheck any topics you want to keep. The rest will be removed.' : 'No outdated topics detected — your curriculum looks great!'}
+                {loading ? 'AI is scanning your curriculum...' : items.length > 0 ? 'Uncheck any topics you want to keep. The rest will be removed.' : 'No outdated topics detected — your curriculum looks great!'}
               </p>
             </div>
             <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-all"
@@ -529,12 +538,17 @@ function TopicAnalysisModalInline({ blocks, onClose, onRemove }) {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-6 space-y-2 custom-scroll">
-          {blocks.length === 0 ? (
+          {loading ? (
+             <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <div className="w-10 h-10 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                <p className="font-label text-xs uppercase tracking-widest font-black text-indigo-500/80">Scanning Playlist Content</p>
+             </div>
+          ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <span className="material-symbols-outlined text-5xl" style={{ color: '#34d399' }}>verified</span>
               <p className="font-body text-sm" style={{ color: 'var(--theme-text-muted)' }}>All topics are up to date!</p>
             </div>
-          ) : blocks.map(b => (
+          ) : items.map(b => (
             <label key={b.topicName} className="flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all hover:bg-white/5"
               style={{ background: selected.has(b.topicName) ? 'rgba(239,68,68,0.06)' : 'transparent', border: `1px solid ${selected.has(b.topicName) ? 'rgba(239,68,68,0.3)' : 'var(--theme-border)'}` }}>
               <input type="checkbox" checked={selected.has(b.topicName)} onChange={() => toggle(b.topicName)}
@@ -547,7 +561,7 @@ function TopicAnalysisModalInline({ blocks, onClose, onRemove }) {
             </label>
           ))}
         </div>
-        {blocks.length > 0 && (
+        {!loading && items.length > 0 && (
           <div className="p-6 flex items-center justify-between gap-4" style={{ borderTop: '1px solid var(--theme-border)' }}>
             <p className="font-label text-xs" style={{ color: 'var(--theme-text-muted)' }}>{selected.size} topic{selected.size !== 1 ? 's' : ''} will be removed</p>
             <button onClick={handleRemove} disabled={selected.size === 0 || removing}
@@ -810,15 +824,22 @@ export default function Dashboard() {
   const handleRunOptimizer = async () => {
     if (!draftCourse) return;
     setAnalyzing(true);
+    setAnalysisData(null);
+    setShowAnalysisModal(true);
     try {
       const res = await fetch(`${API_BASE}/api/course/${draftCourse._id}/playlist/analyze`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         setAnalysisData(data.analysis);
-        setShowAnalysisModal(true);
+      } else {
+        setShowAnalysisModal(false);
       }
-    } catch (e) { console.error(e); }
-    finally { setAnalyzing(false); }
+    } catch (e) { 
+      console.error(e);
+      setShowAnalysisModal(false);
+    } finally { 
+      setAnalyzing(false); 
+    }
   };
 
   const handleRemoveTopics = async (topicNames) => {
@@ -945,12 +966,14 @@ export default function Dashboard() {
           </AnimatePresence>
 
           {/* Optimizer Modal — Outdated topics only, all pre-selected */}
-          {showAnalysisModal && analysisData && (() => {
-            const blocks = analysisData.topicBlocks || [];
-            return (
-              <TopicAnalysisModalInline blocks={blocks} onClose={() => setShowAnalysisModal(false)} onRemove={handleRemoveTopics} />
-            );
-          })()}
+          {showAnalysisModal && (
+            <TopicAnalysisModalInline 
+              loading={analyzing}
+              blocks={analysisData?.topicBlocks || []} 
+              onClose={() => setShowAnalysisModal(false)} 
+              onRemove={handleRemoveTopics} 
+            />
+          )}
 
           {/* Filler Modal — opens immediately with loading */}
           {showFillerModal && (
