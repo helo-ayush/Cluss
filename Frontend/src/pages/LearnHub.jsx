@@ -4,6 +4,7 @@ import { useUser } from '@clerk/clerk-react';
 import SubtopicListItem from '../components/SubtopicListItem';
 import { ShimmerButton } from '../components/magicui/ShimmerButton';
 import TutorChatPanel from '../components/TutorChatPanel';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -78,7 +79,8 @@ function QuizModal({ questions, initialResults, onSubmit, onClose }) {
         </button>
 
         {/* ── Left Sidebar (Nav Grid) ── */}
-        <div className="shrink-0 flex flex-col md:w-64 lg:w-72 border-b md:border-b-0 md:border-r" style={{ borderColor: 'var(--theme-border)', background: 'rgba(0,0,0,0.3)' }}>
+        <div className="shrink-0 flex flex-col md:w-64 lg:w-72 border-b md:border-b-0 md:border-r" 
+          style={{ borderColor: 'var(--theme-border)', background: 'var(--theme-nav-bg)' }}>
           
           {/* Sidebar Header */}
           <div className="p-4 md:p-6 pb-3" style={{ borderBottom: '1px solid var(--theme-border)' }}>
@@ -148,7 +150,7 @@ function QuizModal({ questions, initialResults, onSubmit, onClose }) {
         </div>
 
         {/* ── Right Panel (Question View) ── */}
-        <div className="flex-1 flex flex-col min-w-0 bg-[rgba(0,0,0,0.1)]">
+        <div className="flex-1 flex flex-col min-w-0" style={{ background: 'var(--theme-nav-bg)', opacity: 0.8 }}>
           
           <div className="flex-1 overflow-y-auto p-5 md:p-10 custom-scroll relative">
             <div className="animate-blur-text max-w-3xl mx-auto" key={`q-${currentIdx}`}>
@@ -163,9 +165,9 @@ function QuizModal({ questions, initialResults, onSubmit, onClose }) {
                   }}>
                   {submitted ? (currentResult?.correct ? '✓' : '✗') : currentIdx + 1}
                 </span>
-                <p className="font-body text-lg md:text-xl font-semibold leading-relaxed pt-1" style={{ color: 'var(--theme-text-heading)' }}>
-                  {currentQ.question}
-                </p>
+                <div className="flex-1 min-w-0 pt-1">
+                  <MarkdownRenderer content={currentQ.question} className="font-body text-lg md:text-xl font-semibold leading-relaxed" />
+                </div>
               </div>
 
               {/* Options */}
@@ -217,7 +219,7 @@ function QuizModal({ questions, initialResults, onSubmit, onClose }) {
                         <span className="material-symbols-outlined text-sm">lightbulb</span>
                         Hint
                       </span>
-                      {currentQ.hint || "Review the exact concepts learned in the video for clues."}
+                      <MarkdownRenderer content={currentQ.hint || "Review the exact concepts learned in the video for clues."} />
                     </div>
                   )}
                 </div>
@@ -229,7 +231,7 @@ function QuizModal({ questions, initialResults, onSubmit, onClose }) {
                       <span className="material-symbols-outlined text-sm">lightbulb</span>
                       Explanation
                     </span>
-                    {currentResult.explanation}
+                    <MarkdownRenderer content={currentResult.explanation} />
                   </div>
                 )
               )}
@@ -237,7 +239,7 @@ function QuizModal({ questions, initialResults, onSubmit, onClose }) {
           </div>
 
           {/* ── Footer Navigation (Next/Back) ── */}
-          <div className="shrink-0 p-5 md:p-6 flex items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--theme-border)', background: 'rgba(0,0,0,0.2)' }}>
+          <div className="shrink-0 p-5 md:p-6 flex items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--theme-border)', background: 'var(--theme-nav-bg)' }}>
             <button 
               onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))}
               disabled={currentIdx === 0}

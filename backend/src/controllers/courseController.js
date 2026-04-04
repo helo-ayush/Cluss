@@ -552,6 +552,694 @@ const deleteCourseHandler = async (req, res) => {
     }
 };
 
+// ══════════════════════════════════════════════════
+//  Playlist Import: Helpers
+// ══════════════════════════════════════════════════
+
+/**
+ * Parses a YouTube playlist ID from various URL formats.
+ */
+const extractPlaylistId = (url) => {
+    try {
+        // Handle full URLs
+        const urlObj = new URL(url);
+        const listParam = urlObj.searchParams.get('list');
+        if (listParam) return listParam;
+    } catch (e) {
+        // Not a valid URL — try raw ID
+    }
+    // If it looks like a raw playlist ID
+    if (/^PL[a-zA-Z0-9_-]+$/.test(url) || /^UU[a-zA-Z0-9_-]+$/.test(url) || /^OL[a-zA-Z0-9_-]+$/.test(url)) {
+        return url;
+    }
+    return null;
+};
+
+/**
+ * Parses ISO 8601 duration (PT#H#M#S) to total seconds.
+ */
+const parseDuration = (iso) => {
+    const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+    const h = parseInt(match[1] || 0, 10);
+    const m = parseInt(match[2] || 0, 10);
+    const s = parseInt(match[3] || 0, 10);
+    return h * 3600 + m * 60 + s;
+};
+
+/**
+ * Chunks a flat array of videos into days based on a max seconds-per-day budget.
+ */
+const chunkIntoDays = (videos, maxSecondsPerDay) => {
+    const days = [];
+    let currentDay = { dayNumber: 1, videos: [], totalDuration: 0 };
+
+    for (const video of videos) {
+        // If adding this video would exceed the budget AND the day already has at least one video,
+        // start a new day. (A single video that exceeds the budget goes into its own day.)
+        if (currentDay.totalDuration + video.duration > maxSecondsPerDay && currentDay.videos.length > 0) {
+            days.push(currentDay);
+            currentDay = { dayNumber: days.length + 1, videos: [], totalDuration: 0 };
+        }
+        currentDay.videos.push(video);
+        currentDay.totalDuration += video.duration;
+    }
+
+    // Push the last day if it has videos
+    if (currentDay.videos.length > 0) {
+        days.push(currentDay);
+    }
+
+    return days;
+};
+
+// ══════════════════════════════════════════════════
+//  Playlist Import: Main Handler
+// ══════════════════════════════════════════════════
+
+/**
+ * Express Handler: Create a course from a YouTube playlist URL.
+ * POST /api/course/from-playlist
+ * Body: { clerkId, playlistUrl, hoursPerDay, userName }
+ */
+const createFromPlaylist = async (req, res) => {
+    try {
+        const { clerkId, playlistUrl, hoursPerDay = 2, userName } = req.body;
+
+        if (!clerkId || !playlistUrl) {
+            return res.status(400).json({ success: false, message: "clerkId and playlistUrl are required" });
+        }
+
+        // 1. Parse playlist ID
+        const playlistId = extractPlaylistId(playlistUrl);
+        if (!playlistId) {
+            return res.status(400).json({ success: false, message: "Invalid YouTube playlist URL. Please provide a valid playlist link." });
+        }
+
+        // 2. Initialize YouTube API
+        const { google } = require('googleapis');
+        const youtube = google.youtube({
+            version: 'v3',
+            auth: process.env.YOUTUBE_API_KEY
+        });
+
+        // 3. Fetch playlist metadata (title)
+        let playlistTitle = 'Imported Playlist';
+        try {
+            const plRes = await youtube.playlists.list({
+                part: 'snippet',
+                id: playlistId
+            });
+            if (plRes.data.items && plRes.data.items.length > 0) {
+                playlistTitle = plRes.data.items[0].snippet.title;
+            } else {
+                return res.status(404).json({ success: false, message: "Playlist not found. It may be private or deleted." });
+            }
+        } catch (err) {
+            console.error("Error fetching playlist metadata:", err.message);
+            return res.status(400).json({ success: false, message: "Could not fetch playlist details. The playlist may be private." });
+        }
+
+        // 4. Fetch all playlist items (paginated, max 500 videos)
+        let allItems = [];
+        let nextPageToken = null;
+        const MAX_VIDEOS = 500;
+
+        do {
+            const pageRes = await youtube.playlistItems.list({
+                part: 'snippet',
+                playlistId: playlistId,
+                maxResults: 50,
+                pageToken: nextPageToken || undefined
+            });
+
+            const items = pageRes.data.items || [];
+            allItems = allItems.concat(items);
+            nextPageToken = pageRes.data.nextPageToken;
+
+            if (allItems.length >= MAX_VIDEOS) {
+                allItems = allItems.slice(0, MAX_VIDEOS);
+                break;
+            }
+        } while (nextPageToken);
+
+        if (allItems.length === 0) {
+            return res.status(400).json({ success: false, message: "This playlist is empty." });
+        }
+
+        // 5. Extract video IDs (skip deleted/private videos)
+        const videoEntries = allItems
+            .filter(item => item.snippet && item.snippet.resourceId && item.snippet.resourceId.videoId)
+            .map(item => ({
+                videoId: item.snippet.resourceId.videoId,
+                title: item.snippet.title,
+                channel: item.snippet.videoOwnerChannelTitle || '',
+                channelId: item.snippet.videoOwnerChannelId || ''
+            }));
+
+        if (videoEntries.length === 0) {
+            return res.status(400).json({ success: false, message: "No accessible videos found in this playlist." });
+        }
+
+        // 6. Batch-fetch video durations (50 IDs per call)
+        const durationMap = {};
+        for (let i = 0; i < videoEntries.length; i += 50) {
+            const batch = videoEntries.slice(i, i + 50);
+            const ids = batch.map(v => v.videoId).join(',');
+
+            try {
+                const vidRes = await youtube.videos.list({
+                    part: 'contentDetails',
+                    id: ids
+                });
+
+                for (const item of (vidRes.data.items || [])) {
+                    durationMap[item.id] = parseDuration(item.contentDetails.duration);
+                }
+            } catch (err) {
+                console.error(`Error fetching video durations batch ${i}:`, err.message);
+            }
+        }
+
+        // Merge durations into video entries
+        const videosWithDuration = videoEntries.map(v => ({
+            videoId: v.videoId,
+            title: v.title,
+            duration: durationMap[v.videoId] || 0,
+            channel: v.channel,
+            channelId: v.channelId
+        }));
+
+        // 7. Chunk into days
+        const maxSecondsPerDay = Math.max(hoursPerDay, 0.5) * 3600; // min 30 minutes per day
+        const days = chunkIntoDays(videosWithDuration, maxSecondsPerDay);
+
+        // 8. Find or create user
+        let user = req.dbUser || await User.findOne({ clerkId });
+        if (!user) {
+            user = await User.create({ clerkId, name: userName || 'Learner' });
+        }
+
+        // 9. Save course
+        const newCourse = new Course({
+            userId: user._id,
+            course_title: playlistTitle,
+            course_query: '',
+            sourceType: 'playlist',
+            sourcePlaylistId: playlistId,
+            hoursPerDay: hoursPerDay,
+            days: days,
+            currentDayIndex: 0
+        });
+
+        const savedCourse = await newCourse.save();
+
+        // Track usage
+        user.coursesCreated = (user.coursesCreated || 0) + 1;
+        user.lastCourseCreatedAt = new Date();
+        await user.save();
+
+        console.log(`✅ Playlist course created: "${playlistTitle}" — ${videosWithDuration.length} videos, ${days.length} days`);
+
+        return res.json({
+            success: true,
+            course: savedCourse
+        });
+
+    } catch (error) {
+        console.error("Error in createFromPlaylist:", error);
+        res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+    }
+};
+
+/**
+ * Express Handler: Fetches only playlist-sourced courses for a user.
+ * GET /api/course/user/:clerkId/playlists
+ */
+const getUserPlaylistCourses = async (req, res) => {
+    try {
+        const { clerkId } = req.params;
+
+        const user = await User.findOne({ clerkId });
+        if (!user) {
+            return res.json({ success: true, courses: [] });
+        }
+
+        const courses = await Course.find({ userId: user._id, sourceType: 'playlist' }).sort({ updatedAt: -1 });
+
+        const coursesWithProgress = courses.map(course => {
+            const courseObj = course.toObject();
+            let completedDays = 0;
+            let totalVideos = 0;
+
+            courseObj.days.forEach(day => {
+                totalVideos += day.videos.length;
+                if (day.status === 'ready') completedDays++;
+            });
+
+            courseObj.progress = courseObj.days.length > 0 ? Math.round((completedDays / courseObj.days.length) * 100) : 0;
+            courseObj.completedDays = completedDays;
+            courseObj.totalDays = courseObj.days.length;
+            courseObj.totalVideos = totalVideos;
+
+            return courseObj;
+        });
+
+        return res.json({ success: true, courses: coursesWithProgress });
+    } catch (error) {
+        console.error("Error in getUserPlaylistCourses:", error);
+        res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+    }
+};
+
+// ══════════════════════════════════════════════════
+//  AI Curriculum Optimizer
+// ══════════════════════════════════════════════════
+
+/**
+ * POST /:courseId/playlist/analyze
+ * Analyzes the playlist and returns topic blocks with outdated flags. (FREE)
+ */
+const analyzePlaylistCurriculum = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const course = await Course.findById(courseId);
+        if (!course || course.sourceType !== 'playlist') {
+            return res.status(404).json({ success: false, message: "Playlist course not found" });
+        }
+
+        // Gather all video titles
+        const videoTitles = [];
+        course.days.forEach(day => {
+            day.videos.forEach(v => videoTitles.push(v.title));
+        });
+
+        if (videoTitles.length === 0) {
+            return res.status(400).json({ success: false, message: "No videos to analyze" });
+        }
+
+        // Check cache — if we already analyzed, use it
+        let analysis = course.topicAnalysis;
+        if (!analysis || !analysis.topicBlocks) {
+            const { analyzePlaylistTopics } = require('../utils/playlistAnalyzer');
+            analysis = await analyzePlaylistTopics(videoTitles, course.course_title);
+
+            // Cache full result (both outdated + relevant) for internal use
+            course.topicAnalysis = analysis;
+            await course.save();
+        }
+
+        // Return ONLY outdated topics to the frontend
+        const outdatedOnly = {
+            topicBlocks: (analysis.topicBlocks || []).filter(b => b.isOutdated === true)
+        };
+
+        return res.json({ success: true, analysis: outdatedOnly });
+    } catch (error) {
+        console.error("Error in analyzePlaylistCurriculum:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * POST /:courseId/playlist/remove-topics
+ * Body: { topicNames: ["jQuery", "Bower"] }
+ * Removes videos belonging to selected topics, re-chunks days.
+ */
+const removeOutdatedTopics = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const { topicNames } = req.body;
+
+        if (!topicNames || !Array.isArray(topicNames) || topicNames.length === 0) {
+            return res.status(400).json({ success: false, message: "topicNames array is required" });
+        }
+
+        const course = await Course.findById(courseId);
+        if (!course || course.sourceType !== 'playlist') {
+            return res.status(404).json({ success: false, message: "Playlist course not found" });
+        }
+
+        const analysis = course.topicAnalysis;
+        if (!analysis || !analysis.topicBlocks) {
+            return res.status(400).json({ success: false, message: "Run analysis first" });
+        }
+
+        // Build set of video indices to remove
+        const indicesToRemove = new Set();
+        analysis.topicBlocks.forEach(block => {
+            if (topicNames.includes(block.topicName)) {
+                block.videoIndices.forEach(i => indicesToRemove.add(i));
+            }
+        });
+
+        // Flatten all videos + filter out removed ones
+        const allVideos = [];
+        course.days.forEach(day => {
+            day.videos.forEach(v => allVideos.push(v.toObject()));
+        });
+
+        const filteredVideos = allVideos.filter((_, i) => !indicesToRemove.has(i));
+
+        if (filteredVideos.length === 0) {
+            return res.status(400).json({ success: false, message: "Cannot remove all videos" });
+        }
+
+        // Re-chunk into days
+        const maxSecondsPerDay = Math.max(course.hoursPerDay, 0.5) * 3600;
+        const newDays = [];
+        let currentDay = { dayNumber: 1, videos: [], totalDuration: 0 };
+
+        for (const video of filteredVideos) {
+            if (currentDay.totalDuration + video.duration > maxSecondsPerDay && currentDay.videos.length > 0) {
+                newDays.push(currentDay);
+                currentDay = { dayNumber: newDays.length + 1, videos: [], totalDuration: 0 };
+            }
+            currentDay.videos.push(video);
+            currentDay.totalDuration += video.duration;
+        }
+        if (currentDay.videos.length > 0) newDays.push(currentDay);
+
+        // Update course
+        course.days = newDays;
+        course.currentDayIndex = 0;
+        // Clear cached analysis since structure changed
+        course.topicAnalysis = null;
+        await course.save();
+
+        console.log(`🧹 Removed ${indicesToRemove.size} videos from ${topicNames.length} topics. Now ${filteredVideos.length} videos in ${newDays.length} days.`);
+
+        return res.json({
+            success: true,
+            removedCount: indicesToRemove.size,
+            newDayCount: newDays.length,
+            newVideoCount: filteredVideos.length
+        });
+    } catch (error) {
+        console.error("Error in removeOutdatedTopics:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * POST /:courseId/playlist/suggest-fillers
+ * PRO ONLY — Suggests trending/missing topics.
+ */
+const suggestFillerTopics = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const { clerkId } = req.body;
+
+        // Check pro status
+        const user = await User.findOne({ clerkId });
+        if (!user || user.plan !== 'pro') {
+            return res.status(403).json({ success: false, message: "This feature requires a Pro plan." });
+        }
+
+        const course = await Course.findById(courseId);
+        if (!course || course.sourceType !== 'playlist') {
+            return res.status(404).json({ success: false, message: "Playlist course not found" });
+        }
+
+        // Need topic analysis first
+        let analysis = course.topicAnalysis;
+        if (!analysis || !analysis.topicBlocks) {
+            // Auto-run analysis
+            const videoTitles = [];
+            course.days.forEach(day => day.videos.forEach(v => videoTitles.push(v.title)));
+            const { analyzePlaylistTopics } = require('../utils/playlistAnalyzer');
+            analysis = await analyzePlaylistTopics(videoTitles, course.course_title);
+            course.topicAnalysis = analysis;
+            await course.save();
+        }
+
+        const { suggestMissingTopics } = require('../utils/playlistAnalyzer');
+        const suggestions = await suggestMissingTopics(course.course_title, analysis.topicBlocks);
+
+        return res.json({ success: true, suggestions });
+    } catch (error) {
+        console.error("Error in suggestFillerTopics:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * POST /:courseId/playlist/add-fillers
+ * PRO ONLY — Finds videos for selected topics and adds them as filler days.
+ * Body: { clerkId, selectedTopics: [{ topicName, subtopics: [{ title, youtubeQuery }] }] }
+ */
+const addFillerTopics = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const { clerkId, selectedTopics } = req.body;
+
+        const user = await User.findOne({ clerkId });
+        if (!user || user.plan !== 'pro') {
+            return res.status(403).json({ success: false, message: "Pro plan required" });
+        }
+
+        if (!selectedTopics || selectedTopics.length === 0) {
+            return res.status(400).json({ success: false, message: "No topics selected" });
+        }
+
+        const course = await Course.findById(courseId);
+        if (!course || course.sourceType !== 'playlist') {
+            return res.status(404).json({ success: false, message: "Playlist course not found" });
+        }
+
+        // Respond immediately, process in background
+        res.json({ success: true, message: "Filler topics are being processed. Check back in a moment." });
+
+        // Background processing
+        (async () => {
+            try {
+                const { findBestVideo } = require('../routes/videoFinder');
+                const maxSecondsPerDay = Math.max(course.hoursPerDay, 0.5) * 3600;
+
+                for (const topic of selectedTopics) {
+                    const fillerVideos = [];
+
+                    for (const sub of topic.subtopics) {
+                        console.log(`🔍 Filler: searching video for "${sub.youtubeQuery}"`);
+                        try {
+                            const video = await findBestVideo(sub.youtubeQuery, []);
+                            if (video) {
+                                fillerVideos.push({
+                                    videoId: video.id,
+                                    title: video.title || sub.title,
+                                    duration: video.duration || 0,
+                                    channel: video.channelTitle || '',
+                                    channelId: video.channelId || ''
+                                });
+                            }
+                        } catch (e) {
+                            console.error(`  ⚠️ Video search failed for "${sub.title}":`, e.message);
+                        }
+                    }
+
+                    if (fillerVideos.length > 0) {
+                        // Create filler day(s)
+                        let currentDay = { dayNumber: course.days.length + 1, videos: [], totalDuration: 0, isFiller: true, fillerTopic: topic.topicName };
+
+                        for (const video of fillerVideos) {
+                            if (currentDay.totalDuration + video.duration > maxSecondsPerDay && currentDay.videos.length > 0) {
+                                course.days.push(currentDay);
+                                currentDay = { dayNumber: course.days.length + 1, videos: [], totalDuration: 0, isFiller: true, fillerTopic: topic.topicName };
+                            }
+                            currentDay.videos.push(video);
+                            currentDay.totalDuration += video.duration;
+                        }
+                        if (currentDay.videos.length > 0) {
+                            course.days.push(currentDay);
+                        }
+                    }
+                }
+
+                await course.save();
+                console.log(`✅ Filler topics added: ${selectedTopics.length} topics → ${course.days.length} total days`);
+            } catch (e) {
+                console.error('❌ Background filler processing failed:', e);
+            }
+        })();
+
+    } catch (error) {
+        console.error("Error in addFillerTopics:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// ══════════════════════════════════════════════════
+//  Daily Checkpoint System
+// ══════════════════════════════════════════════════
+
+/**
+ * GET /:courseId/day/:dayIndex/checkpoint
+ * Returns or generates the checkpoint for a specific day.
+ */
+const getCheckpoint = async (req, res) => {
+    try {
+        const { courseId, dayIndex } = req.params;
+        const idx = parseInt(dayIndex, 10);
+
+        const course = await Course.findById(courseId);
+        if (!course || course.sourceType !== 'playlist') {
+            return res.status(404).json({ success: false, message: "Course not found" });
+        }
+
+        const day = course.days[idx];
+        if (!day) {
+            return res.status(404).json({ success: false, message: "Day not found" });
+        }
+
+        // If checkpoint already has questions, return it
+        if (day.checkpoint && day.checkpoint.theoryQuestions && day.checkpoint.theoryQuestions.length > 0) {
+            return res.json({ success: true, checkpoint: day.checkpoint });
+        }
+
+        // Generate checkpoint
+        const videoTitles = day.videos.map(v => v.title);
+        const { generateCheckpoint } = require('../utils/checkpointGenerator');
+        const result = await generateCheckpoint(videoTitles, course.course_title);
+
+        // Save to day
+        day.checkpoint = {
+            status: 'available',
+            attemptsUsed: 0,
+            maxAttempts: 3,
+            lastScore: 0,
+            questionType: result.questionType || 'theory',
+            theoryQuestions: result.theoryQuestions || [],
+            codingQuestion: result.codingQuestion || { prompt: '', language: '', expectedBehavior: '' },
+            submissions: []
+        };
+
+        await course.save();
+        return res.json({ success: true, checkpoint: day.checkpoint });
+    } catch (error) {
+        console.error("Error in getCheckpoint:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * POST /:courseId/day/:dayIndex/checkpoint/submit
+ * Body: { clerkId, theoryAnswers: [...], codeFiles: [{ fileName, content }] }
+ */
+const submitCheckpoint = async (req, res) => {
+    try {
+        const { courseId, dayIndex } = req.params;
+        const { clerkId, theoryAnswers, codeFiles } = req.body;
+        const idx = parseInt(dayIndex, 10);
+
+        const course = await Course.findById(courseId);
+        if (!course || course.sourceType !== 'playlist') {
+            return res.status(404).json({ success: false, message: "Course not found" });
+        }
+
+        const day = course.days[idx];
+        if (!day || !day.checkpoint) {
+            return res.status(404).json({ success: false, message: "Day or checkpoint not found" });
+        }
+
+        // Determine max attempts based on user plan
+        const user = await User.findOne({ clerkId });
+        const maxAttempts = (user && user.plan === 'pro') ? 8 : 3;
+        day.checkpoint.maxAttempts = maxAttempts;
+
+        // Check attempts
+        if (day.checkpoint.attemptsUsed >= maxAttempts) {
+            // All attempts exhausted — unlock next day anyway
+            if (day.checkpoint.status !== 'passed') {
+                day.checkpoint.status = 'failed_all';
+                // Unlock next day
+                if (idx + 1 < course.days.length) {
+                    course.currentDayIndex = Math.max(course.currentDayIndex, idx + 1);
+                    if (course.days[idx + 1].checkpoint) {
+                        course.days[idx + 1].checkpoint.status = 'available';
+                    }
+                }
+                await course.save();
+            }
+            return res.status(400).json({
+                success: false,
+                message: "All attempts exhausted. Day has been unlocked anyway.",
+                checkpoint: day.checkpoint
+            });
+        }
+
+        // Grade with Gemini
+        const { gradeCheckpoint } = require('../utils/checkpointGenerator');
+        const gradeResult = await gradeCheckpoint({
+            courseTitle: course.course_title,
+            videoTitles: day.videos.map(v => v.title),
+            questionType: day.checkpoint.questionType,
+            theoryQuestions: day.checkpoint.theoryQuestions,
+            theoryAnswers: theoryAnswers || [],
+            codingQuestion: day.checkpoint.codingQuestion,
+            codeFiles: codeFiles || []
+        });
+
+        // Save submission
+        day.checkpoint.attemptsUsed += 1;
+        day.checkpoint.lastScore = gradeResult.overallScore;
+        day.checkpoint.submissions.push({
+            attemptNumber: day.checkpoint.attemptsUsed,
+            theoryAnswers: theoryAnswers || [],
+            codeFiles: codeFiles || [],
+            score: gradeResult.overallScore,
+            feedback: gradeResult,
+            submittedAt: new Date()
+        });
+
+        const passed = gradeResult.passed && gradeResult.overallScore >= 60;
+
+        if (passed) {
+            day.checkpoint.status = 'passed';
+            day.status = 'ready';
+            // Unlock next day
+            if (idx + 1 < course.days.length) {
+                course.currentDayIndex = Math.max(course.currentDayIndex, idx + 1);
+                if (!course.days[idx + 1].checkpoint || course.days[idx + 1].checkpoint.status === 'locked') {
+                    if (!course.days[idx + 1].checkpoint) {
+                        course.days[idx + 1].checkpoint = { status: 'available' };
+                    } else {
+                        course.days[idx + 1].checkpoint.status = 'available';
+                    }
+                }
+            }
+            // Log activity
+            try {
+                await logActivity(course.userId, courseId, course.course_title, day.videos.length);
+            } catch (e) { /* ignore */ }
+        } else if (day.checkpoint.attemptsUsed >= maxAttempts) {
+            day.checkpoint.status = 'failed_all';
+            // Still unlock next day
+            if (idx + 1 < course.days.length) {
+                course.currentDayIndex = Math.max(course.currentDayIndex, idx + 1);
+                if (!course.days[idx + 1].checkpoint) {
+                    course.days[idx + 1].checkpoint = { status: 'available' };
+                } else {
+                    course.days[idx + 1].checkpoint.status = 'available';
+                }
+            }
+        }
+
+        await course.save();
+
+        return res.json({
+            success: true,
+            passed,
+            score: gradeResult.overallScore,
+            attemptsRemaining: maxAttempts - day.checkpoint.attemptsUsed,
+            feedback: gradeResult,
+            checkpoint: day.checkpoint
+        });
+    } catch (error) {
+        console.error("Error in submitCheckpoint:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     initializeCourse,
     updateTrustedCreators,
@@ -564,5 +1252,14 @@ module.exports = {
     gradeModuleQuiz,
     getModulePrepStatus,
     triggerPrepare,
-    deleteCourseHandler
+    deleteCourseHandler,
+    createFromPlaylist,
+    getUserPlaylistCourses,
+    analyzePlaylistCurriculum,
+    removeOutdatedTopics,
+    suggestFillerTopics,
+    addFillerTopics,
+    getCheckpoint,
+    submitCheckpoint
 };
+

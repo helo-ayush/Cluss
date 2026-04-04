@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import MarkdownRenderer from './MarkdownRenderer';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -172,37 +171,17 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
                   <div
                     className={`max-w-[85%] px-4 py-3 rounded-2xl ${
                       msg.role === 'user' 
-                        ? 'bg-indigo-600 text-white' 
+                        ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.3)]' 
                         : msg.role === 'system' 
                           ? 'bg-amber-500/10 border border-amber-500/20 text-amber-200'
-                          : 'bg-white/5 border border-white/10 text-slate-200'
+                          : 'bg-indigo-500/5 backdrop-blur-md border border-indigo-500/15 text-slate-200'
                     }`}
                   >
                     {msg.role === 'system' && (
                       <span className="material-symbols-outlined align-middle mr-1" style={{ fontSize: '14px', color: '#fbbf24' }}>info</span>
                     )}
                     {msg.role === 'assistant' ? (
-                      <div className="markdown-body text-sm leading-relaxed">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-                            strong: ({node, ...props}) => <strong className="font-bold text-slate-200" {...props} />,
-                            code: ({node, inline, ...props}) => 
-                              inline ? (
-                                <code className="px-1.5 py-0.5 rounded text-xs font-mono bg-black/20 text-indigo-300" {...props} />
-                              ) : (
-                                <pre className="p-3 my-2 rounded-lg text-xs font-mono bg-black/30 overflow-x-auto text-indigo-200 custom-scroll"><code {...props} /></pre>
-                              ),
-                            ul: ({node, ...props}) => <ul className="list-disc pl-4 mb-2 last:mb-0 space-y-1" {...props} />,
-                            ol: ({node, ...props}) => <ol className="list-decimal pl-4 mb-2 last:mb-0 space-y-1" {...props} />,
-                            li: ({node, ...props}) => <li className="pl-1" {...props} />,
-                            a: ({node, ...props}) => <a className="text-indigo-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
-                          }}
-                        >
-                          {msg.text}
-                        </ReactMarkdown>
-                      </div>
+                      <MarkdownRenderer content={msg.text} className="text-sm leading-relaxed" />
                     ) : (
                       <span style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</span>
                     )}
