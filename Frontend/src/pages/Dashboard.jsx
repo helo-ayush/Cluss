@@ -519,7 +519,7 @@ function TopicAnalysisModalInline({ loading, blocks, onClose, onRemove }) {
   const items = blocks || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="relative rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
         style={{ background: 'var(--color-background)', border: '1px solid var(--theme-border-strong)' }}>
@@ -597,7 +597,7 @@ function FillerModalInline({ loading, suggestions, onClose, onAdd }) {
   const items = suggestions?.missingSuggestions || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="relative rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
         style={{ background: 'var(--color-background)', border: '1px solid var(--theme-border-strong)' }}>
