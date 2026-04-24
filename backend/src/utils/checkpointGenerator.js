@@ -8,9 +8,10 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
  *
  * @param {string[]} videoTitles - Titles of videos watched today
  * @param {string} courseTitle - Overall course/playlist title
+ * @param {string} userPlan - 'free' or 'pro'
  * @returns {{ questionType, theoryQuestions, codingQuestion }}
  */
-async function generateCheckpoint(videoTitles, courseTitle) {
+async function generateCheckpoint(videoTitles, courseTitle, userPlan = 'free') {
     const prompt = `
 You are an expert educator creating a daily learning checkpoint assessment.
 
@@ -57,7 +58,7 @@ NOTE: If questionType is "theory", set codingQuestion to { "prompt": "", "langua
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: userPlan === 'pro' ? 'gemini-1.5-pro' : 'gemini-1.5-flash',
             contents: prompt,
             config: { responseMimeType: 'application/json' }
         });
@@ -81,9 +82,10 @@ NOTE: If questionType is "theory", set codingQuestion to { "prompt": "", "langua
  * @param {string[]} theoryAnswers
  * @param {{ prompt, language, expectedBehavior }} codingQuestion
  * @param {{ fileName, content }[]} codeFiles
+ * @param {string} userPlan
  * @returns {{ theoryScores, codingScore, overallScore, passed, overallFeedback }}
  */
-async function gradeCheckpoint({ courseTitle, videoTitles, questionType, theoryQuestions, theoryAnswers, codingQuestion, codeFiles }) {
+async function gradeCheckpoint({ courseTitle, videoTitles, questionType, theoryQuestions, theoryAnswers, codingQuestion, codeFiles }, userPlan = 'free') {
 
     let codingSection = '';
     if (questionType === 'mixed' && codingQuestion?.prompt) {

@@ -8,9 +8,10 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
  *
  * @param {string[]} videoTitles - Array of video titles in playlist order
  * @param {string} courseTitle - The playlist/course title
+ * @param {string} userPlan - The user's subscription plan (free/pro)
  * @returns {Object} { topicBlocks: [...] }
  */
-async function analyzePlaylistTopics(videoTitles, courseTitle) {
+async function analyzePlaylistTopics(videoTitles, courseTitle, userPlan = 'free') {
     const prompt = `
 You are a senior technology curriculum auditor with deep knowledge of industry trends in 2025-2026.
 

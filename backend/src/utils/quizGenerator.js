@@ -7,7 +7,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
  * @param {String} targetTopic - The topic of the subtopic
  * @param {String} transcript - The YouTube transcript text
  */
-const generateQuizFromTranscript = async (targetTopic, transcript) => {
+const generateQuizFromTranscript = async (targetTopic, transcript, userPlan = 'free') => {
     // 1. If transcript is missing, we use a different prompt for a General Topic Quiz.
     const isGeneralQuiz = !transcript;
     const inputContent = isGeneralQuiz ? "No transcript available. Generate a high-quality quiz based on general knowledge of the topic." : transcript.substring(0, 15000);
@@ -39,8 +39,9 @@ const generateQuizFromTranscript = async (targetTopic, transcript) => {
     `;
 
     try {
+        const geminiModel = (userPlan === 'pro' || userPlan === 'ultra') ? 'gemini-3.1-flash' : 'gemini-2.5-flash';
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: geminiModel,
             contents: prompt,
             config: {
                 responseMimeType: "application/json",

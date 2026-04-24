@@ -1,5 +1,20 @@
+import { useState } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { useTheme } from './ThemeProvider';
 
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 /* ── Icon SVGs ── */
 const IconBrain = () => (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -95,28 +110,28 @@ const AbstractShape = ({ color, opacity, flip = false }) => (
 
 /* ── Feature data ── */
 const FREE_FEATURES = [
-  'Max 3 Playlist/Courses on Profile',
-  '1 Playlist/Course per week',
+  'Max 3 active courses',
+  '1 course generated per week',
   '1 topic unlock per day',
-  'Full video learning',
-  'Progress tracking & streaks',
-  'AI-powered Quizzes',
+  '10 AI chat messages per day',
+  'Quiz pass threshold: 80%',
+  'Gemini 2.5 Flash models'
 ];
 const PRO_FEATURES = [
-  { text: 'Unlimited Playlist Analysis' },
-  { text: 'Unlimited Profile Storage' },
-  { text: 'Unlimited topic unlocks' },
-  { text: 'AI Tutor Chat per topic', badge: 'AI-based' },
-  { text: 'Priority video selection' },
-  { text: 'Quiz pass threshold: 60%' },
+  { text: 'Max 10 active courses' },
+  { text: '1 course generated per week' },
+  { text: '3 topic unlocks per day' },
+  { text: '50 AI chat messages per day', badge: 'AI-based' },
+  { text: 'Quiz pass threshold: 70%' },
+  { text: 'Gemini 3.1 Flash access', badge: 'High-intent' },
 ];
-const ENT_FEATURES = [
-  'Everything in Pro',
-  'Dedicated account manager',
-  'Custom integrations',
-  'SSO & advanced security',
-  'SLA & priority support',
-  'Usage analytics dashboard',
+const ULTRA_FEATURES = [
+  { text: 'Unlimited active courses' },
+  { text: '1 course generated per week' },
+  { text: '10 topic unlocks per day' },
+  { text: 'Unlimited AI chat messages', badge: 'AI-based' },
+  { text: 'Quiz pass threshold: 60%' },
+  { text: 'Gemini 3.1 Flash access', badge: 'High-intent' },
 ];
 
 /* ════════════════════════════════════════════
@@ -124,6 +139,84 @@ const ENT_FEATURES = [
 ════════════════════════════════════════════ */
 export default function Pricing() {
   const { isDark } = useTheme();
+  const { user } = useUser();
+  const [loadingPlan, setLoadingPlan] = useState(null);
+
+  const handleCheckout = async (plan) => {
+    if (!user) {
+      alert("Please sign in to upgrade your plan.");
+      return;
+    }
+    
+    setLoadingPlan(plan);
+    try {
+      const res = await loadRazorpayScript();
+      if (!res) {
+        alert("Razorpay SDK failed to load. Are you online?");
+        setLoadingPlan(null);
+        return;
+      }
+
+      // Create Order
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/payment/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clerkId: user.id, plan }),
+      });
+      const data = await response.json();
+      
+      if (!data.success) {
+        alert("Could not create order: " + (data.message || "Unknown error"));
+        setLoadingPlan(null);
+        return;
+      }
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_placeholder',
+        amount: data.amount,
+        currency: data.currency,
+        name: "StudyHelper AI",
+        description: `Upgrade to ${plan.toUpperCase()}`,
+        order_id: data.order.id,
+        handler: async function (response) {
+          // Verify
+          const verifyRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/payment/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clerkId: user.id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              plan
+            }),
+          });
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            alert(`Payment successful! You are now on the ${plan.toUpperCase()} plan.`);
+            window.location.reload();
+          } else {
+            alert("Payment verification failed");
+          }
+        },
+        prefill: {
+          name: user.fullName || '',
+          email: user.primaryEmailAddress?.emailAddress || '',
+        },
+        theme: {
+          color: "#4f46e5",
+        },
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
 
   /* ── All theme tokens in one place ── */
   const t = isDark ? {
@@ -424,7 +517,7 @@ export default function Pricing() {
               </p>
               {/* Price */}
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '28px' }}>
-                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: '48px', fontWeight: 700, color: t.c1Price, letterSpacing: '-0.03em' }}>$0</span>
+                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: '48px', fontWeight: 700, color: t.c1Price, letterSpacing: '-0.03em' }}>₹0</span>
                 <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: t.c1PriceSub }}>/forever</span>
               </div>
               {/* CTA */}
@@ -498,25 +591,26 @@ export default function Pricing() {
               </p>
               {/* Price */}
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '28px' }}>
-                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: '52px', fontWeight: 700, color: t.c2Price, letterSpacing: '-0.03em' }}>$5</span>
+                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: '52px', fontWeight: 700, color: t.c2Price, letterSpacing: '-0.03em' }}>₹99</span>
                 <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: t.c2PriceSub }}>/month</span>
               </div>
               {/* CTA — orange */}
-              <button className="pricing-cta-orange" style={{
+              <button className="pricing-cta-orange" disabled={loadingPlan === 'pro'} onClick={() => handleCheckout('pro')} style={{
                 width: '100%', padding: '15px', borderRadius: '12px', border: 'none',
                 background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
                 color: '#fff',
                 fontFamily: 'Outfit, sans-serif', fontSize: '16px', fontWeight: 700,
-                cursor: 'pointer', marginBottom: '28px',
+                cursor: loadingPlan === 'pro' ? 'not-allowed' : 'pointer', marginBottom: '28px',
                 boxShadow: '0 0 24px rgba(234,88,12,0.4)',
                 letterSpacing: '0.01em',
+                opacity: loadingPlan === 'pro' ? 0.7 : 1
               }}>
-                Choose this plan
+                {loadingPlan === 'pro' ? 'Processing...' : 'Choose this plan'}
               </button>
               {/* Meta */}
               {[
-                { icon: <IconUsers />, strong: 'Unlimited', rest: ' courses' },
-                { icon: <IconCloud />, strong: '1 GB', rest: ' of storage' },
+                { icon: <IconUsers />, strong: '10', rest: ' active courses' },
+                { icon: <IconCloud />, strong: '5 GB', rest: ' of storage' },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <span style={{ color: t.c2MetaIcon, flexShrink: 0 }}>{item.icon}</span>
@@ -572,28 +666,30 @@ export default function Pricing() {
                 <IconBuilding />
               </div>
               {/* Name */}
-              <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '28px', fontWeight: 700, color: t.c3Name, margin: '0 0 6px', letterSpacing: '-0.01em' }}>Enterprise</h3>
+              <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '28px', fontWeight: 700, color: t.c3Name, margin: '0 0 6px', letterSpacing: '-0.01em' }}>Ultra</h3>
               <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: t.c3Desc, margin: '0 0 28px', lineHeight: 1.5 }}>
-                Own your data. Custom SLA. Dedicated support. Decentralized at scale.
+                No limits. Learn without boundaries. High-intent curriculum generation.
               </p>
-              {/* "Price" */}
-              <div style={{ marginBottom: '28px' }}>
-                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: '36px', fontWeight: 700, color: t.c3Price, letterSpacing: '-0.02em' }}>Contact us</span>
+              {/* Price */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '28px' }}>
+                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: '52px', fontWeight: 700, color: t.c3Price, letterSpacing: '-0.02em' }}>₹349</span>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: t.c3PriceSub }}>/month</span>
               </div>
               {/* CTA */}
-              <button className="pricing-cta-ghost" style={{
+              <button className="pricing-cta-ghost" disabled={loadingPlan === 'ultra'} onClick={() => handleCheckout('ultra')} style={{
                 width: '100%', padding: '14px', borderRadius: '12px',
                 background: t.c3CtaBg, border: t.c3CtaBorder, color: t.c3CtaText,
                 fontFamily: 'Outfit, sans-serif', fontSize: '15px', fontWeight: 600,
-                cursor: 'pointer', marginBottom: '28px',
+                cursor: loadingPlan === 'ultra' ? 'not-allowed' : 'pointer', marginBottom: '28px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                opacity: loadingPlan === 'ultra' ? 0.7 : 1
               }}>
-                <IconMail /> Contact us
+                {loadingPlan === 'ultra' ? 'Processing...' : 'Upgrade to Ultra'}
               </button>
               {/* Meta */}
               {[
-                { icon: <IconUsers />, strong: 'Unlimited', rest: ' seats available' },
-                { icon: <IconCloud />, strong: '100 GB+', rest: ' of storage' },
+                { icon: <IconUsers />, strong: 'Unlimited', rest: ' active courses' },
+                { icon: <IconCloud />, strong: 'Unlimited', rest: ' storage' },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <span style={{ color: t.c3MetaIcon, flexShrink: 0 }}>{item.icon}</span>
@@ -610,10 +706,21 @@ export default function Pricing() {
               </div>
               {/* Features */}
               <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '13px' }}>
-                {ENT_FEATURES.map((feat, i) => (
+                {ULTRA_FEATURES.map((feat, i) => (
                   <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ color: t.c3CheckColor, flexShrink: 0 }}><IconCheck /></span>
-                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: t.c3FeatText }}>{feat}</span>
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: t.c3FeatText }}>
+                      {feat.text}
+                      {feat.badge && (
+                        <span className="pricing-ai-badge" style={{
+                          background: t.c3BadgeAiBg || 'rgba(100,116,139,0.15)',
+                          border: t.c3BadgeAiBorder || '1px solid rgba(100,116,139,0.25)',
+                          color: t.c3BadgeAiText || t.c3Name,
+                        }}>
+                          <IconSparkle /> {feat.badge}
+                        </span>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>

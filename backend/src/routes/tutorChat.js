@@ -3,16 +3,17 @@ const router = express.Router();
 const User = require('../models/User');
 const Course = require('../models/Course');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { checkAIChatLimit, recordAIChat } = require('../middleware/usageLimiter');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 /**
  * POST /api/tutor-chat
- * AI Tutor Chat — Pro users only.
+ * AI Tutor Chat.
  * Accepts: { clerkId, courseId, moduleIndex, subtopicIndex, message, history[] }
  * Returns: { success, reply }
  */
-router.post('/', async (req, res) => {
+router.post('/', checkAIChatLimit, async (req, res) => {
     try {
         const { clerkId, courseId, moduleIndex, subtopicIndex, message, history } = req.body;
 
@@ -20,19 +21,10 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ success: false, message: 'clerkId, courseId, and message are required' });
         }
 
-        // Check Pro plan
+        // Check User plan
         const user = await User.findOne({ clerkId });
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
-        }
-
-        if (user.plan !== 'pro') {
-            return res.status(403).json({
-                success: false,
-                limitReached: true,
-                limitType: 'proOnly',
-                message: 'AI Tutor Chat is a Pro feature. Upgrade to Pro to unlock personalized tutoring!'
-            });
         }
 
         const course = await Course.findById(courseId);
@@ -108,8 +100,9 @@ router.post('/', async (req, res) => {
         LECTURE CONTENT:
         ${transcript ? transcript.substring(0, 10000) : 'No context available for this topic. Use general knowledge.'}`;
 
-        // Initialize model (Using gemini-2.5-flash as per project standard)
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        // Initialize model (Route based on plan)
+        const geminiModel = (user.plan === 'pro' || user.plan === 'ultra') ? 'gemini-3.1-flash' : 'gemini-2.5-flash';
+        const model = genAI.getGenerativeModel({ model: geminiModel });
 
         // Format history for Gemini chat
         const chatHistory = (history || []).map(msg => ({
@@ -127,6 +120,9 @@ router.post('/', async (req, res) => {
 
         const result = await chat.sendMessage(message);
         const aiResponse = result.response.text();
+
+        // Record AI chat usage
+        await recordAIChat(clerkId);
 
         return res.json({
             success: true,

@@ -8,12 +8,21 @@ const PLAN_LIMITS = {
         coursesPerWeek: 1,
         topicUnlocksPerCoursePerDay: 1,
         quizPassThreshold: 80,
+        maxAiChatPerDay: 10
     },
     pro: {
+        maxCourses: 10,
+        coursesPerWeek: 1,
+        topicUnlocksPerCoursePerDay: 3,
+        quizPassThreshold: 70,
+        maxAiChatPerDay: 50
+    },
+    ultra: {
         maxCourses: Infinity,
-        coursesPerWeek: Infinity,
-        topicUnlocksPerCoursePerDay: Infinity,
+        coursesPerWeek: 1,
+        topicUnlocksPerCoursePerDay: 10,
         quizPassThreshold: 60,
+        maxAiChatPerDay: Infinity
     }
 };
 
@@ -58,13 +67,13 @@ const checkCourseCreation = async (req, res, next) => {
             });
         }
 
-        // Check 2: 1 course per week for free users
-        if (user.plan !== 'pro' && isWithinLastWeek(user.lastCourseCreatedAt)) {
+        // Check 2: 1 course per week
+        if (isWithinLastWeek(user.lastCourseCreatedAt)) {
             return res.status(403).json({
                 success: false,
                 limitReached: true,
                 limitType: 'weeklyLimit',
-                message: 'Free users can analyze 1 Playlist per week. Upgrade to Pro for unlimited analysis!',
+                message: 'All users are limited to 1 generated course per week to ensure quality.',
                 currentPlan: user.plan,
                 nextAvailable: new Date(new Date(user.lastCourseCreatedAt).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
             });
@@ -92,9 +101,9 @@ const checkTopicUnlock = async (req, res, next) => {
         if (!course) return next();
 
         const user = await User.findById(course.userId);
-        if (!user || user.plan === 'pro') return next(); // Pro users skip limits
+        if (!user) return next();
 
-        const limits = PLAN_LIMITS.free;
+        const limits = PLAN_LIMITS[user.plan || 'free'];
         const today = todayStr();
 
         // Find today's unlock record for this course
@@ -109,7 +118,7 @@ const checkTopicUnlock = async (req, res, next) => {
                 success: false,
                 limitReached: true,
                 limitType: 'dailyTopicLimit',
-                message: 'Free users can unlock 1 topic per course per day. Come back tomorrow or upgrade to Pro!',
+                message: `You've reached your limit of ${limits.topicUnlocksPerCoursePerDay} topic unlocks per day for this course.`,
                 currentPlan: user.plan
             });
         }
@@ -130,7 +139,7 @@ const checkTopicUnlock = async (req, res, next) => {
 const recordTopicUnlock = async (userId, courseId) => {
     try {
         const user = await User.findById(userId);
-        if (!user || user.plan === 'pro') return;
+        if (!user) return;
 
         const today = todayStr();
         const existing = user.topicUnlocks.find(
@@ -155,9 +164,64 @@ const recordTopicUnlock = async (userId, courseId) => {
     }
 };
 
+/**
+ * Middleware: Checks daily AI chat limits.
+ */
+const checkAIChatLimit = async (req, res, next) => {
+    try {
+        const clerkId = req.body.clerkId;
+        if (!clerkId) return next();
+
+        const user = await User.findOne({ clerkId });
+        if (!user) return next();
+
+        const limits = PLAN_LIMITS[user.plan || 'free'];
+        if (limits.maxAiChatPerDay === Infinity) return next();
+
+        const today = todayStr();
+        const chatUsage = user.aiChatUsage || {};
+
+        if (chatUsage.date === today && chatUsage.count >= limits.maxAiChatPerDay) {
+            return res.status(403).json({
+                success: false,
+                limitReached: true,
+                message: `You've reached your limit of ${limits.maxAiChatPerDay} AI chat messages for today. Upgrade to a higher plan for more!`,
+                currentPlan: user.plan
+            });
+        }
+
+        next();
+    } catch (err) {
+        console.error('checkAIChatLimit error:', err.message);
+        next();
+    }
+};
+
+/**
+ * Increments AI Chat Usage
+ */
+const recordAIChat = async (clerkId) => {
+    try {
+        const user = await User.findOne({ clerkId });
+        if (!user) return;
+
+        const today = todayStr();
+        if (!user.aiChatUsage || user.aiChatUsage.date !== today) {
+            user.aiChatUsage = { date: today, count: 1 };
+        } else {
+            user.aiChatUsage.count += 1;
+        }
+        await user.save();
+    } catch (err) {
+        console.error('recordAIChat error:', err.message);
+    }
+};
+
 module.exports = {
     PLAN_LIMITS,
     checkCourseCreation,
     checkTopicUnlock,
-    recordTopicUnlock
+    recordTopicUnlock,
+    checkAIChatLimit,
+    recordAIChat
 };

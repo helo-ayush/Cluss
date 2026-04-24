@@ -27,6 +27,7 @@ const activityRoutes = require('./src/routes/activity');
 const userRoutes = require('./src/routes/user');
 const leaderboardRoutes = require('./src/routes/leaderboard');
 const tutorChatRoutes = require('./src/routes/tutorChat');
+const paymentRoutes = require('./src/routes/payment');
 
 // Base status route
 app.get('/', (req, res) => {
@@ -83,6 +84,7 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/tutor-chat', tutorChatRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

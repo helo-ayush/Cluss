@@ -20,8 +20,12 @@ const userSchema = new mongoose.Schema({
     // ── SaaS Plan Fields ──
     plan: {
         type: String,
-        enum: ['free', 'pro'],
+        enum: ['free', 'pro', 'ultra'],
         default: 'free'
+    },
+    aiChatUsage: {
+        date: { type: String }, // "YYYY-MM-DD"
+        count: { type: Number, default: 0 }
     },
     coursesCreated: {
         type: Number,

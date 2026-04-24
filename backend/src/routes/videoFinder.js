@@ -35,7 +35,6 @@ async function fetchTranscriptSafe(videoId) {
     return '';
 }
 
-// --- HELPER FUNCTION: Fetch Stats AND Transcripts ---
 async function getVideoStats(videoIds) {
     if (videoIds.length === 0) return [];
 
@@ -53,47 +52,33 @@ async function getVideoStats(videoIds) {
         return (h * 3600 + m * 60 + s) > 60;
     });
 
-    let transcriptMap = {};
-    const extractedIds = items.map(item => item.id);
+    return items.map(item => ({
+        id: item.id,
+        title: item.snippet.title,
+        channelId: item.snippet.channelId,
+        channelTitle: item.snippet.channelTitle,
+        viewCount: parseInt(item.statistics.viewCount || 0),
+        likeCount: parseInt(item.statistics.likeCount || 0),
+        likeViewRatio: (parseInt(item.statistics.likeCount || 0) / parseInt(item.statistics.viewCount || 1)),
+        transcript: "" // Transcripts fetched later for top 3
+    }));
+}
+
+// --- HELPER: Micro-Batch Pipeline for Transcripts ---
+async function fetchTranscriptsForTop3(videos) {
+    if (!videos || videos.length === 0) return [];
     
-    if (extractedIds.length > 0) {
-        try {
-            // Batch process using Python script
-            const result = await YoutubeTranscript.fetchTranscriptsBatch(extractedIds);
-            if (result && result.data) {
-                transcriptMap = result.data;
-            }
-        } catch(err) {
-            console.error("Batch transcript fetch failed:", err.message);
-        }
-    }
-
-    let foundTranscriptsCount = 0;
-
-    const videosWithTranscripts = items.map(item => {
-        const transcriptArray = transcriptMap[item.id] || [];
-        let transcriptText = "";
-        
-        if (transcriptArray.length > 0) {
-            transcriptText = transcriptArray.map(t => t.text).join(' ');
-            if (transcriptText.length > 100) transcriptText = transcriptText.substring(0, 15000);
-            foundTranscriptsCount++;
-        }
-
-        return {
-            id: item.id,
-            title: item.snippet.title,
-            channelId: item.snippet.channelId,
-            channelTitle: item.snippet.channelTitle,
-            viewCount: parseInt(item.statistics.viewCount || 0),
-            likeCount: parseInt(item.statistics.likeCount || 0),
-            likeViewRatio: (parseInt(item.statistics.likeCount || 0) / parseInt(item.statistics.viewCount || 1)),
-            transcript: transcriptText
-        };
+    // Sort logically to get best 3 (already done by general search, but we enforce 3 limit here)
+    const top3 = videos.slice(0, 3);
+    
+    console.log(`⏱ Fetching transcripts in parallel for top ${top3.length} videos...`);
+    const promises = top3.map(async (vid) => {
+        vid.transcript = await fetchTranscriptSafe(vid.id);
+        return vid;
     });
-
-    console.log(`📊 Out of ${items.length} candidate videos, ${foundTranscriptsCount} had transcriptions available.`);
-    return videosWithTranscripts;
+    
+    await Promise.all(promises);
+    return top3;
 }
 
 // --- HELPER: General Search ---
@@ -151,7 +136,8 @@ async function findBestVideo(searchQuery, preferredCreators = []) {
             const videoIds = searchRes.data.items.map(item => item.id.videoId);
             if (videoIds.length === 0) continue;
 
-            const candidateVideos = await getVideoStats(videoIds);
+            let candidateVideos = await getVideoStats(videoIds);
+            candidateVideos = await fetchTranscriptsForTop3(candidateVideos);
             const geminiChoice = await evaluateWithGemini(candidateVideos, searchQuery);
 
             if (geminiChoice) {
@@ -165,7 +151,8 @@ async function findBestVideo(searchQuery, preferredCreators = []) {
     // STEP 2: General Search Fallback
     if (!winningVideo) {
         console.log(`\n--- General Search for: "${searchQuery}" ---`);
-        const generalCandidates = await performGeneralSearch(searchQuery);
+        let generalCandidates = await performGeneralSearch(searchQuery);
+        generalCandidates = await fetchTranscriptsForTop3(generalCandidates);
         winningVideo = await evaluateWithGemini(generalCandidates, searchQuery);
         searchTypeUsed = 'general';
     }

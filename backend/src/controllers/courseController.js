@@ -177,8 +177,11 @@ const generateAndSaveQuiz = async (req, res) => {
             return res.json({ success: true, cached: true, quiz: subtopic.quiz });
         }
 
+        // Generate Quiz using appropriate model based on plan
+        const user = await require('../models/User').findById(course.userId);
+        const userPlan = user?.plan || 'free';
         const { generateQuizFromTranscript } = require('../utils/quizGenerator');
-        const generatedQuiz = await generateQuizFromTranscript(subtopic.subtopic_title, transcript);
+        const generatedQuiz = await generateQuizFromTranscript(subtopic.subtopic_title, transcript, userPlan);
 
         if (!generatedQuiz || !Array.isArray(generatedQuiz) || generatedQuiz.length === 0) {
             return res.status(500).json({ success: false, message: "Failed to generate quiz from transcript" });
@@ -842,7 +845,9 @@ const analyzePlaylistCurriculum = async (req, res) => {
         let analysis = course.topicAnalysis;
         if (!analysis || !analysis.topicBlocks) {
             const { analyzePlaylistTopics } = require('../utils/playlistAnalyzer');
-            analysis = await analyzePlaylistTopics(videoTitles, course.course_title);
+            const user = await User.findById(course.userId);
+            const userPlan = user?.plan || 'free';
+            analysis = await analyzePlaylistTopics(videoTitles, course.course_title, userPlan);
 
             // Cache full result (both outdated + relevant) for internal use
             course.topicAnalysis = analysis;
