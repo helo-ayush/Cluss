@@ -1,7 +1,6 @@
     const User = require('../models/User');
 const Course = require('../models/Course');
 
-// ── Plan Limits ──
 const PLAN_LIMITS = {
     free: {
         maxCourses: 3,
@@ -12,14 +11,14 @@ const PLAN_LIMITS = {
     },
     pro: {
         maxCourses: 10,
-        coursesPerWeek: 1,
+        coursesPerWeek: 5,
         topicUnlocksPerCoursePerDay: 3,
         quizPassThreshold: 70,
         maxAiChatPerDay: 50
     },
     ultra: {
-        maxCourses: Infinity,
-        coursesPerWeek: 1,
+        maxCourses: 50,
+        coursesPerWeek: 15,
         topicUnlocksPerCoursePerDay: 10,
         quizPassThreshold: 60,
         maxAiChatPerDay: Infinity
@@ -67,15 +66,20 @@ const checkCourseCreation = async (req, res, next) => {
             });
         }
 
-        // Check 2: 1 course per week
-        if (isWithinLastWeek(user.lastCourseCreatedAt)) {
+        // Check 2: Courses per week
+        const oneWeekAgo = new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+        const coursesThisWeek = await Course.countDocuments({ 
+            userId: user._id, 
+            createdAt: { $gte: oneWeekAgo } 
+        });
+
+        if (coursesThisWeek >= limits.coursesPerWeek) {
             return res.status(403).json({
                 success: false,
                 limitReached: true,
                 limitType: 'weeklyLimit',
-                message: 'All users are limited to 1 generated course per week to ensure quality.',
-                currentPlan: user.plan,
-                nextAvailable: new Date(new Date(user.lastCourseCreatedAt).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+                message: `You've reached your limit of ${limits.coursesPerWeek} generated courses per week. Upgrade to a higher plan for more!`,
+                currentPlan: user.plan
             });
         }
 

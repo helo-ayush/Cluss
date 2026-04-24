@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { useUser } from '@clerk/clerk-react';
+import { useState, useEffect } from 'react';
+import { useUser, useClerk } from '@clerk/clerk-react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from './ThemeProvider';
+import { motion, AnimatePresence } from 'motion/react';
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -119,15 +121,15 @@ const FREE_FEATURES = [
 ];
 const PRO_FEATURES = [
   { text: 'Max 10 active courses' },
-  { text: '1 course generated per week' },
+  { text: '5 courses generated per week' },
   { text: '3 topic unlocks per day' },
   { text: '50 AI chat messages per day', badge: 'AI-based' },
   { text: 'Quiz pass threshold: 70%' },
   { text: 'Gemini 3.1 Flash access', badge: 'High-intent' },
 ];
 const ULTRA_FEATURES = [
-  { text: 'Unlimited active courses' },
-  { text: '1 course generated per week' },
+  { text: 'Max 50 active courses' },
+  { text: '15 courses generated per week' },
   { text: '10 topic unlocks per day' },
   { text: 'Unlimited AI chat messages', badge: 'AI-based' },
   { text: 'Quiz pass threshold: 60%' },
@@ -140,11 +142,41 @@ const ULTRA_FEATURES = [
 export default function Pricing() {
   const { isDark } = useTheme();
   const { user } = useUser();
+  const { openSignIn } = useClerk();
+  const navigate = useNavigate();
   const [loadingPlan, setLoadingPlan] = useState(null);
+  const [userPlan, setUserPlan] = useState('free');
+  const [toast, setToast] = useState(null); // { message: string, type: 'success' | 'error' }
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+      if (type === 'success') window.location.reload();
+    }, 2500);
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/user/${user.id}/usage`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.plan) {
+            setUserPlan(data.plan);
+          }
+        })
+        .catch(err => console.error(err));
+    }
+  }, [user]);
 
   const handleCheckout = async (plan) => {
     if (!user) {
-      alert("Please sign in to upgrade your plan.");
+      openSignIn();
+      return;
+    }
+
+    if (userPlan === plan || (userPlan === 'ultra' && plan === 'pro')) {
+      navigate('/dashboard');
       return;
     }
     
@@ -152,7 +184,7 @@ export default function Pricing() {
     try {
       const res = await loadRazorpayScript();
       if (!res) {
-        alert("Razorpay SDK failed to load. Are you online?");
+        showToast("Razorpay SDK failed to load. Are you online?", "error");
         setLoadingPlan(null);
         return;
       }
@@ -166,7 +198,7 @@ export default function Pricing() {
       const data = await response.json();
       
       if (!data.success) {
-        alert("Could not create order: " + (data.message || "Unknown error"));
+        showToast("Could not create order: " + (data.message || "Unknown error"), "error");
         setLoadingPlan(null);
         return;
       }
@@ -193,10 +225,9 @@ export default function Pricing() {
           });
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
-            alert(`Payment successful! You are now on the ${plan.toUpperCase()} plan.`);
-            window.location.reload();
+            showToast(`Payment successful! You are now on the ${plan.toUpperCase()} plan.`, "success");
           } else {
-            alert("Payment verification failed");
+            showToast("Payment verification failed", "error");
           }
         },
         prefill: {
@@ -438,6 +469,47 @@ export default function Pricing() {
           transition: 'background 0.4s ease',
         }}
       >
+        {/* Toast Notification */}
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.9, x: 50 }}
+              animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+              exit={{ opacity: 0, y: 50, scale: 0.9, x: 50 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              style={{
+                position: 'fixed', bottom: '30px', right: '30px',
+                background: t.cardBg,
+                border: toast.type === 'success' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+                color: t.textMain,
+                padding: '16px 24px', borderRadius: '16px',
+                fontFamily: 'Inter, sans-serif', fontSize: '15px', fontWeight: 500,
+                boxShadow: '0 20px 40px rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)',
+                zIndex: 9999, display: 'flex', alignItems: 'center', gap: '12px'
+              }}
+            >
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: toast.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                color: toast.type === 'success' ? '#10b981' : '#ef4444',
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                  {toast.type === 'success' ? 'check_circle' : 'error'}
+                </span>
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: t.textMain }}>
+                  {toast.type === 'success' ? 'Success' : 'Error'}
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: t.textMuted, opacity: 0.9 }}>
+                  {toast.message}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Ambient glow */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: t.ambientGlow, transition: 'background 0.4s ease' }} />
 
@@ -521,18 +593,24 @@ export default function Pricing() {
                 <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: t.c1PriceSub }}>/forever</span>
               </div>
               {/* CTA */}
-              <button className="pricing-cta-ghost" style={{
-                width: '100%', padding: '14px', borderRadius: '12px',
-                background: t.c1CtaBg, border: t.c1CtaBorder, color: t.c1CtaText,
-                fontFamily: 'Outfit, sans-serif', fontSize: '15px', fontWeight: 600,
-                cursor: 'pointer', marginBottom: '28px',
-              }}>
-                Get Started Free
+              <button 
+                className="pricing-cta-ghost" 
+                onClick={() => {
+                  if (!user) openSignIn();
+                  else navigate('/dashboard');
+                }}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '12px',
+                  background: t.c1CtaBg, border: t.c1CtaBorder, color: t.c1CtaText,
+                  fontFamily: 'Outfit, sans-serif', fontSize: '15px', fontWeight: 600,
+                  cursor: 'pointer', marginBottom: '28px',
+                }}
+              >
+                {user ? 'Go to Dashboard' : 'Get Started Free'}
               </button>
               {/* Meta */}
               {[
                 { icon: <IconUsers />, strong: '3', rest: ' courses maximum' },
-                { icon: <IconCloud />, strong: '250 MB', rest: ' of storage' },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <span style={{ color: t.c1MetaIcon, flexShrink: 0 }}>{item.icon}</span>
@@ -605,12 +683,11 @@ export default function Pricing() {
                 letterSpacing: '0.01em',
                 opacity: loadingPlan === 'pro' ? 0.7 : 1
               }}>
-                {loadingPlan === 'pro' ? 'Processing...' : 'Choose this plan'}
+                {loadingPlan === 'pro' ? 'Processing...' : userPlan === 'pro' || userPlan === 'ultra' ? 'Go to Dashboard' : 'Choose this plan'}
               </button>
               {/* Meta */}
               {[
                 { icon: <IconUsers />, strong: '10', rest: ' active courses' },
-                { icon: <IconCloud />, strong: '5 GB', rest: ' of storage' },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <span style={{ color: t.c2MetaIcon, flexShrink: 0 }}>{item.icon}</span>
@@ -684,12 +761,11 @@ export default function Pricing() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 opacity: loadingPlan === 'ultra' ? 0.7 : 1
               }}>
-                {loadingPlan === 'ultra' ? 'Processing...' : 'Upgrade to Ultra'}
+                {loadingPlan === 'ultra' ? 'Processing...' : userPlan === 'ultra' ? 'Go to Dashboard' : 'Upgrade to Ultra'}
               </button>
               {/* Meta */}
               {[
-                { icon: <IconUsers />, strong: 'Unlimited', rest: ' active courses' },
-                { icon: <IconCloud />, strong: 'Unlimited', rest: ' storage' },
+                { icon: <IconUsers />, strong: '50', rest: ' active courses' },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <span style={{ color: t.c3MetaIcon, flexShrink: 0 }}>{item.icon}</span>

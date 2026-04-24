@@ -27,8 +27,8 @@ router.post('/create-order', async (req, res) => {
         }
 
         const razorpay = new Razorpay({
-            key_id: process.env.RAZORPAY_KEY_ID,
-            key_secret: process.env.RAZORPAY_KEY_SECRET
+            key_id: (process.env.RAZORPAY_KEY_ID || '').trim(),
+            key_secret: (process.env.RAZORPAY_KEY_SECRET || '').trim()
         });
 
         const options = {
@@ -70,7 +70,7 @@ router.post('/verify', async (req, res) => {
         }
 
         // Verify signature
-        const secret = process.env.RAZORPAY_KEY_SECRET || 'secret_placeholder';
+        const secret = (process.env.RAZORPAY_KEY_SECRET || 'secret_placeholder').trim();
         const body = razorpay_order_id + "|" + razorpay_payment_id;
 
         const expectedSignature = crypto
@@ -83,9 +83,10 @@ router.post('/verify', async (req, res) => {
         }
 
         // Update user plan
-        const user = await User.findOne({ clerkId });
+        let user = await User.findOne({ clerkId });
         if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
+            // User might be new and hasn't created a course yet
+            user = new User({ clerkId, name: 'Learner' });
         }
 
         user.plan = plan;
