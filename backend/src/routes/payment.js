@@ -1,8 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const User = require('../models/User');
+
+let Razorpay = null;
+try {
+    Razorpay = require('razorpay');
+} catch (error) {
+    console.warn('Razorpay SDK not installed. Payment routes will return 503 until the dependency is available.');
+}
 
 /**
  * POST /api/payment/create-order
@@ -11,6 +17,13 @@ const User = require('../models/User');
  */
 router.post('/create-order', async (req, res) => {
     try {
+        if (!Razorpay) {
+            return res.status(503).json({
+                success: false,
+                message: 'Payment service is unavailable because the Razorpay SDK is not installed.'
+            });
+        }
+
         const { clerkId, plan } = req.body;
 
         if (!clerkId || !plan) {
