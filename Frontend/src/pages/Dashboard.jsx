@@ -161,56 +161,87 @@ function CourseCard({ course, palette, onOpen, index, onDeleteClick }) {
   const pct = course.progress;
   const isCompleted = pct === 100;
   const isActive = pct > 0 && pct < 100;
+  const moduleCount = course.totalModules || course.modules?.length || 0;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
-      whileHover={{ y: -8, scale: 1.02 }}
+      whileHover={{ y: -8, scale: 1.01 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: (index % 10) * 0.05, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
       className="relative w-full cursor-pointer group"
     >
-      <div className="relative overflow-hidden rounded-[40px] bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-500 group-hover:shadow-[0_20px_48px_rgba(0,0,0,0.08)] h-[260px]">
-        
-        {/* Glow effect on hover */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-             style={{ background: `radial-gradient(circle at 50% 0%, ${palette.from}10, transparent 70%)` }} />
-
-        {/* Delete Button */}
+      <div className="course-surface relative overflow-hidden rounded-[34px] transition-all duration-500 group-hover:shadow-[0_30px_64px_rgba(148,163,184,0.28)] min-h-[360px]">
+        <div
+          className="absolute inset-0 opacity-90 pointer-events-none"
+          style={{
+            background: `
+              radial-gradient(circle at top right, ${palette.to}18, transparent 36%),
+              linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.86))
+            `
+          }}
+        />
+        <div
+          className="absolute inset-x-0 top-0 h-28 opacity-70 pointer-events-none"
+          style={{ background: `linear-gradient(180deg, ${palette.from}18, transparent)` }}
+        />
         <button 
            onClick={(e) => { e.stopPropagation(); onDeleteClick(course); }}
-           className="absolute top-6 right-6 w-9 h-9 rounded-full flex items-center justify-center bg-white/60 backdrop-blur-md border border-white/80 hover:bg-red-500 hover:text-white transition-all z-20 opacity-0 group-hover:opacity-100 text-gray-500 shadow-sm"
+           className="absolute top-5 right-5 w-10 h-10 rounded-full flex items-center justify-center bg-white/78 backdrop-blur-md border border-white/80 hover:bg-red-500 hover:text-white transition-all z-20 opacity-0 group-hover:opacity-100 text-gray-500 shadow-sm"
         >
            <span className="material-symbols-outlined text-[18px]">delete</span>
         </button>
 
-        <div className="relative z-10 p-8 h-full flex flex-col justify-between" onClick={onOpen}>
-          <div>
-            <h3 className="font-bold text-[20px] text-gray-900 leading-[1.2] tracking-tight line-clamp-2 mb-4 group-hover:text-indigo-600 transition-colors">
+        <div className="relative z-10 p-7 h-full flex flex-col" onClick={onOpen}>
+          <div className="flex items-start justify-between gap-3 mb-6">
+            <div className="course-kicker">
+              <span className="material-symbols-outlined text-[15px]" style={{ color: palette.to }}>auto_awesome</span>
+              AI path
+            </div>
+            <div
+              className="w-12 h-12 rounded-[18px] flex items-center justify-center text-xl shadow-[0_16px_32px_rgba(15,23,42,0.08)]"
+              style={{ background: `linear-gradient(135deg, ${palette.from}18, ${palette.to}10)` }}
+            >
+              {palette.icon}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="font-bold text-[22px] text-gray-900 leading-[1.1] tracking-tight line-clamp-3 group-hover:text-indigo-700 transition-colors">
               {course.course_title}
             </h3>
+            <div className="flex flex-wrap gap-2.5">
+              <span className="course-stat-chip text-[10px] uppercase tracking-[0.16em]">
+                <span className="material-symbols-outlined text-[14px]" style={{ color: palette.from }}>layers</span>
+                {moduleCount} modules
+              </span>
+              <span className="course-stat-chip text-[10px] uppercase tracking-[0.16em]">
+                <span className="material-symbols-outlined text-[14px]" style={{ color: palette.from }}>checklist</span>
+                {course.totalSubtopics} lessons
+              </span>
+            </div>
             <div className="flex items-center gap-2.5">
               <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1)]" style={{ background: palette.from }} />
-              <span className="text-gray-500 text-[10px] uppercase font-black tracking-[0.15em]">
+              <span className="text-gray-500 text-[10px] uppercase font-black tracking-[0.18em]">
                 {isCompleted ? 'Complete' : isActive ? 'In Progress' : 'New'}
               </span>
             </div>
           </div>
 
-          <div>
-            <div className="flex items-end justify-between mb-4">
+          <div className="mt-auto pt-8">
+            <div className="flex items-end justify-between gap-4 mb-4">
               <div className="flex flex-col">
-                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Progress</span>
-                <p className="text-gray-400 text-[11px] font-medium">
+                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Progress</span>
+                <p className="text-gray-500 text-[12px] font-medium">
                   {course.completedSubtopics}/{course.totalSubtopics} topics
                 </p>
               </div>
-              <span className="text-3xl font-black italic tracking-tighter text-gray-900/10 group-hover:text-indigo-600/20 transition-all duration-500">
+              <span className="text-4xl font-black italic tracking-tighter text-gray-900/10 group-hover:text-indigo-700/20 transition-all duration-500">
                 {pct}%
               </span>
             </div>
             
-            <div className="h-2 rounded-full bg-black/5 overflow-hidden p-[1px]">
+            <div className="course-progress-track mb-4">
               <motion.div className="h-full rounded-full relative" 
                 style={{ 
                   background: `linear-gradient(90deg, ${palette.from}, ${palette.to})`,
@@ -223,6 +254,114 @@ function CourseCard({ course, palette, onOpen, index, onDeleteClick }) {
                 <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" 
                      style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)' }} />
               </motion.div>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-gray-400">
+              <span>Continue learning</span>
+              <span className="material-symbols-outlined text-[18px]" style={{ color: palette.to }}>arrow_forward</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function PlaylistCourseCard({ course, index, onOpen, onDeleteClick }) {
+  const pct = course.progress;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileHover={{ y: -8, scale: 1.01 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+      className="relative w-full cursor-pointer group"
+    >
+      <div className="course-surface relative overflow-hidden rounded-[34px] transition-all duration-500 group-hover:shadow-[0_30px_64px_rgba(248,113,113,0.16)] min-h-[360px]">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `
+              radial-gradient(circle at top right, rgba(239,68,68,0.14), transparent 38%),
+              linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,250,250,0.88))
+            `
+          }}
+        />
+        <div className="absolute inset-x-0 top-0 h-28 opacity-80 pointer-events-none bg-[linear-gradient(180deg,rgba(239,68,68,0.16),transparent)]" />
+        <button
+          onClick={(e) => { e.stopPropagation(); onDeleteClick(course); }}
+          className="absolute top-5 right-5 w-10 h-10 rounded-full flex items-center justify-center bg-white/78 backdrop-blur-md border border-white/80 hover:bg-red-500 hover:text-white transition-all z-20 opacity-0 group-hover:opacity-100 text-gray-500 shadow-sm"
+        >
+          <span className="material-symbols-outlined text-[18px]">delete</span>
+        </button>
+
+        <div className="relative z-10 p-7 h-full flex flex-col" onClick={onOpen}>
+          <div className="flex items-start justify-between gap-3 mb-6">
+            <div className="course-kicker">
+              <span className="material-symbols-outlined text-[15px] text-red-500">playlist_play</span>
+              Playlist plan
+            </div>
+            <div className="w-12 h-12 rounded-[18px] flex items-center justify-center text-xl shadow-[0_16px_32px_rgba(15,23,42,0.08)] bg-red-50 text-red-500">
+              <span className="material-symbols-outlined text-[22px]">smart_display</span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="font-bold text-[22px] text-gray-900 leading-[1.1] tracking-tight line-clamp-3 group-hover:text-red-600 transition-colors">
+              {course.course_title}
+            </h3>
+            <div className="flex flex-wrap gap-2.5">
+              <span className="course-stat-chip text-[10px] uppercase tracking-[0.16em]">
+                <span className="material-symbols-outlined text-[14px] text-red-500">event</span>
+                {course.totalDays} days
+              </span>
+              <span className="course-stat-chip text-[10px] uppercase tracking-[0.16em]">
+                <span className="material-symbols-outlined text-[14px] text-red-500">video_library</span>
+                {course.totalVideos || course.days?.reduce((sum, day) => sum + (day.videos?.length || 0), 0) || 0} videos
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.18)] bg-red-500" />
+              <span className="text-gray-500 text-[10px] uppercase font-black tracking-[0.18em]">
+                {pct === 100 ? 'Complete' : pct > 0 ? 'In Progress' : 'Ready'}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-auto pt-8">
+            <div className="flex items-end justify-between gap-4 mb-4">
+              <div className="flex flex-col">
+                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Progress</span>
+                <p className="text-gray-500 text-[12px] font-medium">
+                  {course.completedDays}/{course.totalDays} days completed
+                </p>
+              </div>
+              <span className="text-4xl font-black italic tracking-tighter text-gray-900/10 group-hover:text-red-500/20 transition-all duration-500">
+                {pct}%
+              </span>
+            </div>
+
+            <div className="course-progress-track mb-4">
+              <motion.div
+                className="h-full rounded-full relative"
+                style={{
+                  background: 'linear-gradient(90deg, #ef4444, #f87171)',
+                  boxShadow: '0 0 12px rgba(239,68,68,0.24)'
+                }}
+                initial={{ width: 0 }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 1, delay: index * 0.1, ease: 'circOut' }}
+              >
+                <div
+                  className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)' }}
+                />
+              </motion.div>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-gray-400">
+              <span>Open study plan</span>
+              <span className="material-symbols-outlined text-[18px] text-red-500">arrow_forward</span>
             </div>
           </div>
         </div>
@@ -331,6 +470,36 @@ function SectionHeader({ icon, title, subtitle, color = '#6366f1' }) {
   );
 }
 
+function DashboardMetricTile({ icon, label, value, detail, accent = '#6366f1', delay = 0 }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.4, ease: 'easeOut' }}
+      className="h-full"
+    >
+      <div className="course-surface relative h-full overflow-hidden rounded-[28px] p-5 sm:p-6">
+        <div
+          className="absolute inset-x-0 top-0 h-20 pointer-events-none"
+          style={{ background: `linear-gradient(180deg, ${accent}18, transparent)` }}
+        />
+        <div className="relative z-10 flex h-full flex-col gap-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="w-12 h-12 rounded-[18px] flex items-center justify-center shrink-0" style={{ background: `${accent}14` }}>
+              <span className="material-symbols-outlined" style={{ color: accent, fontSize: '22px' }}>{icon}</span>
+            </div>
+            <span className="font-label text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">{label}</span>
+          </div>
+          <div className="space-y-2">
+            <p className="text-4xl sm:text-5xl font-black italic tracking-[-0.05em] text-gray-900">{value}</p>
+            <p className="text-sm font-medium leading-relaxed text-gray-500">{detail}</p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Course Progress Rows ───
 function CourseProgressRows({ courses }) {
   if (!courses.length) return (
@@ -386,7 +555,7 @@ const getStreakQuote = (count) => {
 function StatCard({ icon, label, value, color, delay, quote }) {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.4, ease: "easeOut" }} className="h-full">
-      <div className="rounded-[40px] h-full flex flex-col group cursor-default bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_48px_rgba(0,0,0,0.08)]">
+      <div className="course-surface rounded-[40px] h-full flex flex-col group cursor-default transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_56px_rgba(148,163,184,0.24)]">
         <div className="p-8 flex flex-col h-full justify-between">
           <div className="mb-6">
             <h3 className="text-6xl font-black italic tracking-tighter mb-2 text-gray-900 group-hover:text-indigo-600 transition-colors">{value}</h3>
@@ -931,8 +1100,14 @@ export default function Dashboard() {
     </div>
   );
 
-  const completedCourses = courses.filter(c => c.progress === 100).length;
-  const activeCourses = courses.filter(c => c.progress > 0 && c.progress < 100).length;
+  const forgeCourses = courses.filter(c => c.sourceType !== 'playlist');
+  const completedCourses = forgeCourses.filter(c => c.progress === 100).length;
+  const activeCourses = forgeCourses.filter(c => c.progress > 0 && c.progress < 100).length;
+  const playlistCompletedCourses = playlistCourses.filter(c => c.progress === 100).length;
+  const playlistActiveCourses = playlistCourses.filter(c => c.progress > 0 && c.progress < 100).length;
+  const totalStudyPlans = forgeCourses.length + playlistCourses.length;
+  const totalCompletedPlans = completedCourses + playlistCompletedCourses;
+  const totalActivePlans = activeCourses + playlistActiveCourses;
   const progressPct = stats.totalSubtopics > 0 ? Math.round((stats.completedSubtopics / stats.totalSubtopics) * 100) : 0;
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
   const planName = usageData?.plan?.toUpperCase() || 'FREE';
@@ -940,19 +1115,23 @@ export default function Dashboard() {
   const showUpgradeLink = usageData ? usageData.plan !== 'ultra' : true;
   const forgePermission = usageData?.permissions?.forge || null;
   const playlistPermission = usageData?.permissions?.playlist || null;
-
+  const continueCourse = forgeCourses.find(c => c.progress > 0 && c.progress < 100) || playlistCourses.find(c => c.progress > 0 && c.progress < 100) || null;
+  const continueHref = continueCourse
+    ? continueCourse.sourceType === 'playlist' || playlistCourses.some(c => c._id === continueCourse._id)
+      ? `/playlist/${continueCourse._id}`
+      : `/course/${continueCourse._id}`
+    : null;
+  const heroTitle = activeTab === 'forge' ? 'Design a course that feels custom made.' : 'Shape a playlist into a focused study plan.';
+  const heroDescription = activeTab === 'forge'
+    ? 'Use AI to turn one learning goal into a polished roadmap with structure, videos, and quizzes ready to go.'
+    : 'Drop in a YouTube playlist and Cluss will organize the chaos into daily sessions you can actually finish.';
+  const momentumLabel = activityMeta.streak >= 7 ? 'Locked in' : activityMeta.streak >= 3 ? 'Building heat' : activityMeta.totalThisWeek > 0 ? 'Momentum started' : 'Fresh canvas';
+  const planAccent = usageData?.plan === 'ultra' ? '#f97316' : usageData?.plan === 'pro' ? '#6366f1' : '#64748b';
   return (
     <>
       <SignedIn>
-        {/* ── Superb Mesh Background ── */}
-        <div className="fixed inset-0 z-0 bg-[#f8fafc] overflow-hidden">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-200/40 blur-[120px] animate-pulse" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-200/30 blur-[120px]" />
-          <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-purple-100/40 blur-[100px]" />
-          <div className="absolute bottom-[20%] left-[10%] w-[25%] h-[25%] rounded-full bg-indigo-50/50 blur-[80px]" />
-        </div>
-
-        <main className="relative z-10 min-h-screen pt-28 pb-20 px-6 lg:px-8 max-w-[1200px] mx-auto">
+        <div className="course-shell">
+        <main className="relative z-10 min-h-screen overflow-x-hidden pt-24 pb-20 px-4 sm:px-6 lg:px-8 max-w-[1320px] mx-auto">
 
           {/* Delete Modal Overlay */}
           <AnimatePresence>
@@ -993,8 +1172,8 @@ export default function Dashboard() {
                 <p className="text-[10px] uppercase tracking-[0.3em] mb-2 font-bold text-gray-400">
                   {greeting}
                 </p>
-                <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] text-gray-900">
-                  {user?.firstName || 'Learner'}<span className="text-indigo-500">.</span>
+                <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.04] text-gray-900">
+                  {heroTitle}
                 </h1>
               </div>
               {activityMeta.streak > 0 && (
@@ -1012,6 +1191,91 @@ export default function Dashboard() {
 
 
             {/* ── Hero Content (Conditional on Tab) ── */}
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] mb-8">
+              <div className="course-surface-soft rounded-[32px] p-5 sm:p-6">
+                <div className="inline-flex flex-wrap rounded-full border border-white/70 bg-white/72 p-1.5 shadow-[0_20px_40px_rgba(148,163,184,0.14)]">
+                  {[
+                    { key: 'forge', label: 'Forge', icon: 'auto_awesome' },
+                    { key: 'playlist', label: 'Playlist', icon: 'smart_display' }
+                  ].map(tab => {
+                    const active = activeTab === tab.key;
+                    return (
+                      <button
+                        key={tab.key}
+                        onClick={() => {
+                          setActiveTab(tab.key);
+                          setTimeout(() => {
+                            if (tab.key === 'forge') inputRef.current?.focus();
+                            else playlistInputRef.current?.focus();
+                          }, 120);
+                        }}
+                        className={`inline-flex items-center gap-2 rounded-full px-4 py-3 font-label text-[11px] font-bold uppercase tracking-[0.18em] transition-all ${
+                          active
+                            ? 'bg-[#111827] text-white shadow-[0_16px_32px_rgba(17,24,39,0.18)]'
+                            : 'text-gray-500 hover:bg-white/80'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-5 text-[15px] sm:text-base leading-relaxed text-gray-600 max-w-2xl">
+                  {heroDescription}
+                </p>
+                <div className="flex flex-wrap gap-3 mt-5">
+                  <span className="course-stat-chip">
+                    <span className="material-symbols-outlined text-[16px] text-indigo-500">task_alt</span>
+                    {stats.completedSubtopics} lessons finished
+                  </span>
+                  <span className="course-stat-chip">
+                    <span className="material-symbols-outlined text-[16px] text-orange-500">local_fire_department</span>
+                    {activityMeta.streak} day streak
+                  </span>
+                  <span className="course-stat-chip">
+                    <span className="material-symbols-outlined text-[16px] text-red-500">video_library</span>
+                    {playlistCourses.length} playlist plans
+                  </span>
+                </div>
+              </div>
+
+              <div className="course-surface-soft rounded-[32px] p-5 sm:p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-2">Momentum</p>
+                    <p className="text-2xl font-black italic tracking-tight text-gray-900">{momentumLabel}</p>
+                    <p className="mt-2 text-sm font-medium text-gray-500">
+                      {activityMeta.totalThisWeek} lessons completed this week.
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-[18px] flex items-center justify-center" style={{ background: `${planAccent}18`, color: planAccent }}>
+                    <span className="material-symbols-outlined text-[22px]">bolt</span>
+                  </div>
+                </div>
+                <div className="mt-5 space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-gray-500">Forge lane</span>
+                      <span className="font-bold text-gray-900">{forgePermission?.activeCount ?? 0}/{forgePermission?.maxCourses ?? usageData?.limits?.maxCourses ?? 0}</span>
+                    </div>
+                    <div className="course-progress-track">
+                      <motion.div className="course-progress-fill" initial={{ width: 0 }} animate={{ width: `${Math.min(100, ((forgePermission?.activeCount ?? 0) / Math.max(forgePermission?.maxCourses ?? usageData?.limits?.maxCourses ?? 1, 1)) * 100)}%` }} transition={{ duration: 0.7 }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-gray-500">Playlist lane</span>
+                      <span className="font-bold text-gray-900">{playlistPermission?.activeCount ?? 0}/{playlistPermission?.maxCourses ?? usageData?.limits?.maxCourses ?? 0}</span>
+                    </div>
+                    <div className="course-progress-track">
+                      <motion.div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #ef4444, #f87171)' }} initial={{ width: 0 }} animate={{ width: `${Math.min(100, ((playlistPermission?.activeCount ?? 0) / Math.max(playlistPermission?.maxCourses ?? usageData?.limits?.maxCourses ?? 1, 1)) * 100)}%` }} transition={{ duration: 0.7, delay: 0.08 }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <AnimatePresence mode="wait">
               {activeTab === 'forge' ? (
                 /* ── FORGE TAB ── */
@@ -1021,8 +1285,8 @@ export default function Dashboard() {
                   </motion.div>
                 ) : (
                   <motion.div key="forge-input" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="bg-white/40 backdrop-blur-2xl rounded-[48px] border border-white/60 shadow-[0_20px_64px_rgba(0,0,0,0.06)] p-10 md:p-14 relative overflow-hidden">
-                    <div className="relative z-10 flex flex-col max-w-2xl">
+                    className="course-hero-card rounded-[40px] p-6 sm:p-8 lg:p-10 relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col w-full">
                       <div className="flex items-center justify-between mb-4">
                         {usageData && (
                           <>
@@ -1040,7 +1304,7 @@ export default function Dashboard() {
                       </h2>
                       <p className="text-gray-500 mb-8">Cluss will automatically generate a tailored curriculum just for you.</p>
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                        <div className="flex-1 flex items-center bg-gray-50 rounded-full px-6 py-4 border border-gray-200 focus-within:border-black transition-colors">
+                        <div className="flex-1 flex items-center bg-white rounded-full px-6 py-4 border border-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] focus-within:border-black transition-colors">
                           <span className="material-symbols-outlined text-gray-400 mr-3">search</span>
                           <input
                             ref={inputRef} type="text"
@@ -1090,8 +1354,8 @@ export default function Dashboard() {
                 ) : wizardStage === 2 && draftCourse ? (
                   /* ═══ STAGE 2: OPTIMIZE & SAVE WIZARD ═══ */
                   <motion.div key="playlist-wizard" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="bg-white/40 backdrop-blur-2xl rounded-[48px] border border-white/60 shadow-[0_20px_64px_rgba(0,0,0,0.06)] p-10 md:p-14 relative overflow-hidden">
-                    <div className="relative z-10 flex flex-col">
+                    className="course-hero-card rounded-[40px] p-6 sm:p-8 lg:p-10 relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col w-full">
 
                       {/* Step indicator */}
                       <div className="flex items-center gap-4 mb-8">
@@ -1202,8 +1466,8 @@ export default function Dashboard() {
                 ) : (
                   /* ═══ STAGE 1: IMPORT URL ═══ */
                   <motion.div key="playlist-input" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="bg-white/40 backdrop-blur-2xl rounded-[48px] border border-white/60 shadow-[0_20px_64px_rgba(0,0,0,0.06)] p-10 md:p-14 relative overflow-hidden">
-                    <div className="relative z-10 flex flex-col max-w-2xl">
+                    className="course-hero-card rounded-[40px] p-6 sm:p-8 lg:p-10 relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col w-full">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex flex-wrap items-center gap-3">
                           <p className="font-label text-[11px] uppercase tracking-[0.25em] font-bold text-red-500">
@@ -1233,7 +1497,7 @@ export default function Dashboard() {
 
                       {/* Playlist URL Input */}
                       <div className="space-y-4">
-                        <div className="flex-1 flex items-center bg-gray-50 rounded-full px-6 py-4 border border-gray-200 focus-within:border-black transition-colors">
+                        <div className="flex-1 flex items-center bg-white rounded-full px-6 py-4 border border-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] focus-within:border-black transition-colors">
                           <span className="material-symbols-outlined text-gray-400 mr-3">link</span>
                           <input
                             ref={playlistInputRef}
@@ -1249,7 +1513,7 @@ export default function Dashboard() {
 
                         {/* Hours Per Day + Submit */}
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                          <div className="flex items-center gap-3 bg-gray-50 rounded-full px-6 py-4 border border-gray-200">
+                          <div className="flex items-center gap-3 bg-white rounded-full px-6 py-4 border border-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
                             <span className="material-symbols-outlined text-gray-400">schedule</span>
                             <span className="text-sm font-medium text-gray-500">Hours/day:</span>
                             <input
@@ -1307,8 +1571,15 @@ export default function Dashboard() {
           </motion.section>
 
           {/* ══ OVERALL PROGRESS ══ */}
+          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+            <DashboardMetricTile icon="school" label="Study plans" value={totalStudyPlans} detail="Your combined forge and playlist library." accent="#111827" delay={0.03} />
+            <DashboardMetricTile icon="task_alt" label="Lessons done" value={stats.completedSubtopics} detail="The amount of curriculum you have already conquered." accent="#6366f1" delay={0.08} />
+            <DashboardMetricTile icon="play_circle" label="In progress" value={totalActivePlans} detail="Paths that still have active momentum right now." accent="#f97316" delay={0.13} />
+            <DashboardMetricTile icon="whatshot" label="This week" value={activityMeta.totalThisWeek} detail="Lessons completed in the last seven-day stretch." accent="#ef4444" delay={0.18} />
+          </section>
+
           <section className="mb-6">
-            <div className="bg-white/40 backdrop-blur-2xl rounded-[40px] p-10 shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/60" >
+            <div className="course-surface rounded-[40px] p-6 sm:p-8 lg:p-10" >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <SectionHeader icon="donut_large" title="Overall Progress" subtitle="Your journey so far" color="#6366f1" />
                 {loading ? (
@@ -1351,8 +1622,8 @@ export default function Dashboard() {
 
           {/* ══ MY COURSES (AI-Generated) ══ */}
           {activeTab === 'forge' && (
-          <section className="mb-10">
-            <div className="bg-white/40 backdrop-blur-2xl rounded-[40px] p-10 shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/60" >
+          <section id="dashboard-collection" className="mb-10">
+            <div className="course-surface rounded-[40px] p-6 sm:p-8 lg:p-10" >
               <SectionHeader icon="auto_stories" title="My Courses" subtitle="Continue where you left off" color="#818cf8" />
               
               {loading ? (
@@ -1365,7 +1636,7 @@ export default function Dashboard() {
                   <p className="font-body text-sm" style={{ color: 'var(--theme-text-muted)' }}>No courses yet. Forge one above!</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[1000px] overflow-y-auto custom-scroll pr-2 -mr-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                   {courses.filter(c => c.sourceType !== 'playlist').map((course, i) => (
                     <CourseCard key={course._id} course={course} palette={CARD_PALETTES[i % CARD_PALETTES.length]} index={i} onOpen={() => nav(`/course/${course._id}`)} onDeleteClick={setCourseToDelete} />
                   ))}
@@ -1377,8 +1648,8 @@ export default function Dashboard() {
 
           {/* ══ MY PLAYLIST COURSES ══ */}
           {activeTab === 'playlist' && (
-          <section className="mb-10">
-            <div className="bg-white/40 backdrop-blur-2xl rounded-[40px] p-10 shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/60" >
+          <section id="dashboard-collection" className="mb-10">
+            <div className="course-surface rounded-[40px] p-6 sm:p-8 lg:p-10" >
               <SectionHeader icon="playlist_play" title="My Playlist Courses" subtitle="Imported from YouTube" color="#ef4444" />
               
               {loading ? (
@@ -1391,8 +1662,17 @@ export default function Dashboard() {
                   <p className="font-body text-sm" style={{ color: 'var(--theme-text-muted)' }}>No imported playlists yet. Paste a YouTube link above!</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[1000px] overflow-y-auto custom-scroll pr-2 -mr-2">
-                  {playlistCourses.map((course, i) => {
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                  {playlistCourses.map((course, i) => (
+                    <PlaylistCourseCard
+                      key={`playlist-modern-${course._id}`}
+                      course={course}
+                      index={i}
+                      onOpen={() => nav(`/playlist/${course._id}`)}
+                      onDeleteClick={setCourseToDelete}
+                    />
+                  ))}
+                  {false && playlistCourses.map((course, i) => {
                     const palette = { from: '#ef4444', to: '#dc2626', icon: '📺' };
                     const pct = course.progress;
                     return (
@@ -1469,14 +1749,16 @@ export default function Dashboard() {
           )}
 
           {/* ══ LEADERBOARD ══ */}
-          <Leaderboard />
+          <section id="dashboard-progress">
+            <Leaderboard />
+          </section>
 
           {/* ══ ACTIVITY + CALENDAR + PROGRESS + ACTIONS ══ */}
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 mb-10">
 
             {/* Weekly Activity */}
             <div className="lg:col-span-4">
-              <div className="bg-white rounded-[32px] border border-gray-100 p-6 h-full shadow-sm" >
+              <div className="course-surface rounded-[32px] p-6 h-full" >
                 <SectionHeader icon="bar_chart_4_bars" title="This Week" subtitle="7 days of focus" color="#a78bfa" />
                 {loading ? (
                   <div className="flex items-end gap-2.5 h-28">
@@ -1497,7 +1779,7 @@ export default function Dashboard() {
 
             {/* Mini Calendar */}
             <div className="lg:col-span-3">
-              <div className="bg-white rounded-[32px] border border-gray-100 p-6 h-full shadow-sm" >
+              <div className="course-surface rounded-[32px] p-6 h-full" >
                 {loading ? (
                   <div className="h-full w-full flex flex-col pt-2">
                     <div className="flex justify-between items-center mb-4">
@@ -1516,12 +1798,12 @@ export default function Dashboard() {
 
             {/* Progress Breakdown */}
             <div className="lg:col-span-5">
-              <div className="bg-white rounded-[32px] border border-gray-100 p-6 h-full shadow-sm" >
+              <div className="course-surface rounded-[32px] p-6 h-full" >
                 <SectionHeader icon="timeline" title="Progress Breakdown" color="#fbbf24" />
                 {loading ? (
                   <div className="space-y-3 pt-2">{[1,2,3].map(i => <div key={i} className="h-6 skeleton rounded-full" />)}</div>
                 ) : (
-                  <CourseProgressRows courses={courses} />
+                  <CourseProgressRows courses={[...forgeCourses, ...playlistCourses]} />
                 )}
               </div>
             </div>
@@ -1532,17 +1814,11 @@ export default function Dashboard() {
                <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center w-full sm:w-auto">
                  <p className="font-label text-xs font-bold uppercase tracking-[0.2em] mr-2 w-full sm:w-auto text-center sm:text-left" style={{ color: 'var(--theme-text-faint)' }}>Quick Actions</p>
                  {[
-                   { icon: 'play_circle', label: activeCourses > 0 ? 'Continue Learning' : 'Start a Course', color: '#6366f1', action: () => activeCourses > 0 && nav(`/course/${courses.find(c => c.progress > 0 && c.progress < 100)?._id}`) },
+                   { icon: 'play_circle', label: continueHref ? 'Continue Learning' : 'Start a Course', color: '#6366f1', action: () => continueHref ? nav(continueHref) : setTimeout(() => inputRef.current?.focus(), 150) },
                    { icon: 'add_circle', label: 'New Course', color: '#818cf8', action: () => { window.scrollTo({top: 0, behavior: 'smooth'}); setTimeout(() => inputRef.current?.focus(), 500); } },
                  ].map((item, i) => (
                    <button key={i} onClick={item.action}
-                     className="relative px-5 py-2.5 rounded-full font-label text-xs font-bold transition-all duration-300 overflow-hidden group border hover:-translate-y-0.5"
-                     style={{
-                        background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.0) 100%)',
-                        borderColor: 'rgba(255,255,255,0.08)',
-                        color: 'var(--theme-text-heading)',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                     }}
+                     className="course-surface-soft relative px-5 py-3 rounded-full font-label text-xs font-bold transition-all duration-300 overflow-hidden group hover:-translate-y-0.5 text-gray-900"
                     >
                      <div className="relative z-10 flex items-center gap-2">
                        <span className="material-symbols-outlined" style={{ color: item.color, fontSize: '18px' }}>{item.icon}</span>
@@ -1565,13 +1841,14 @@ export default function Dashboard() {
             ) : (
               <>
                 <StatCard icon="task_alt" label="Topics Conquered" value={stats.completedSubtopics} color="#34d399" delay={0.12} quote={getTopicsQuote(stats.completedSubtopics)} />
-                <StatCard icon="emoji_events" label="Courses Mastered" value={completedCourses} color="#fbbf24" delay={0.16} quote={getCoursesQuote(completedCourses)} />
+                <StatCard icon="emoji_events" label="Courses Mastered" value={totalCompletedPlans} color="#fbbf24" delay={0.16} quote={getCoursesQuote(totalCompletedPlans)} />
                 <StatCard icon="local_fire_department" label="Daily Streak" value={activityMeta.streak} color="#f472b6" delay={0.20} quote={getStreakQuote(activityMeta.streak)} />
               </>
             )}
           </section>
 
         </main>
+        </div>
       </SignedIn>
       <SignedOut><RedirectToSignIn redirectUrl="/" /></SignedOut>
     </>

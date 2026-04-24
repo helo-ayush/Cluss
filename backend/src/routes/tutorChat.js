@@ -101,7 +101,7 @@ router.post('/', checkAIChatLimit, async (req, res) => {
         ${transcript ? transcript.substring(0, 10000) : 'No context available for this topic. Use general knowledge.'}`;
 
         // Initialize model (Route based on plan)
-        const geminiModel = (user.plan === 'pro' || user.plan === 'ultra') ? 'gemini-3.1-flash' : 'gemini-2.5-flash';
+        const geminiModel = 'gemini-2.5-flash';
         const model = genAI.getGenerativeModel({ model: geminiModel });
 
         // Format history for Gemini chat

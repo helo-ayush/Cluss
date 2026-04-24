@@ -113,8 +113,8 @@ const Navbar = () => {
       ]
     : pathname === '/dashboard'
     ? [
-        { label: 'Forge Path', type: 'navigate', to: '/dashboard?action=forge' },
-        { label: 'Import Playlist', type: 'navigate', to: '/dashboard?action=import' },
+        { label: 'Progress', type: 'scroll', target: 'dashboard-progress', offset: 132 },
+        { label: 'Collection', type: 'scroll', target: 'dashboard-collection', offset: 132 },
       ]
     : pathname === '/'
     ? [

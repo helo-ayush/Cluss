@@ -39,7 +39,7 @@ const generateQuizFromTranscript = async (targetTopic, transcript, userPlan = 'f
     `;
 
     try {
-        const geminiModel = (userPlan === 'pro' || userPlan === 'ultra') ? 'gemini-3.1-flash' : 'gemini-2.5-flash';
+        const geminiModel = 'gemini-2.5-flash';
         const response = await ai.models.generateContent({
             model: geminiModel,
             contents: prompt,
