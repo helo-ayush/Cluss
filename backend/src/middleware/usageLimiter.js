@@ -25,6 +25,25 @@ const PLAN_LIMITS = {
     }
 };
 
+const CREATION_CATEGORIES = {
+    forge: {
+        sourceType: 'ai-generated',
+        singularLabel: 'forge course',
+        pluralLabel: 'forge courses',
+        upgradeTarget: 'Pro'
+    },
+    playlist: {
+        sourceType: 'playlist',
+        singularLabel: 'playlist course',
+        pluralLabel: 'playlist courses',
+        upgradeTarget: 'Pro'
+    }
+};
+
+const getNormalizedPlan = (plan) => PLAN_LIMITS[plan] ? plan : 'free';
+
+const getCategoryConfig = (category = 'forge') => CREATION_CATEGORIES[category] || CREATION_CATEGORIES.forge;
+
 /**
  * Helper to get current date string
  */
@@ -40,11 +59,131 @@ const isWithinLastWeek = (date) => {
     return new Date(date) > oneWeekAgo;
 };
 
+const getWeeklyResetDate = async (userId, sourceType, weeklyLimit) => {
+    if (!weeklyLimit || weeklyLimit === Infinity) return null;
+
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const recentCourses = await Course.find({
+        userId,
+        sourceType,
+        createdAt: { $gte: oneWeekAgo }
+    })
+        .sort({ createdAt: 1 })
+        .select('createdAt')
+        .limit(weeklyLimit);
+
+    if (recentCourses.length < weeklyLimit) return null;
+
+    const oldestTracked = recentCourses[0]?.createdAt;
+    if (!oldestTracked) return null;
+
+    return new Date(oldestTracked.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+};
+
+const buildLimitMessage = ({ plan, limits, category, activeCount, weeklyCount, nextAvailable }) => {
+    const categoryConfig = getCategoryConfig(category);
+    const planLabel = plan.toUpperCase();
+
+    if (activeCount >= limits.maxCourses) {
+        if (plan === 'ultra') {
+            return {
+                limitType: 'maxCourses',
+                message: `You have reached the maximum of ${limits.maxCourses} ${categoryConfig.pluralLabel} on the ${planLabel} plan. Delete an existing ${categoryConfig.singularLabel} to add a new one.`
+            };
+        }
+
+        return {
+            limitType: 'maxCourses',
+            message: `You have reached the maximum of ${limits.maxCourses} ${categoryConfig.pluralLabel} on the ${planLabel} plan. Delete one or upgrade to ${categoryConfig.upgradeTarget} for more.`
+        };
+    }
+
+    if (weeklyCount >= limits.coursesPerWeek) {
+        const resetSuffix = nextAvailable ? ` You can create another after ${nextAvailable}.` : '';
+        if (plan === 'ultra') {
+            return {
+                limitType: 'weeklyLimit',
+                message: `You have reached your weekly limit of ${limits.coursesPerWeek} ${categoryConfig.pluralLabel} on the ${planLabel} plan.${resetSuffix}`
+            };
+        }
+
+        return {
+            limitType: 'weeklyLimit',
+            message: `You have reached your weekly limit of ${limits.coursesPerWeek} ${categoryConfig.pluralLabel} on the ${planLabel} plan.${resetSuffix} Upgrade to ${categoryConfig.upgradeTarget} for more.`
+        };
+    }
+
+    return {
+        limitType: null,
+        message: ''
+    };
+};
+
+const getCourseCreationStatus = async (user, category = 'forge') => {
+    const normalizedPlan = getNormalizedPlan(user?.plan);
+    const limits = PLAN_LIMITS[normalizedPlan];
+    const categoryConfig = getCategoryConfig(category);
+
+    if (!user?._id) {
+        return {
+            category,
+            sourceType: categoryConfig.sourceType,
+            activeCount: 0,
+            weeklyCount: 0,
+            maxCourses: limits.maxCourses,
+            weeklyLimit: limits.coursesPerWeek,
+            canCreate: true,
+            nextAvailable: null,
+            limitType: null,
+            message: ''
+        };
+    }
+
+    const oneWeekAgo = new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+    const [activeCount, weeklyCount] = await Promise.all([
+        Course.countDocuments({ userId: user._id, sourceType: categoryConfig.sourceType }),
+        Course.countDocuments({
+            userId: user._id,
+            sourceType: categoryConfig.sourceType,
+            createdAt: { $gte: oneWeekAgo }
+        })
+    ]);
+
+    const nextAvailable = weeklyCount >= limits.coursesPerWeek
+        ? await getWeeklyResetDate(user._id, categoryConfig.sourceType, limits.coursesPerWeek)
+        : null;
+
+    const canCreate = activeCount < limits.maxCourses && weeklyCount < limits.coursesPerWeek;
+    const { limitType, message } = buildLimitMessage({
+        plan: normalizedPlan,
+        limits,
+        category,
+        activeCount,
+        weeklyCount,
+        nextAvailable
+    });
+
+    return {
+        category,
+        sourceType: categoryConfig.sourceType,
+        activeCount,
+        weeklyCount,
+        maxCourses: limits.maxCourses,
+        weeklyLimit: limits.coursesPerWeek,
+        canCreate,
+        nextAvailable,
+        limitType,
+        message
+    };
+};
+
 /**
  * Middleware: Checks if the user can create a new course.
  * Expects clerkId in req.body
  */
-const checkCourseCreation = async (req, res, next) => {
+const checkCourseCreation = (category = 'forge') => async (req, res, next) => {
     try {
         const { clerkId } = req.body;
         if (!clerkId) return next(); // Let the handler deal with missing clerkId
@@ -52,40 +191,26 @@ const checkCourseCreation = async (req, res, next) => {
         const user = await User.findOne({ clerkId });
         if (!user) return next(); // New user, will be created in handler
 
-        const limits = PLAN_LIMITS[user.plan || 'free'];
+        const normalizedPlan = getNormalizedPlan(user.plan);
+        const limits = PLAN_LIMITS[normalizedPlan];
+        const status = await getCourseCreationStatus(user, category);
 
-        // Check 1: Max courses in profile
-        const activeCourseCount = await Course.countDocuments({ userId: user._id });
-        if (activeCourseCount >= limits.maxCourses) {
+        if (!status.canCreate) {
             return res.status(403).json({
                 success: false,
                 limitReached: true,
-                limitType: 'maxCourses',
-                message: `You've reached the maximum of ${limits.maxCourses} Playlist/Courses on the Free plan. Upgrade to Pro for unlimited profile storage!`,
-                currentPlan: user.plan
-            });
-        }
-
-        // Check 2: Courses per week
-        const oneWeekAgo = new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
-        const coursesThisWeek = await Course.countDocuments({ 
-            userId: user._id, 
-            createdAt: { $gte: oneWeekAgo } 
-        });
-
-        if (coursesThisWeek >= limits.coursesPerWeek) {
-            return res.status(403).json({
-                success: false,
-                limitReached: true,
-                limitType: 'weeklyLimit',
-                message: `You've reached your limit of ${limits.coursesPerWeek} generated courses per week. Upgrade to a higher plan for more!`,
-                currentPlan: user.plan
+                limitType: status.limitType,
+                message: status.message,
+                currentPlan: normalizedPlan,
+                category,
+                nextAvailable: status.nextAvailable
             });
         }
 
         // Attach user and limits to request for downstream use
         req.dbUser = user;
         req.planLimits = limits;
+        req.creationCategory = category;
         next();
     } catch (err) {
         console.error('usageLimiter error:', err.message);
@@ -223,7 +348,10 @@ const recordAIChat = async (clerkId) => {
 
 module.exports = {
     PLAN_LIMITS,
+    CREATION_CATEGORIES,
     checkCourseCreation,
+    getCourseCreationStatus,
+    getNormalizedPlan,
     checkTopicUnlock,
     recordTopicUnlock,
     checkAIChatLimit,

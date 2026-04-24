@@ -11,6 +11,9 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const pathname = location.pathname;
+  const courseMatch = pathname.match(/^\/course\/([^/]+)$/);
+  const learnMatch = pathname.match(/^\/course\/([^/]+)\/learn\/\d+$/);
+  const mobileMenuDelay = 320;
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
@@ -24,24 +27,102 @@ const Navbar = () => {
 
   const handleScroll = (e, id) => {
     e.preventDefault();
+    const shouldDelayScroll = mobileMenuOpen;
     setMobileMenuOpen(false);
     if (pathname !== '/') {
       navigate('/');
       setTimeout(() => {
+        const runScroll = () => {
+          const el = document.getElementById(id);
+          if (el) {
+            if (window.__lenis) window.__lenis.scrollTo(el);
+            else el.scrollIntoView({ behavior: 'smooth' });
+          }
+        };
+
+        if (shouldDelayScroll) {
+          setTimeout(runScroll, mobileMenuDelay);
+        } else {
+          runScroll();
+        }
+      }, 150);
+    } else {
+      const runScroll = () => {
         const el = document.getElementById(id);
         if (el) {
           if (window.__lenis) window.__lenis.scrollTo(el);
           else el.scrollIntoView({ behavior: 'smooth' });
         }
-      }, 150);
-    } else {
-      const el = document.getElementById(id);
-      if (el) {
-        if (window.__lenis) window.__lenis.scrollTo(el);
-        else el.scrollIntoView({ behavior: 'smooth' });
+      };
+
+      if (shouldDelayScroll) {
+        setTimeout(runScroll, mobileMenuDelay);
+      } else {
+        runScroll();
       }
     }
   };
+
+  const scrollToPageSection = (sectionId, offset = 132, settle = false) => {
+    const element = document.getElementById(sectionId);
+    if (!element) return;
+
+    const runScroll = () => {
+      const nextElement = document.getElementById(sectionId);
+      if (!nextElement) return;
+      const top = window.scrollY + nextElement.getBoundingClientRect().top - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    };
+
+    runScroll();
+
+    if (settle) {
+      setTimeout(runScroll, 260);
+    }
+  };
+
+  const handleContextAction = (e, action) => {
+    e.preventDefault();
+    const shouldDelayScroll = mobileMenuOpen;
+    setMobileMenuOpen(false);
+
+    if (action.type === 'scroll') {
+      const runScroll = () => scrollToPageSection(action.target, action.offset, action.settle);
+      if (shouldDelayScroll) {
+        setTimeout(runScroll, mobileMenuDelay);
+      } else {
+        runScroll();
+      }
+      return;
+    }
+
+    if (action.type === 'navigate') {
+      navigate(action.to);
+    }
+  };
+
+  const contextualActions = courseMatch
+    ? [
+        { label: 'Progress', type: 'scroll', target: 'course-progress-overview', offset: 132 },
+        { label: 'Topic', type: 'scroll', target: 'course-current-topic', offset: 132 },
+      ]
+    : learnMatch
+    ? [
+        { label: 'Course', type: 'navigate', to: `/course/${learnMatch[1]}` },
+        { label: 'Lectures', type: 'scroll', target: 'learn-module-quiz', offset: 84, settle: true },
+      ]
+    : pathname === '/dashboard'
+    ? [
+        { label: 'Forge Path', type: 'navigate', to: '/dashboard?action=forge' },
+        { label: 'Import Playlist', type: 'navigate', to: '/dashboard?action=import' },
+      ]
+    : pathname === '/'
+    ? [
+        { label: 'Features', type: 'landing', target: 'about' },
+        { label: 'Overview', type: 'landing', target: 'features' },
+        { label: 'Pricing', type: 'landing', target: 'pricing' },
+      ]
+    : [];
 
   return (
     <motion.div
@@ -76,44 +157,44 @@ const Navbar = () => {
           </motion.div>
 
           <AnimatePresence mode="popLayout">
-            {pathname === '/' && (
+            {contextualActions.length > 0 && (
               <motion.div
-                key="nav-links"
+                key={`nav-links-${pathname}`}
                 initial={{ opacity: 0, x: -30 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -30 }}
                 transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
                 className="flex gap-8 lg:gap-13 items-center"
               >
-                <a href="#about" onClick={(e) => handleScroll(e, "about")} className='group cursor-pointer flex items-center gap-1.5 hover:text-gray-400 transition duration-300 font-medium text-gray-900'>
-                  Features
-                </a>
-                <a href="#features" onClick={(e) => handleScroll(e, "features")} className='group cursor-pointer flex items-center gap-1.5 hover:text-gray-400 transition duration-300 font-medium text-gray-900'>
-                  Overview
-                </a>
-                <a href="#pricing" onClick={(e) => handleScroll(e, "pricing")} className='group cursor-pointer flex items-center gap-1.5 hover:text-gray-400 transition duration-300 font-medium text-gray-900'>
-                  Pricing
-                </a>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence mode="popLayout">
-            {pathname === '/dashboard' && (
-              <motion.div
-                key="dash-links"
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-                className="flex gap-8 lg:gap-13 items-center"
-              >
-                <Link to="/dashboard?action=forge" className='group cursor-pointer flex items-center gap-1.5 hover:text-gray-400 transition duration-300 font-medium text-gray-900'>
-                  Forge Path
-                </Link>
-                <Link to="/dashboard?action=import" className='group cursor-pointer flex items-center gap-1.5 hover:text-gray-400 transition duration-300 font-medium text-gray-900'>
-                  Import Playlist
-                </Link>
+                {contextualActions.map((action) =>
+                  action.type === 'landing' ? (
+                    <a
+                      key={action.label}
+                      href={`#${action.target}`}
+                      onClick={(e) => handleScroll(e, action.target)}
+                      className='group cursor-pointer flex items-center gap-1.5 hover:text-gray-400 transition duration-300 font-medium text-gray-900'
+                    >
+                      {action.label}
+                    </a>
+                  ) : action.type === 'navigate' ? (
+                    <Link
+                      key={action.label}
+                      to={action.to}
+                      className='group cursor-pointer flex items-center gap-1.5 hover:text-gray-400 transition duration-300 font-medium text-gray-900'
+                    >
+                      {action.label}
+                    </Link>
+                  ) : (
+                    <button
+                      key={action.label}
+                      type="button"
+                      onClick={(e) => handleContextAction(e, action)}
+                      className='group flex cursor-pointer items-center gap-1.5 bg-transparent hover:text-gray-400 transition duration-300 font-medium text-gray-900'
+                    >
+                      {action.label}
+                    </button>
+                  )
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -191,18 +272,35 @@ const Navbar = () => {
           >
             <div className="flex flex-col px-6 py-4 gap-4 font-medium">
               <Link to="/" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-gray-100">Home</Link>
-              {pathname === '/' && (
-                <>
-                  <a href="#about" onClick={(e) => handleScroll(e, "about")} className="py-2 border-b border-gray-100">Features</a>
-                  <a href="#features" onClick={(e) => handleScroll(e, "features")} className="py-2 border-b border-gray-100">Overview</a>
-                  <a href="#pricing" onClick={(e) => handleScroll(e, "pricing")} className="py-2">Pricing</a>
-                </>
-              )}
-              {pathname === '/dashboard' && (
-                <>
-                  <Link to="/dashboard?action=forge" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-gray-100">Forge Path</Link>
-                  <Link to="/dashboard?action=import" onClick={() => setMobileMenuOpen(false)} className="py-2">Import Playlist</Link>
-                </>
+              {contextualActions.map((action, index) =>
+                action.type === 'landing' ? (
+                  <a
+                    key={action.label}
+                    href={`#${action.target}`}
+                    onClick={(e) => handleScroll(e, action.target)}
+                    className={`py-2 ${index !== contextualActions.length - 1 ? 'border-b border-gray-100' : ''}`}
+                  >
+                    {action.label}
+                  </a>
+                ) : action.type === 'navigate' ? (
+                  <Link
+                    key={action.label}
+                    to={action.to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`py-2 ${index !== contextualActions.length - 1 ? 'border-b border-gray-100' : ''}`}
+                  >
+                    {action.label}
+                  </Link>
+                ) : (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={(e) => handleContextAction(e, action)}
+                    className={`bg-transparent py-2 text-left ${index !== contextualActions.length - 1 ? 'border-b border-gray-100' : ''}`}
+                  >
+                    {action.label}
+                  </button>
+                )
               )}
             </div>
           </motion.div>

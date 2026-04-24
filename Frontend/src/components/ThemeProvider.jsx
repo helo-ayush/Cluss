@@ -11,7 +11,7 @@ export default function ThemeProvider({ children }) {
     const root = document.documentElement;
     root.classList.add('light');
     root.classList.remove('dark');
-    localStorage.setItem('focusforge-theme', 'light');
+    localStorage.setItem('cluss-theme', 'light');
   }, []);
 
   const toggleTheme = () => { /* disabled */ };

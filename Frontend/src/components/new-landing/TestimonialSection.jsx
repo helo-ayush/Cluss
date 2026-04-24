@@ -5,7 +5,7 @@ import { Linkedin, ArrowLeft, ArrowRight } from 'lucide-react';
 const testimonials = [
     {
         id: 1,
-        text: "StudyHelper transformed my messy YouTube favorites into a real computer science curriculum. The AI-generated course kept me on track for my full-stack finals without feeling overwhelmed.",
+        text: "Cluss transformed my messy YouTube favorites into a real computer science curriculum. The AI-generated course kept me on track for my full-stack finals without feeling overwhelmed.",
         name: "Sean Bockhold",
         role: "Computer Science Student, Georgia Tech",
         avatar: "https://i.pravatar.cc/150?u=sean"
@@ -19,7 +19,7 @@ const testimonials = [
     },
     {
         id: 3,
-        text: "As an educator, I recommend StudyHelper to all my students. The AI Quiz generator helps them verify their knowledge immediately after watching a lecture, turning passive watching into active learning.",
+        text: "As an educator, I recommend Cluss to all my students. The AI Quiz generator helps them verify their knowledge immediately after watching a lecture, turning passive watching into active learning.",
         name: "Nick Geeza",
         role: "High School Mathematics Educator",
         avatar: "https://i.pravatar.cc/150?u=nick"
@@ -33,7 +33,7 @@ const testimonials = [
     },
     {
         id: 5,
-        text: "I used to get distracted by YouTube's feed. With StudyHelper, I paste a topic and get a full structured course. The AI notes and quizzes make sure I actually retain what I watch.",
+        text: "I used to get distracted by YouTube's feed. With Cluss, I paste a topic and get a full structured course. The AI notes and quizzes make sure I actually retain what I watch.",
         name: "Alex Reed",
         role: "Bootcamp Graduate & Software Engineer",
         avatar: "https://i.pravatar.cc/150?u=alex"

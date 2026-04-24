@@ -4,11 +4,11 @@ const c = require('../controllers/courseController');
 const { checkCourseCreation, checkTopicUnlock } = require('../middleware/usageLimiter');
 
 // Course CRUD
-router.post('/create', checkCourseCreation, c.createCourseHandler);
+router.post('/create', checkCourseCreation('forge'), c.createCourseHandler);
 router.get('/user/:clerkId', c.getUserCourses);
 
 // ── Playlist Import ──
-router.post('/from-playlist', checkCourseCreation, c.createFromPlaylist);
+router.post('/from-playlist', checkCourseCreation('playlist'), c.createFromPlaylist);
 router.get('/user/:clerkId/playlists', c.getUserPlaylistCourses);
 
 // ── Playlist Curriculum Optimizer ──

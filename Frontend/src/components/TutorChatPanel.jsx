@@ -6,7 +6,7 @@ import MarkdownRenderer from './MarkdownRenderer';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
-export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex, subtopicIndex, topicTitle, isPro }) {
+export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex, subtopicIndex, topicTitle, hasTutorAccess }) {
   const { user } = useUser();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -87,7 +87,7 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-60"
+            className="fixed inset-0 z-[1050]"
             style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)' }}
             onClick={onClose}
           />
@@ -98,7 +98,7 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
             animate={{ opacity: 1, scale: 1, translateY: '-50%' }}
             exit={{ opacity: 0, scale: 0.95, translateY: '-48%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-6 z-70 flex flex-col overflow-hidden rounded-[32px]"
+            className="fixed right-6 z-[1060] flex flex-col overflow-hidden rounded-[32px]"
             style={{
               top: '50%',
               width: 'min(450px, 92vw)',
@@ -222,13 +222,13 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
 
             {/* Input Station */}
             <div className="relative shrink-0 px-6 py-6" style={{ borderTop: '1px solid var(--theme-border-strong)', background: 'var(--theme-nav-bg)' }}>
-              {!isPro && (
+              {!hasTutorAccess && (
                 <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
                   className="mb-4 p-3 rounded-2xl flex items-center justify-between border border-amber-500/20 bg-amber-500/10">
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="material-symbols-outlined text-amber-500 text-[20px] shrink-0">workspace_premium</span>
                     <p className="font-body text-[11px] text-amber-800 dark:text-amber-200/90 leading-snug truncate">
-                      Upgrade to <strong className="text-amber-600 dark:text-amber-500 font-black">Pro</strong> for unlimited <br/> AI tutoring support.
+                      Upgrade to <strong className="text-amber-600 dark:text-amber-500 font-black">Pro or Ultra</strong> for unlimited <br/> AI tutoring support.
                     </p>
                   </div>
                   <Link to="/#pricing" className="shrink-0 px-4 py-2 rounded-xl bg-amber-500 text-[10px] font-black uppercase text-white hover:bg-amber-400 transition-all shadow-md active:scale-95">
@@ -237,7 +237,7 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
                 </motion.div>
               )}
               
-              <div className={`group relative transition-all duration-300 ${!isPro ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <div className={`group relative transition-all duration-300 ${!hasTutorAccess ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <div className="relative flex items-center gap-3 rounded-2xl px-5 py-4 transition-all" style={{
                   background: 'var(--dash-input-bg)',
                   border: '1px solid var(--dash-input-border)',
@@ -247,7 +247,7 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
                     rows={1}
                     className="flex-1 bg-transparent border-none outline-none font-body text-[14px] resize-none max-h-40 custom-scroll placeholder:opacity-50"
                     style={{ color: 'var(--theme-text-heading)' }}
-                    placeholder={isPro ? "What would you like to clarify?..." : "AI tutoring is locked..."}
+                    placeholder={hasTutorAccess ? "What would you like to clarify?..." : "AI tutoring is locked..."}
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={e => {
@@ -256,11 +256,11 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
                         sendMessage();
                       }
                     }}
-                    disabled={loading || !isPro}
+                    disabled={loading || !hasTutorAccess}
                   />
                   <button
                     onClick={sendMessage}
-                    disabled={!input.trim() || loading || !isPro}
+                    disabled={!input.trim() || loading || !hasTutorAccess}
                     className="shrink-0 w-10 min-h-10 rounded-xl flex items-center justify-center transition-all disabled:opacity-30 group shadow-sm"
                     style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
                   >

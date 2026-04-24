@@ -46,7 +46,7 @@ export default function Leaderboard() {
             </div>
             <div>
               <h3 className="text-xl font-bold text-gray-900 tracking-tight">Leaderboard</h3>
-              <p className="text-sm text-gray-500 mt-1 font-medium">Top learners on Focus Forge</p>
+              <p className="text-sm text-gray-500 mt-1 font-medium">Top learners on Cluss</p>
             </div>
           </div>
 

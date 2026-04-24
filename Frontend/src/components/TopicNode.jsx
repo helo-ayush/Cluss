@@ -2,29 +2,37 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 
-const CARD_PALETTES = [
-  { from: '#1e1b4b', to: '#4338ca', icon: '⚡' },
-  { from: '#0f172a', to: '#3730a3', icon: '🔮' },
-  { from: '#022c22', to: '#059669', icon: '🌿' },
-  { from: '#2e1065', to: '#6d28d9', icon: '✨' },
-  { from: '#0f172a', to: '#0284c7', icon: '🚀' },
-  { from: '#3b0764', to: '#7e22ce', icon: '💎' },
-];
+const STATUS_META = {
+  completed: {
+    label: 'Completed',
+    icon: 'check_circle',
+    accent: '#15803d',
+    chipBg: 'rgba(21, 128, 61, 0.12)',
+    border: 'rgba(21, 128, 61, 0.16)',
+  },
+  active: {
+    label: 'In Progress',
+    icon: 'play_circle',
+    accent: '#4338ca',
+    chipBg: 'rgba(67, 56, 202, 0.12)',
+    border: 'rgba(67, 56, 202, 0.16)',
+  },
+  locked: {
+    label: 'Locked',
+    icon: 'lock',
+    accent: '#64748b',
+    chipBg: 'rgba(100, 116, 139, 0.12)',
+    border: 'rgba(100, 116, 139, 0.16)',
+  },
+};
 
-export default function TopicNode({ module, moduleIndex, courseId, status, isLeft = true }) {
+export default function TopicNode({ module, moduleIndex, courseId, status }) {
   const navigate = useNavigate();
-
-  const isCompleted = status === 'completed';
-  const isActive = status === 'active';
+  const meta = STATUS_META[status] || STATUS_META.locked;
   const isLocked = status === 'locked';
-
-  const palette = isActive || isCompleted 
-    ? CARD_PALETTES[moduleIndex % CARD_PALETTES.length]
-    : { from: '#1e293b', to: '#0f172a', icon: '🔒' };
-
-  const subtopicCount = module.subtopics?.length || 0;
-  const completedCount = module.subtopics?.filter(s => s.status === 'completed').length || 0;
-  const progressPct = subtopicCount > 0 ? Math.round((completedCount / subtopicCount) * 100) : 0;
+  const subtopics = module.subtopics || [];
+  const completedCount = subtopics.filter((subtopic) => subtopic.status === 'completed').length;
+  const progressPct = subtopics.length > 0 ? Math.round((completedCount / subtopics.length) * 100) : 0;
 
   const handleClick = () => {
     if (isLocked) return;
@@ -32,117 +40,155 @@ export default function TopicNode({ module, moduleIndex, courseId, status, isLef
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95, x: isLeft ? -30 : 30, y: 15 }}
-      animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-      transition={{ delay: moduleIndex * 0.1, duration: 0.5, ease: 'easeOut' }}
+    <motion.button
+      type="button"
       onClick={handleClick}
-      className={`relative w-full max-w-lg mx-auto group ${!isLocked ? 'cursor-pointer' : ''}`}
+      disabled={isLocked}
+      initial={{ opacity: 0, y: 28 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: moduleIndex * 0.06, duration: 0.45, ease: 'easeOut' }}
+      className={`course-surface relative w-full overflow-hidden rounded-[2rem] p-6 text-left ${
+        isLocked ? 'course-rail-item-locked' : 'cursor-pointer'
+      }`}
     >
-      {/* Custom Tooltip for Locked Nodes */}
-      {isLocked && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50 px-4 py-2.5 rounded-xl text-xs font-label font-bold tracking-wide w-max max-w-[250px] text-center shadow-xl"
-             style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', color: 'var(--theme-text-body)' }}>
-          Please complete the above topic quiz to unlock
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-[rgba(15,23,42,0.95)]"></div>
-        </div>
-      )}
-      <div 
-        className={`relative overflow-hidden rounded-[2rem] transition-all duration-300 ${!isLocked ? 'hover:-translate-y-2' : ''}`}
-        style={{
-          background: `linear-gradient(145deg, ${palette.from} 0%, ${palette.to} 100%)`,
-          boxShadow: isActive ? `0 16px 40px ${palette.from}50` : isCompleted ? `0 12px 32px ${palette.from}30` : '0 8px 16px rgba(0,0,0,0.2)',
-          border: isActive ? `1px solid ${palette.from}90` : '1px solid rgba(255,255,255,0.05)',
-          opacity: isLocked ? 0.75 : 1
-        }}
-      >
-        {/* Subtle decorative elements matching Dashboard cards */}
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%)',
-        }} />
-        {!isLocked && <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full pointer-events-none" style={{ background: 'rgba(255,255,255,0.05)', filter: 'blur(24px)' }} />}
-        <div className="absolute -bottom-10 -left-10 w-44 h-44 rounded-full pointer-events-none" style={{ background: 'rgba(0,0,0,0.2)', filter: 'blur(20px)' }} />
-
-        {/* Large watermark number */}
-        <div className={`absolute top-4 ${isLeft ? 'right-6' : 'left-6'} font-headline text-8xl italic font-black pointer-events-none select-none transition-all duration-500 group-hover:scale-110 group-hover:-translate-y-3`}
+      <div className="pointer-events-none absolute inset-0">
+        <div
+          className="absolute inset-x-0 top-0 h-28"
           style={{
-            color: 'rgba(255,255,255,0.02)',
-            WebkitTextStroke: '1px rgba(255,255,255,0.08)'
-          }}>
-          {String(moduleIndex + 1).padStart(2, '0')}
+            background: `linear-gradient(180deg, ${meta.chipBg}, transparent)`,
+          }}
+        />
+        <div
+          className="absolute -right-10 top-6 h-28 w-28 rounded-full blur-3xl"
+          style={{ background: meta.chipBg }}
+        />
+      </div>
+
+      <div className="relative z-10 flex flex-col gap-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.35rem] text-lg font-black"
+              style={{
+                background: meta.chipBg,
+                color: meta.accent,
+                border: `1px solid ${meta.border}`,
+              }}
+            >
+              {String(moduleIndex + 1).padStart(2, '0')}
+            </div>
+            <div>
+              <p
+                className="font-label text-[11px] font-bold uppercase tracking-[0.24em]"
+                style={{ color: 'rgba(15, 23, 42, 0.48)' }}
+              >
+                Module {moduleIndex + 1}
+              </p>
+              <h3
+                className="mt-2 font-serif text-2xl font-semibold leading-tight md:text-[2rem]"
+                style={{ color: 'var(--theme-text-heading)' }}
+              >
+                {module.module_title}
+              </h3>
+            </div>
+          </div>
+
+          <div
+            className="inline-flex items-center gap-2 rounded-full px-3 py-2"
+            style={{
+              background: meta.chipBg,
+              color: meta.accent,
+              border: `1px solid ${meta.border}`,
+            }}
+          >
+            <span className="material-symbols-outlined text-[16px]">{meta.icon}</span>
+            <span className="font-label text-[11px] font-bold uppercase tracking-[0.18em]">
+              {meta.label}
+            </span>
+          </div>
         </div>
 
-        <div className="relative z-10 p-7 md:p-9 flex flex-col justify-between min-h-[240px]">
-          
-          {/* Header area */}
-          <div>
-            <div className="flex flex-wrap items-center gap-3 justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-lg"
-                  style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                  {palette.icon}
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {isActive && (
-                  <div className="px-3.5 py-1.5 rounded-full flex items-center gap-2 shadow-sm" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)' }}>
-                    <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-                    <span className="font-label text-[10px] font-bold uppercase tracking-widest text-white">Current</span>
-                  </div>
-                )}
-                {isCompleted && (
-                  <div className="px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm" style={{ background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.3)' }}>
-                    <span className="material-symbols-outlined text-[14px] text-emerald-400">check_circle</span>
-                    <span className="font-label text-[10px] font-bold uppercase tracking-widest text-emerald-400">Mastered</span>
-                  </div>
-                )}
-              </div>
+        <p
+          className="max-w-3xl font-body text-sm leading-7 md:text-[15px]"
+          style={{ color: 'var(--theme-text-body)' }}
+        >
+          {isLocked
+            ? 'Finish the previous checkpoint to unlock this module and start learning.'
+            : `A guided sequence of ${subtopics.length} lesson${subtopics.length === 1 ? '' : 's'} designed to move from intuition to application.`}
+        </p>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="course-surface-soft rounded-[1.35rem] px-4 py-4">
+            <p
+              className="font-label text-[10px] font-bold uppercase tracking-[0.2em]"
+              style={{ color: 'rgba(15, 23, 42, 0.46)' }}
+            >
+              Lessons
+            </p>
+            <p className="mt-2 font-headline text-2xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+              {subtopics.length}
+            </p>
+          </div>
+
+          <div className="course-surface-soft rounded-[1.35rem] px-4 py-4">
+            <p
+              className="font-label text-[10px] font-bold uppercase tracking-[0.2em]"
+              style={{ color: 'rgba(15, 23, 42, 0.46)' }}
+            >
+              Completed
+            </p>
+            <p className="mt-2 font-headline text-2xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+              {completedCount}
+            </p>
+          </div>
+
+          <div className="course-surface-soft rounded-[1.35rem] px-4 py-4">
+            <p
+              className="font-label text-[10px] font-bold uppercase tracking-[0.2em]"
+              style={{ color: 'rgba(15, 23, 42, 0.46)' }}
+            >
+              Progress
+            </p>
+            <p className="mt-2 font-headline text-2xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+              {progressPct}%
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="mb-2 flex items-center justify-between">
+              <span
+                className="font-label text-[10px] font-bold uppercase tracking-[0.2em]"
+                style={{ color: 'rgba(15, 23, 42, 0.48)' }}
+              >
+                Module Progress
+              </span>
+              <span className="font-label text-xs font-bold" style={{ color: meta.accent }}>
+                {progressPct}%
+              </span>
             </div>
-
-            <h3 className="font-headline text-2xl md:text-3xl font-bold text-white italic leading-tight drop-shadow-md pr-10">
-              {module.module_title}
-            </h3>
+            <div className="course-progress-track">
+              <div className="course-progress-fill" style={{ width: `${progressPct}%` }} />
+            </div>
           </div>
 
-          {/* Footer stats and progress */}
-          <div className="mt-8">
-             <div className="flex items-center justify-between mb-3.5">
-               <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1.5 text-white/70 font-label text-[11px] uppercase tracking-wider font-semibold">
-                    <span className="material-symbols-outlined text-[16px]">topic</span>
-                    {subtopicCount} topics
-                  </span>
-                  {!isLocked && completedCount > 0 && (
-                     <span className="flex items-center gap-1.5 text-white/90 font-label text-[11px] uppercase tracking-wider font-semibold">
-                       <span className="material-symbols-outlined text-[16px]">done_all</span>
-                       {completedCount} done
-                     </span>
-                  )}
-               </div>
-               {(!isLocked && progressPct > 0) && (
-                 <span className="text-white font-label text-[13px] font-black tracking-wide">{progressPct}%</span>
-               )}
-               {isLocked && <span className="text-white/40 font-label text-[11px] uppercase tracking-widest font-black flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">lock</span>Locked</span>}
-             </div>
-
-             {/* Progress Bar */}
-             {!isLocked && (
-               <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.3)' }}>
-                 <motion.div 
-                   className="h-full rounded-full bg-white relative"
-                   initial={{ width: 0 }}
-                   animate={{ width: `${progressPct}%` }}
-                   transition={{ duration: 1.2, delay: 0.3 + (moduleIndex * 0.1), ease: 'easeOut' }}
-                 >
-                   {isActive && <div className="absolute inset-0 bg-white opacity-40 animate-pulse"></div>}
-                 </motion.div>
-               </div>
-             )}
+          <div
+            className="inline-flex items-center gap-2 self-start rounded-full px-4 py-2.5"
+            style={{
+              background: isLocked ? 'rgba(255, 255, 255, 0.5)' : meta.chipBg,
+              color: isLocked ? 'rgba(15, 23, 42, 0.45)' : meta.accent,
+            }}
+          >
+            <span className="font-label text-[11px] font-bold uppercase tracking-[0.18em]">
+              {isLocked ? 'Locked' : status === 'completed' ? 'Review Module' : 'Open Module'}
+            </span>
+            <span className="material-symbols-outlined text-[16px]">
+              {isLocked ? 'lock' : 'arrow_outward'}
+            </span>
           </div>
-
         </div>
       </div>
-    </motion.div>
+    </motion.button>
   );
 }

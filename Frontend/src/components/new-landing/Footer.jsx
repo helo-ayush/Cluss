@@ -114,7 +114,7 @@ const Footer = () => {
                     </div>
 
                     <div className="flex items-center gap-4 text-sm text-gray-500 order-3 md:order-2">
-                        <span>© 2026 StudyHelper. All rights reserved</span>
+                        <span>© 2026 Cluss. All rights reserved</span>
                         <div className="w-1 h-1 rounded-full bg-black mx-1" />
                         <Link to="#" className="text-gray-900 font-medium">Privacy Policy</Link>
                     </div>

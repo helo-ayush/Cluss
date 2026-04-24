@@ -241,6 +241,7 @@ function ActivityBars({ activityData }) {
     <div className="flex items-end gap-3 h-32 mt-4">
       {last7.map((day, i) => {
         const pct = (day.subtopicsCompleted / maxVal) * 100;
+
         const todayStr = new Date().toISOString().slice(0, 10);
         const isToday = day.date === todayStr;
         const dateObj = new Date(day.date + 'T00:00:00');
@@ -295,7 +296,7 @@ function MiniCalendar({ activityData }) {
         </div>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center">
-        {['M','T','W','T','F','S','S'].map(d => <span key={d} className="text-[9px] font-bold text-gray-400 uppercase">{d}</span>)}
+        {['M','T','W','T','F','S','S'].map((d, i) => <span key={`${d}-${i}`} className="text-[9px] font-bold text-gray-400 uppercase">{d}</span>)}
         {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="h-7" />)}
         {Array.from({ length: daysInMonth }, (_, i) => {
           const d = i + 1;
@@ -610,6 +611,7 @@ export default function Dashboard() {
   const [creating, setCreating] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState(null);
   const [query, setQuery] = useState('');
+  const [forgeError, setForgeError] = useState('');
   const nav = useNavigate();
   const loc = useLocation();
   const inputRef = useRef(null);
@@ -694,23 +696,36 @@ export default function Dashboard() {
 
   const handleCreateCourse = async () => {
     if (!query.trim() || creating) return;
+    if (usageData?.permissions?.forge && !usageData.permissions.forge.canCreate) {
+      return;
+    }
     try {
+      const trimmedQuery = query.trim();
+      setForgeError('');
       setCreating(true);
       const genRes = await fetch(`${API_BASE}/topic-generator`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query.trim() })
+        body: JSON.stringify({ query: trimmedQuery })
       });
       const curriculum = await genRes.json();
+      if (!genRes.ok) {
+        throw new Error(curriculum.error || curriculum.message || 'Failed to generate a curriculum for this topic.');
+      }
+      if (!curriculum || !curriculum.modules) {
+        throw new Error("Invalid curriculum format received from AI");
+      }
+
       const saveRes = await fetch(`${API_BASE}/api/course/create`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clerkId: user.id,
           userName: user.firstName || user.fullName || 'Learner',
           llmCurriculum: {
-            course_query: query.trim(), course_title: curriculum.course_title,
+            course_query: trimmedQuery,
+            course_title: curriculum.course_title || trimmedQuery,
             modules: curriculum.modules.map(mod => ({
               module_id: mod.module_id, module_title: mod.module_title,
-              subtopics: mod.subtopics.map(sub => ({
+              subtopics: (mod.subtopics || []).map(sub => ({
                 subtopic_id: sub.subtopic_id, subtopic_title: sub.subtopic_title,
                 Youtube_query: sub.youtube_search_query
               }))
@@ -719,8 +734,37 @@ export default function Dashboard() {
         })
       });
       const saveData = await saveRes.json();
-      if (saveData.success) { setQuery(''); await fetchAll(); }
-    } catch (err) { console.error(err); }
+      if (!saveRes.ok || !saveData.success) {
+        throw new Error(saveData.message || saveData.error || 'Failed to save the course to your profile.');
+      }
+
+      if (saveData.course) {
+        const totalSubtopics = (saveData.course.modules || []).reduce(
+          (count, mod) => count + (mod.subtopics || []).length,
+          0
+        );
+
+        const optimisticCourse = {
+          ...saveData.course,
+          sourceType: saveData.course.sourceType || 'ai-generated',
+          progress: 0,
+          completedSubtopics: 0,
+          totalSubtopics,
+          totalModules: (saveData.course.modules || []).length
+        };
+
+        setCourses(prev => [
+          optimisticCourse,
+          ...prev.filter(course => course._id !== optimisticCourse._id)
+        ]);
+      }
+
+      setQuery('');
+      await fetchAll();
+    } catch (err) {
+      console.error(err);
+      setForgeError(err.message || 'Something went wrong while creating your course.');
+    }
     finally { setCreating(false); }
   };
 
@@ -735,6 +779,9 @@ export default function Dashboard() {
 
   const handleImportPlaylist = async () => {
     if (!playlistUrl.trim() || importingPlaylist) return;
+    if (usageData?.permissions?.playlist && !usageData.permissions.playlist.canCreate) {
+      return;
+    }
     setPlaylistError('');
     try {
       setImportingPlaylist(true);
@@ -888,6 +935,11 @@ export default function Dashboard() {
   const activeCourses = courses.filter(c => c.progress > 0 && c.progress < 100).length;
   const progressPct = stats.totalSubtopics > 0 ? Math.round((stats.completedSubtopics / stats.totalSubtopics) * 100) : 0;
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
+  const planName = usageData?.plan?.toUpperCase() || 'FREE';
+  const hasProFeatures = usageData ? usageData.plan === 'pro' || usageData.plan === 'ultra' : false;
+  const showUpgradeLink = usageData ? usageData.plan !== 'ultra' : true;
+  const forgePermission = usageData?.permissions?.forge || null;
+  const playlistPermission = usageData?.permissions?.playlist || null;
 
   return (
     <>
@@ -972,20 +1024,21 @@ export default function Dashboard() {
                     className="bg-white/40 backdrop-blur-2xl rounded-[48px] border border-white/60 shadow-[0_20px_64px_rgba(0,0,0,0.06)] p-10 md:p-14 relative overflow-hidden">
                     <div className="relative z-10 flex flex-col max-w-2xl">
                       <div className="flex items-center justify-between mb-4">
-                        {usageData && usageData.plan === 'pro' ? (
-                          <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-900">
-                            PRO PLAN
-                          </span>
-                        ) : usageData ? (
-                          <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-600">
-                            {usageData.usage.activeCourses}/{usageData.limits.maxCourses} Courses
-                          </span>
-                        ) : null}
+                        {usageData && (
+                          <>
+                            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-900">
+                              {planName} PLAN
+                            </span>
+                            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-indigo-50 text-indigo-600 border border-indigo-100">
+                              {forgePermission?.activeCount ?? 0}/{forgePermission?.maxCourses ?? usageData.limits.maxCourses} Forge Courses
+                            </span>
+                          </>
+                        )}
                       </div>
                       <h2 className="text-3xl md:text-5xl font-medium text-gray-900 mb-2 leading-tight">
                         What do you want to learn today?
                       </h2>
-                      <p className="text-gray-500 mb-8">StudyHelper will automatically generate a tailored curriculum just for you.</p>
+                      <p className="text-gray-500 mb-8">Cluss will automatically generate a tailored curriculum just for you.</p>
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                         <div className="flex-1 flex items-center bg-gray-50 rounded-full px-6 py-4 border border-gray-200 focus-within:border-black transition-colors">
                           <span className="material-symbols-outlined text-gray-400 mr-3">search</span>
@@ -993,11 +1046,11 @@ export default function Dashboard() {
                             ref={inputRef} type="text"
                             className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder:text-gray-400"
                             placeholder="e.g. Machine Learning, Web Development, Data Science..."
-                            value={query} onChange={e => setQuery(e.target.value)}
+                            value={query} onChange={e => { setQuery(e.target.value); setForgeError(''); }}
                             onKeyDown={e => e.key === 'Enter' && handleCreateCourse()}
                           />
                         </div>
-                        <button onClick={handleCreateCourse} disabled={!query.trim() || (usageData && !usageData.canCreateCourse)}
+                        <button onClick={handleCreateCourse} disabled={!query.trim() || creating || (forgePermission && !forgePermission.canCreate)}
                           className="group relative cursor-pointer px-8 py-4 bg-[#e5e9eb] flex gap-2 rounded-full overflow-hidden shrink-0 items-center justify-center disabled:opacity-50">
                           <div className='absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-500'></div>
                           <div className='relative z-10 flex gap-2 text-gray-900 group-hover:text-white transition-colors duration-500 font-medium'>
@@ -1005,19 +1058,23 @@ export default function Dashboard() {
                           </div>
                         </button>
                       </div>
-                      {usageData && !usageData.canCreateCourse && (
+                      {forgeError && (
+                        <div className="mt-6 p-4 rounded-2xl border border-red-100 bg-red-50 flex items-start gap-3">
+                          <span className="material-symbols-outlined text-red-500 text-xl">error</span>
+                          <p className="text-sm text-red-500 font-medium">{forgeError}</p>
+                        </div>
+                      )}
+                      {forgePermission && !forgePermission.canCreate && (
                         <div className="mt-6 p-4 rounded-2xl border border-red-100 bg-red-50 flex items-start gap-3">
                           <span className="material-symbols-outlined text-red-500 text-xl">error</span>
                           <div>
                             <p className="font-bold text-red-600 text-sm">Limit Reached</p>
-                            <p className="text-sm text-red-500 mt-1">
-                              {usageData.usage.activeCourses >= usageData.limits.maxCourses 
-                                ? `You have reached the maximum of ${usageData.limits.maxCourses} free courses. Delete an existing course or upgrade to Pro.`
-                                : `You can only create ${usageData.limits.coursesPerWeek} free course per week. Upgrade to Pro for unlimited access.`}
-                            </p>
-                            <Link to="/#pricing" className="inline-block mt-3 px-4 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-full transition-colors">
-                              View Pro Plan
-                            </Link>
+                            <p className="text-sm text-red-500 mt-1">{forgePermission.message}</p>
+                            {showUpgradeLink && (
+                              <Link to="/#pricing" className="inline-block mt-3 px-4 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-full transition-colors">
+                                View Plans
+                              </Link>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1066,7 +1123,7 @@ export default function Dashboard() {
                         <div className="space-y-4">
                           <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 px-1">Curriculum Optimization</h4>
                           
-                          {usageData && usageData.plan === 'pro' ? (
+                          {hasProFeatures ? (
                             <button
                               onClick={() => setShowFillerModal(true)}
                               className={`w-full p-6 rounded-[24px] text-left transition-all relative overflow-hidden border ${
@@ -1096,10 +1153,10 @@ export default function Dashboard() {
                                 </div>
                                 <div>
                                   <p className="text-sm font-bold text-gray-400">Find Missing Topics</p>
-                                  <span className="px-2 py-0.5 rounded text-[8px] font-bold uppercase bg-amber-100 text-amber-700 mt-1 inline-block">PRO ONLY</span>
+                                  <span className="px-2 py-0.5 rounded text-[8px] font-bold uppercase bg-amber-100 text-amber-700 mt-1 inline-block">PRO / ULTRA</span>
                                 </div>
                               </div>
-                              <p className="text-xs text-gray-400 font-medium">Upgrade to Pro to unlock AI-powered topic gap analysis.</p>
+                              <p className="text-xs text-gray-400 font-medium">Upgrade to Pro or Ultra to unlock AI-powered topic gap analysis.</p>
                             </div>
                           )}
                         </div>
@@ -1148,12 +1205,24 @@ export default function Dashboard() {
                     className="bg-white/40 backdrop-blur-2xl rounded-[48px] border border-white/60 shadow-[0_20px_64px_rgba(0,0,0,0.06)] p-10 md:p-14 relative overflow-hidden">
                     <div className="relative z-10 flex flex-col max-w-2xl">
                       <div className="flex items-center justify-between mb-4">
-                        <p className="font-label text-[11px] uppercase tracking-[0.25em] font-bold text-red-500">
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>smart_display</span>
-                            Import YouTube Playlist
-                          </span>
-                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="font-label text-[11px] uppercase tracking-[0.25em] font-bold text-red-500">
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>smart_display</span>
+                              Import YouTube Playlist
+                            </span>
+                          </p>
+                          {usageData && (
+                            <>
+                              <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-900">
+                                {planName} PLAN
+                              </span>
+                              <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-red-50 text-red-600 border border-red-100">
+                                {playlistPermission?.activeCount ?? 0}/{playlistPermission?.maxCourses ?? usageData.limits.maxCourses} Playlist Courses
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <h2 className="text-3xl md:text-5xl font-medium text-gray-900 mb-2 leading-tight">
                         Turn any playlist into a study plan
@@ -1196,7 +1265,7 @@ export default function Dashboard() {
 
                           <button
                             onClick={handleImportPlaylist}
-                            disabled={!playlistUrl.trim()}
+                            disabled={!playlistUrl.trim() || importingPlaylist || (playlistPermission && !playlistPermission.canCreate)}
                             className="group relative cursor-pointer px-8 py-4 bg-red-500 flex gap-2 rounded-full overflow-hidden shrink-0 items-center justify-center disabled:opacity-50"
                           >
                             <div className='absolute inset-0 bg-red-600 translate-y-full group-hover:translate-y-0 transition-transform duration-500'></div>
@@ -1207,6 +1276,21 @@ export default function Dashboard() {
                           </button>
                         </div>
                       </div>
+
+                      {playlistPermission && !playlistPermission.canCreate && (
+                        <div className="mt-6 p-4 rounded-2xl border border-red-100 bg-red-50 flex items-start gap-3">
+                          <span className="material-symbols-outlined text-red-500 text-xl">error</span>
+                          <div>
+                            <p className="font-bold text-red-600 text-sm">Limit Reached</p>
+                            <p className="text-sm text-red-500 mt-1">{playlistPermission.message}</p>
+                            {showUpgradeLink && (
+                              <Link to="/#pricing" className="inline-block mt-3 px-4 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-full transition-colors">
+                                View Plans
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Error Message */}
                       {playlistError && (

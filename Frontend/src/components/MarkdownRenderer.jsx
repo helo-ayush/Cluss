@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 /**
- * Shared Markdown Renderer for FocusForge.
+ * Shared Markdown Renderer for Cluss.
  * Ensures consistent styling for AI-generated content across questions, feedback, and tutor chat.
  */
 export default function MarkdownRenderer({ content, className = '' }) {

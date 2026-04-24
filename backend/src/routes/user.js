@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const Course = require('../models/Course');
-const { PLAN_LIMITS } = require('../middleware/usageLimiter');
+const { PLAN_LIMITS, getCourseCreationStatus, getNormalizedPlan } = require('../middleware/usageLimiter');
 
 /**
  * GET /api/user/:clerkId/usage
@@ -12,46 +11,48 @@ router.get('/:clerkId/usage', async (req, res) => {
     try {
         const { clerkId } = req.params;
         const user = await User.findOne({ clerkId });
+        const plan = getNormalizedPlan(user?.plan);
+        const limits = PLAN_LIMITS[plan];
+        const today = new Date().toISOString().slice(0, 10);
 
         if (!user) {
-            // New user — return default free limits
+            const emptyPermission = {
+                canCreate: true,
+                limitType: null,
+                message: '',
+                nextAvailable: null,
+                activeCount: 0,
+                weeklyCount: 0,
+                maxCourses: limits.maxCourses,
+                weeklyLimit: limits.coursesPerWeek
+            };
+
             return res.json({
                 success: true,
-                plan: 'free',
-                limits: PLAN_LIMITS.free,
-                usage: { coursesCreated: 0, activeCourses: 0 },
+                plan,
+                limits,
+                usage: {
+                    totalCoursesCreated: 0,
+                    forge: { activeCourses: 0, weeklyCreated: 0 },
+                    playlist: { activeCourses: 0, weeklyCreated: 0 },
+                    todayTopicUnlocks: {}
+                },
+                permissions: {
+                    forge: emptyPermission,
+                    playlist: emptyPermission
+                },
                 canCreateCourse: true,
-                nextCourseAvailable: null
+                canImportPlaylist: true,
+                nextCourseAvailable: null,
+                nextPlaylistAvailable: null
             });
         }
 
-        const limits = PLAN_LIMITS[user.plan || 'free'];
-        const activeCourses = await Course.countDocuments({ userId: user._id });
+        const [forgeStatus, playlistStatus] = await Promise.all([
+            getCourseCreationStatus(user, 'forge'),
+            getCourseCreationStatus(user, 'playlist')
+        ]);
 
-        // Check if user can create a course
-        let canCreateCourse = true;
-        let nextCourseAvailable = null;
-
-        if (user.plan !== 'pro') {
-            // Max courses check
-            if (activeCourses >= limits.maxCourses) {
-                canCreateCourse = false;
-            }
-            // Weekly limit check
-            if (user.lastCourseCreatedAt) {
-                const oneWeekAgo = new Date();
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                if (new Date(user.lastCourseCreatedAt) > oneWeekAgo) {
-                    canCreateCourse = false;
-                    nextCourseAvailable = new Date(
-                        new Date(user.lastCourseCreatedAt).getTime() + 7 * 24 * 60 * 60 * 1000
-                    ).toISOString();
-                }
-            }
-        }
-
-        // Today's topic unlocks per course
-        const today = new Date().toISOString().slice(0, 10);
         const todayUnlocks = {};
         (user.topicUnlocks || []).forEach(u => {
             if (u.date === today) {
@@ -61,16 +62,28 @@ router.get('/:clerkId/usage', async (req, res) => {
 
         return res.json({
             success: true,
-            plan: user.plan || 'free',
+            plan,
             limits,
             usage: {
-                coursesCreated: user.coursesCreated || 0,
-                activeCourses,
-                lastCourseCreatedAt: user.lastCourseCreatedAt,
+                totalCoursesCreated: user.coursesCreated || 0,
+                forge: {
+                    activeCourses: forgeStatus.activeCount,
+                    weeklyCreated: forgeStatus.weeklyCount
+                },
+                playlist: {
+                    activeCourses: playlistStatus.activeCount,
+                    weeklyCreated: playlistStatus.weeklyCount
+                },
                 todayTopicUnlocks: todayUnlocks
             },
-            canCreateCourse,
-            nextCourseAvailable
+            permissions: {
+                forge: forgeStatus,
+                playlist: playlistStatus
+            },
+            canCreateCourse: forgeStatus.canCreate,
+            canImportPlaylist: playlistStatus.canCreate,
+            nextCourseAvailable: forgeStatus.nextAvailable,
+            nextPlaylistAvailable: playlistStatus.nextAvailable
         });
     } catch (err) {
         console.error('Error fetching user usage:', err);

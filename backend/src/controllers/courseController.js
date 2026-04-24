@@ -957,7 +957,7 @@ const suggestFillerTopics = async (req, res) => {
 
         // Check pro status
         const user = await User.findOne({ clerkId });
-        if (!user || user.plan !== 'pro') {
+        if (!user || (user.plan !== 'pro' && user.plan !== 'ultra')) {
             return res.status(403).json({ success: false, message: "This feature requires a Pro plan." });
         }
 
@@ -999,7 +999,7 @@ const addFillerTopics = async (req, res) => {
         const { clerkId, selectedTopics } = req.body;
 
         const user = await User.findOne({ clerkId });
-        if (!user || user.plan !== 'pro') {
+        if (!user || (user.plan !== 'pro' && user.plan !== 'ultra')) {
             return res.status(403).json({ success: false, message: "Pro plan required" });
         }
 
@@ -1148,7 +1148,7 @@ const submitCheckpoint = async (req, res) => {
 
         // Determine max attempts based on user plan
         const user = await User.findOne({ clerkId });
-        const maxAttempts = (user && user.plan === 'pro') ? 8 : 3;
+        const maxAttempts = (user && (user.plan === 'pro' || user.plan === 'ultra')) ? 8 : 3;
         day.checkpoint.maxAttempts = maxAttempts;
 
         // Check attempts

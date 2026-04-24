@@ -18,29 +18,12 @@ const withTimeout = (promise, ms, fallback) =>
         new Promise(resolve => setTimeout(() => resolve(fallback), ms))
     ]);
 
-// ─── New: Simple Proxy transcript fetcher ───────────────────────────────
-async function fetchTranscriptSafe(videoId) {
-    try {
-        const transcriptArray = await withTimeout(
-            YoutubeTranscript.fetchTranscript(videoId),
-            45000,
-            []
-        );
-        const text = (transcriptArray || []).map(t => t.text).join(' ');
-        if (text.length > 100) return text.substring(0, 15000);
-    } catch (err) {
-        console.error(`  ❌ Proxy Transcript failed for ${videoId}:`, err.message);
-    }
-
-    return '';
-}
-
 async function getVideoStats(videoIds) {
     if (videoIds.length === 0) return [];
 
     const response = await youtube.videos.list({
         part: 'snippet,statistics,contentDetails',
-        id: videoIds.join(','),
+        id: videoIds.join(',')
     });
 
     const items = response.data.items.filter(item => {
@@ -57,27 +40,42 @@ async function getVideoStats(videoIds) {
         title: item.snippet.title,
         channelId: item.snippet.channelId,
         channelTitle: item.snippet.channelTitle,
-        viewCount: parseInt(item.statistics.viewCount || 0),
-        likeCount: parseInt(item.statistics.likeCount || 0),
-        likeViewRatio: (parseInt(item.statistics.likeCount || 0) / parseInt(item.statistics.viewCount || 1)),
-        transcript: "" // Transcripts fetched later for top 3
+        viewCount: parseInt(item.statistics.viewCount || 0, 10),
+        likeCount: parseInt(item.statistics.likeCount || 0, 10),
+        likeViewRatio: parseInt(item.statistics.likeCount || 0, 10) / parseInt(item.statistics.viewCount || 1, 10),
+        transcript: '' // Transcripts fetched later for top 3
     }));
 }
 
 // --- HELPER: Micro-Batch Pipeline for Transcripts ---
 async function fetchTranscriptsForTop3(videos) {
     if (!videos || videos.length === 0) return [];
-    
-    // Sort logically to get best 3 (already done by general search, but we enforce 3 limit here)
+
     const top3 = videos.slice(0, 3);
-    
-    console.log(`⏱ Fetching transcripts in parallel for top ${top3.length} videos...`);
-    const promises = top3.map(async (vid) => {
-        vid.transcript = await fetchTranscriptSafe(vid.id);
-        return vid;
-    });
-    
-    await Promise.all(promises);
+    console.log(`Fetching transcripts in parallel for top ${top3.length} videos...`);
+
+    try {
+        const transcriptResult = await withTimeout(
+            YoutubeTranscript.fetchTranscriptsBatch(top3.map(vid => vid.id)),
+            45000,
+            { data: {} }
+        );
+
+        top3.forEach(vid => {
+            const transcriptArray = transcriptResult?.data?.[vid.id];
+            const text = Array.isArray(transcriptArray)
+                ? transcriptArray.map(segment => segment.text).join(' ')
+                : '';
+
+            vid.transcript = text.length > 100 ? text.substring(0, 15000) : '';
+        });
+    } catch (err) {
+        top3.forEach(vid => {
+            vid.transcript = '';
+            console.error(`  Transcript fetch failed for ${vid.id}:`, err.message);
+        });
+    }
+
     return top3;
 }
 
@@ -128,7 +126,7 @@ async function findBestVideo(searchQuery, preferredCreators = []) {
             const searchRes = await youtube.search.list({
                 part: 'snippet',
                 q: searchQuery,
-                channelId: channelId,
+                channelId,
                 type: 'video',
                 maxResults: limits[i]
             });
@@ -173,7 +171,7 @@ router.post('/', async (req, res) => {
         if (!winningVideo) {
             return res.status(404).json({
                 success: false,
-                message: "Could not find a high-quality video for this topic."
+                message: 'Could not find a high-quality video for this topic.'
             });
         }
 
@@ -183,8 +181,8 @@ router.post('/', async (req, res) => {
             video: winningVideo
         });
     } catch (error) {
-        console.error("Error in Search Engine:", error);
-        res.status(500).json({ success: false, message: "Engine Failure", error: error.message });
+        console.error('Error in Search Engine:', error);
+        res.status(500).json({ success: false, message: 'Engine Failure', error: error.message });
     }
 });
 

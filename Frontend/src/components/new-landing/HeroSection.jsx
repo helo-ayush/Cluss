@@ -37,7 +37,7 @@ const HeroSection = () => {
                                     Stop Searching.<br />Start Learning.
                                 </div>
                                 <div className='text-[18px] text-gray-600 text-left max-w-lg'>
-                                    StudyHelper automatically generates high-quality, structured courses from YouTube using AI, complete with quizzes, summaries, and interactive RAG chat.
+                                    Cluss automatically generates high-quality, structured courses from YouTube using AI, complete with quizzes, summaries, and interactive RAG chat.
                                 </div>
                                 <div className='group relative cursor-pointer px-6 py-3 bg-[#e5e9eb] flex gap-2 rounded-full overflow-hidden mt-4'>
                                     <div className='absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out'></div>
@@ -128,7 +128,7 @@ const HeroSection = () => {
                         <div className='bg-[#eef3f4] rounded-3xl p-6 relative w-full max-w-105'>
                             <div className='rounded-2xl overflow-hidden relative'>
                                 <div className='aspect-video w-full rounded-xl overflow-hidden bg-[#f3f6f7]'>
-                                    <img src={Img1} alt="StudyHelper Dashboard" className="w-full h-full object-cover" />
+                                    <img src={Img1} alt="Cluss Dashboard" className="w-full h-full object-cover" />
                                 </div>
                             </div>
                             <div className='mt-5 flex items-center justify-between'>
@@ -142,7 +142,7 @@ const HeroSection = () => {
                     <div className='w-full md:w-1/2 flex flex-col justify-center'>
                         <h2 className='text-[40px] font-semibold tracking-tight mb-6 text-gray-900'>Turn Videos into Knowledge</h2>
                         <p className='text-[16px] text-gray-700 leading-relaxed max-w-170 mb-6'>
-                            StudyHelper provides an integrated toolkit for learners. Instantly generate curated curriculums from YouTube, read AI-generated summaries, interact with your courses via RAG study chat, and reinforce your knowledge with AI quizzes — designed to save time and boost retention.
+                            Cluss provides an integrated toolkit for learners. Instantly generate curated curriculums from YouTube, read AI-generated summaries, interact with your courses via RAG study chat, and reinforce your knowledge with AI quizzes — designed to save time and boost retention.
                         </p>
                         <div className='group relative cursor-pointer w-fit px-6 py-3 bg-[#e5e9eb] flex gap-2 rounded-full overflow-hidden'>
                             <div className='absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out'></div>

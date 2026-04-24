@@ -1,198 +1,37 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
-// ─── Helpers ───
 const formatDuration = (seconds) => {
-  if (!seconds || seconds <= 0) return '0:00';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}:${String(s).padStart(2, '0')}`;
-};
-const formatDayDuration = (seconds) => {
   if (!seconds || seconds <= 0) return '0m';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 };
 
-const DAY_COLORS = [
-  { accent: '#818cf8', glow: 'rgba(129,140,248,0.15)' },
-  { accent: '#6366f1', glow: 'rgba(99,102,241,0.15)' },
-  { accent: '#a78bfa', glow: 'rgba(167,139,250,0.15)' },
-  { accent: '#4f46e5', glow: 'rgba(79,70,229,0.15)' },
-  { accent: '#34d399', glow: 'rgba(52,211,153,0.15)' },
-  { accent: '#f472b6', glow: 'rgba(244,114,182,0.15)' },
-];
+function StatusPill({ status }) {
+  const tone = {
+    ready: { label: 'Completed', color: '#15803d', background: 'rgba(21, 128, 61, 0.12)' },
+    processing: { label: 'Preparing', color: '#4338ca', background: 'rgba(67, 56, 202, 0.12)' },
+    failed: { label: 'Needs Retry', color: '#b91c1c', background: 'rgba(185, 28, 28, 0.12)' },
+    unprocessed: { label: 'Not Started', color: '#475569', background: 'rgba(71, 85, 105, 0.12)' },
+  }[status] || { label: 'Locked', color: '#64748b', background: 'rgba(100, 116, 139, 0.12)' };
 
-// ─── Status Badge ───
-function StatusBadge({ status }) {
-  const config = {
-    unprocessed: { label: 'Not Started', icon: 'schedule', color: 'var(--theme-text-faint)', bg: 'transparent', border: 'var(--theme-border)' },
-    processing: { label: 'Processing...', icon: 'sync', color: '#818cf8', bg: 'rgba(129,140,248,0.08)', border: 'rgba(129,140,248,0.2)' },
-    ready: { label: 'Complete', icon: 'check_circle', color: '#34d399', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' },
-    failed: { label: 'Error', icon: 'error', color: '#ef4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)' },
-  };
-  const c = config[status] || config.unprocessed;
   return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-label text-[10px] font-bold uppercase tracking-wider"
-      style={{ color: c.color, background: c.bg, border: `1px solid ${c.border}` }}>
-      <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>{c.icon}</span>
-      {c.label}
+    <span
+      className="inline-flex items-center rounded-full px-3 py-2 font-label text-[10px] font-bold uppercase tracking-[0.18em]"
+      style={{ color: tone.color, background: tone.background }}
+    >
+      {tone.label}
     </span>
   );
 }
 
-// ─── Video Row ───
-function VideoRow({ video, index, isLocked, dayColor }) {
-  return (
-    <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.04, duration: 0.3 }}
-      className="flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group"
-      style={{ background: isLocked ? 'transparent' : 'rgba(255,255,255,0.02)', opacity: isLocked ? 0.4 : 1 }}>
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200"
-        style={{ background: isLocked ? 'var(--theme-border)' : `${dayColor}12`, border: `1px solid ${isLocked ? 'var(--theme-border)' : dayColor + '25'}` }}>
-        {isLocked ? (
-          <span className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--theme-text-faint)' }}>lock</span>
-        ) : (
-          <span className="font-label text-[11px] font-bold" style={{ color: dayColor }}>{index + 1}</span>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-body text-sm font-medium truncate" style={{ color: isLocked ? 'var(--theme-text-faint)' : 'var(--theme-text-heading)' }}>{video.title}</p>
-        {video.channel && <p className="font-label text-[10px] mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>{video.channel}</p>}
-      </div>
-      <span className="shrink-0 font-label text-[11px] font-bold px-2.5 py-1 rounded-lg"
-        style={{ color: isLocked ? 'var(--theme-text-faint)' : dayColor, background: isLocked ? 'transparent' : `${dayColor}08` }}>
-        {formatDuration(video.duration)}
-      </span>
-    </motion.div>
-  );
-}
-
-// ─── Day Card ───
-function DayCard({ day, index, isCurrent, isLocked, totalDays, onStartCheckpoint, courseId }) {
-  const navigate = useNavigate();
-  const [expanded, setExpanded] = useState(isCurrent);
-  const palette = DAY_COLORS[index % DAY_COLORS.length];
-  const dayStatus = day.status;
-  const checkpointStatus = day.checkpoint?.status || 'locked';
-  const nodeClass = dayStatus === 'ready' ? 'neon-node-completed' : isCurrent ? 'neon-node-active' : isLocked ? 'neon-node-locked' : '';
-
-  return (
-    <div className="relative">
-      {index < totalDays - 1 && (
-        <div className="flex justify-center w-full">
-          <div className={`node-connector h-10 ${dayStatus === 'ready' ? 'node-connector-completed' : isCurrent ? 'node-connector-active' : 'node-connector-locked'}`} />
-        </div>
-      )}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.08, duration: 0.5, ease: 'easeOut' }}>
-        <div className={`neon-node ${nodeClass} rounded-2xl overflow-hidden transition-all duration-500 cursor-pointer`}
-          onClick={() => !isLocked && setExpanded(!expanded)} style={{ opacity: isLocked ? 0.45 : 1 }}>
-          <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 20% 20%, ${palette.glow}, transparent 70%)` }} />
-          <div className="relative z-10 p-5 sm:p-6">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: isLocked ? 'var(--theme-border)' : `linear-gradient(135deg, ${palette.accent}25, ${palette.accent}10)`, border: `1.5px solid ${isLocked ? 'var(--theme-border)' : palette.accent + '40'}`, boxShadow: isCurrent ? `0 0 20px ${palette.accent}30` : 'none' }}>
-                  <span className="font-headline text-lg font-black italic" style={{ color: isLocked ? 'var(--theme-text-faint)' : palette.accent }}>{day.dayNumber}</span>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-headline text-base sm:text-lg font-bold" style={{ color: isLocked ? 'var(--theme-text-faint)' : 'var(--theme-text-heading)' }}>
-                      Day {day.dayNumber}
-                    </h3>
-                    {day.isFiller && (
-                      <span className="px-2 py-0.5 rounded-full font-label text-[8px] font-bold uppercase" style={{ background: 'rgba(168,85,247,0.1)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.2)' }}>
-                        Filler · {day.fillerTopic}
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-label text-[10px] sm:text-[11px] uppercase tracking-wider mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                    {day.videos.length} video{day.videos.length !== 1 ? 's' : ''} • {formatDayDuration(day.totalDuration)}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={dayStatus} />
-                {!isLocked && (
-                  <motion.span className="material-symbols-outlined" animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.3 }}
-                    style={{ color: 'var(--theme-text-muted)', fontSize: '20px' }}>expand_more</motion.span>
-                )}
-              </div>
-            </div>
-          </div>
-          <AnimatePresence>
-            {expanded && !isLocked && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.35, ease: 'easeInOut' }} className="overflow-hidden">
-                <div className="px-4 sm:px-5 pb-5 space-y-1">
-                  <div className="h-px mb-3" style={{ background: 'linear-gradient(90deg, transparent, var(--theme-border-strong), transparent)' }} />
-
-                  {/* Start Day Button */}
-                  <motion.button initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-                    onClick={(e) => { e.stopPropagation(); navigate(`/playlist/${courseId}/day/${index}`); }}
-                    className="w-full mb-4 py-3.5 rounded-xl font-label text-sm font-bold text-white flex items-center justify-center gap-2.5 transition-all hover:scale-[1.02] hover:-translate-y-0.5 cursor-pointer"
-                    style={{ background: `linear-gradient(135deg, ${palette.accent}, ${palette.accent}dd)`, boxShadow: `0 4px 24px ${palette.accent}35` }}>
-                    <span className="material-symbols-outlined text-lg">play_circle</span>
-                    {dayStatus === 'ready' ? `Review Day ${day.dayNumber}` : `Start Day ${day.dayNumber}`}
-                  </motion.button>
-
-                  {day.videos.map((video, vIdx) => (
-                    <VideoRow key={video.videoId || vIdx} video={video} index={vIdx} isLocked={false} dayColor={palette.accent} />
-                  ))}
-
-                  {/* Checkpoint CTA */}
-                  {(isCurrent || checkpointStatus === 'available' || checkpointStatus === 'passed' || checkpointStatus === 'failed_all') && dayStatus !== 'ready' && (
-                    <motion.button initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                      onClick={(e) => { e.stopPropagation(); onStartCheckpoint && onStartCheckpoint(index); }}
-                      className="w-full mt-4 py-3.5 rounded-xl font-label text-sm font-bold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02] hover:-translate-y-0.5"
-                      style={{ background: `linear-gradient(135deg, ${palette.accent}, ${palette.accent}cc)`, boxShadow: `0 4px 20px ${palette.accent}40` }}>
-                      <span className="material-symbols-outlined text-lg">quiz</span>
-                      {checkpointStatus === 'passed' ? 'Review Checkpoint' : checkpointStatus === 'failed_all' ? 'Review (All attempts used)' : `Complete Day ${day.dayNumber}`}
-                    </motion.button>
-                  )}
-
-                  {dayStatus === 'ready' && (
-                    <div className="flex items-center gap-2 mt-3 px-4 py-2.5 rounded-xl" style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)' }}>
-                      <span className="material-symbols-outlined" style={{ color: '#34d399', fontSize: '16px' }}>check_circle</span>
-                      <span className="font-label text-xs font-bold" style={{ color: '#34d399' }}>Day completed — checkpoint passed!</span>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
-// ─── Progress Ring ───
-function ProgressRing({ pct, size = 72, stroke = 5, color = '#6366f1' }) {
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
-  return (
-    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(99,102,241,0.1)" strokeWidth={stroke} />
-      <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
-        strokeDasharray={circ} initial={{ strokeDashoffset: circ }} animate={{ strokeDashoffset: offset }} transition={{ duration: 1.2, ease: 'easeOut' }} />
-    </svg>
-  );
-}
-
-
-// ═══════════════════════════════════════════════
-//  CHECKPOINT MODAL
-// ═══════════════════════════════════════════════
 function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onSubmitted }) {
   const [activeTab, setActiveTab] = useState('theory');
   const [theoryAnswers, setTheoryAnswers] = useState(Array(checkpoint?.theoryQuestions?.length || 0).fill(''));
@@ -200,114 +39,177 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const gutterRefs = useRef([]);
-  const lastSub = checkpoint?.submissions?.length > 0 ? checkpoint.submissions[checkpoint.submissions.length - 1] : null;
 
-  const syncScroll = (e, idx) => {
-    if (gutterRefs.current[idx]) {
-      gutterRefs.current[idx].scrollTop = e.target.scrollTop;
-    }
-  };
+  const lastSubmission =
+    checkpoint?.submissions?.length > 0
+      ? checkpoint.submissions[checkpoint.submissions.length - 1]
+      : null;
 
   useEffect(() => {
-    if (lastSub && (checkpoint?.status === 'passed' || checkpoint?.status === 'failed_all')) {
-      setResult(lastSub.feedback);
-      setTheoryAnswers(lastSub.theoryAnswers || []);
-      if (lastSub.codeFiles?.length > 0) setCodeFiles(lastSub.codeFiles);
+    if (lastSubmission && (checkpoint?.status === 'passed' || checkpoint?.status === 'failed_all')) {
+      setResult(lastSubmission.feedback);
+      setTheoryAnswers(lastSubmission.theoryAnswers || []);
+      if (lastSubmission.codeFiles?.length > 0) setCodeFiles(lastSubmission.codeFiles);
     }
-  }, []);
+  }, [checkpoint?.status, lastSubmission]);
+
+  const isReview = checkpoint?.status === 'passed' || checkpoint?.status === 'failed_all';
+  const attemptsUsed = checkpoint?.attemptsUsed || 0;
+  const maxAttempts = checkpoint?.maxAttempts || 3;
+
+  const updateAnswer = (index, value) => {
+    const next = [...theoryAnswers];
+    next[index] = value;
+    setTheoryAnswers(next);
+  };
+
+  const updateFile = (index, key, value) => {
+    const next = [...codeFiles];
+    next[index] = { ...next[index], [key]: value };
+    setCodeFiles(next);
+  };
+
+  const addFile = () => setCodeFiles([...codeFiles, { fileName: 'filename', content: '' }]);
+  const removeFile = (index) => setCodeFiles(codeFiles.filter((_, fileIndex) => fileIndex !== index));
+
+  const syncScroll = (event, index) => {
+    if (gutterRefs.current[index]) {
+      gutterRefs.current[index].scrollTop = event.target.scrollTop;
+    }
+  };
 
   const handleSubmit = async () => {
     if (submitting) return;
     setSubmitting(true);
     try {
       const res = await fetch(`${API_BASE}/api/course/${courseId}/day/${dayIndex}/checkpoint/submit`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clerkId, theoryAnswers, codeFiles: checkpoint.questionType === 'mixed' ? codeFiles : [] })
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clerkId,
+          theoryAnswers,
+          codeFiles: checkpoint.questionType === 'mixed' ? codeFiles : [],
+        }),
       });
       const data = await res.json();
       if (data.feedback) setResult(data.feedback);
       onSubmitted(data);
-    } catch (e) { console.error(e); }
-    finally { setSubmitting(false); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const addFile = () => setCodeFiles([...codeFiles, { fileName: 'filename', content: '' }]);
-  const removeFile = (i) => setCodeFiles(codeFiles.filter((_, idx) => idx !== i));
-  const updateFile = (i, key, val) => { const f = [...codeFiles]; f[i] = { ...f[i], [key]: val }; setCodeFiles(f); };
-  const updateAnswer = (i, val) => { const a = [...theoryAnswers]; a[i] = val; setTheoryAnswers(a); };
-
-  const isReview = checkpoint?.status === 'passed' || checkpoint?.status === 'failed_all';
-  const attemptsUsed = checkpoint?.attemptsUsed || 0;
-  const maxAttempts = checkpoint?.maxAttempts || 3;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6"
-      style={{ background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)' }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="relative w-full h-full md:h-auto md:max-h-[90vh] max-w-4xl md:rounded-2xl flex flex-col overflow-hidden"
-        style={{ background: 'var(--color-background)', border: '1px solid var(--theme-border-strong)' }}>
-
-        {/* Header */}
-        <div className="shrink-0 p-5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--theme-border)' }}>
+    <div className="course-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6" onClick={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <motion.div
+        initial={{ opacity: 0, y: 22, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: 'easeOut' }}
+        className="course-modal-panel flex h-full w-full max-w-5xl flex-col overflow-hidden md:h-auto md:max-h-[90vh] md:rounded-[2rem]"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-black/5 px-5 py-5 md:px-7">
           <div>
-            <h2 className="font-headline text-lg font-bold" style={{ color: 'var(--theme-text-heading)' }}>
-              {isReview ? '📊 Checkpoint Review' : `🧠 Day ${dayIndex + 1} Checkpoint`}
+            <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+              Day {dayIndex + 1} Checkpoint
+            </p>
+            <h2 className="mt-2 font-serif text-3xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+              {isReview ? 'Checkpoint Review' : 'Show what you learned'}
             </h2>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="font-label text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                {attemptsUsed}/{maxAttempts} attempts used
-              </span>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <span className="course-stat-chip">{attemptsUsed}/{maxAttempts} attempts used</span>
               {result && (
-                <span className={`font-label text-xs font-bold ${result.passed ? 'text-emerald-400' : 'text-red-400'}`}>
-                  Score: {result.overallScore}%
+                <span className="course-stat-chip" style={{ color: result.passed ? '#15803d' : '#b91c1c' }}>
+                  {result.overallScore}% score
                 </span>
               )}
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10"
-            style={{ border: '1px solid var(--theme-border)' }}>
-            <span className="material-symbols-outlined text-sm" style={{ color: 'var(--theme-text-muted)' }}>close</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white/80"
+          >
+            <span className="material-symbols-outlined text-[18px]" style={{ color: 'var(--theme-text-muted)' }}>
+              close
+            </span>
           </button>
         </div>
 
-        {/* Tabs */}
         {checkpoint?.questionType === 'mixed' && (
-          <div className="shrink-0 flex gap-2 px-5 pt-4">
-            {[{ key: 'theory', label: '📝 Theory', icon: 'edit_note' }, { key: 'coding', label: '💻 Coding', icon: 'code' }].map(t => (
-              <button key={t.key} onClick={() => setActiveTab(t.key)}
-                className="px-4 py-2 rounded-lg font-label text-xs font-bold transition-all"
-                style={{ background: activeTab === t.key ? 'rgba(99,102,241,0.1)' : 'transparent', color: activeTab === t.key ? '#818cf8' : 'var(--theme-text-muted)', border: `1px solid ${activeTab === t.key ? 'rgba(99,102,241,0.3)' : 'var(--theme-border)'}` }}>
-                {t.label}
+          <div className="flex gap-2 px-5 pt-5 md:px-7">
+            {[
+              { key: 'theory', label: 'Theory' },
+              { key: 'coding', label: 'Coding' },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`rounded-full px-4 py-2 font-label text-[11px] font-bold uppercase tracking-[0.18em] transition ${
+                  activeTab === tab.key ? 'text-white' : ''
+                }`}
+                style={{
+                  background: activeTab === tab.key ? 'linear-gradient(135deg, #111827, #312e81)' : 'rgba(255,255,255,0.7)',
+                  color: activeTab === tab.key ? '#ffffff' : 'rgba(15, 23, 42, 0.58)',
+                  border: '1px solid rgba(15, 23, 42, 0.08)',
+                }}
+              >
+                {tab.label}
               </button>
             ))}
           </div>
         )}
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 custom-scroll">
+        <div className="flex-1 overflow-y-auto px-5 py-6 md:px-7">
           {activeTab === 'theory' && (
-            <div className="space-y-6 max-w-3xl mx-auto">
-              {(checkpoint?.theoryQuestions || []).map((q, i) => {
-                const fb = result?.theoryScores?.find(s => s.questionIndex === i);
+            <div className="mx-auto max-w-3xl space-y-5">
+              {(checkpoint?.theoryQuestions || []).map((question, index) => {
+                const feedback = result?.theoryScores?.find((entry) => entry.questionIndex === index);
                 return (
-                  <div key={i} className="rounded-xl p-5" style={{ background: 'var(--color-surface-container)', border: '1px solid var(--theme-border-strong)' }}>
-                    <div className="flex items-start gap-3 mb-3">
-                      <span className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center font-label text-xs font-bold"
-                        style={{ background: fb ? (fb.score >= 60 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)') : 'rgba(99,102,241,0.1)', color: fb ? (fb.score >= 60 ? '#22c55e' : '#ef4444') : '#818cf8', border: `1px solid ${fb ? (fb.score >= 60 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)') : 'rgba(99,102,241,0.2)'}` }}>
-                        {fb ? `${fb.score}` : i + 1}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <MarkdownRenderer content={q.question} className="font-body text-sm font-semibold" />
+                  <div key={index} className="course-surface rounded-[1.7rem] p-5">
+                    <div className="flex items-start gap-4">
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-label text-xs font-bold"
+                        style={{
+                          background: feedback
+                            ? feedback.score >= 60
+                              ? 'rgba(21, 128, 61, 0.12)'
+                              : 'rgba(185, 28, 28, 0.12)'
+                            : 'rgba(67, 56, 202, 0.12)',
+                          color: feedback ? (feedback.score >= 60 ? '#15803d' : '#b91c1c') : '#4338ca',
+                        }}
+                      >
+                        {feedback ? feedback.score : index + 1}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-body text-sm font-semibold leading-7" style={{ color: 'var(--theme-text-heading)' }}>
+                          <MarkdownRenderer content={question.question} />
+                        </div>
                       </div>
                     </div>
-                      <textarea value={theoryAnswers[i] || ''} onChange={e => updateAnswer(i, e.target.value)} disabled={isReview}
-                      rows={5} placeholder="Write your detailed answer here..."
-                      className="w-full bg-transparent rounded-lg p-3 font-body text-sm resize-y outline-none disabled:opacity-60 transition-all focus:border-indigo-500/50"
-                      style={{ border: '1px solid var(--theme-border-strong)', color: 'var(--theme-text-heading)' }} />
-                    {fb && fb.feedback && (
-                      <div className="mt-3 p-4 rounded-lg" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)' }}>
-                        <p className="font-label text-[10px] uppercase font-bold mb-1" style={{ color: '#a78bfa' }}>Feedback</p>
-                        <MarkdownRenderer content={fb.feedback} className="font-body text-xs" />
+
+                    <textarea
+                      value={theoryAnswers[index] || ''}
+                      onChange={(event) => updateAnswer(index, event.target.value)}
+                      disabled={isReview}
+                      rows={5}
+                      placeholder="Write your answer here..."
+                      className="mt-4 w-full resize-y rounded-[1.2rem] border border-black/10 bg-white/70 p-4 font-body text-sm outline-none transition focus:border-[#4338ca]/35"
+                      style={{ color: 'var(--theme-text-heading)' }}
+                    />
+
+                    {feedback?.feedback && (
+                      <div className="course-surface-soft mt-4 rounded-[1.2rem] p-4">
+                        <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: '#4338ca' }}>
+                          Feedback
+                        </p>
+                        <div className="mt-2 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                          <MarkdownRenderer content={feedback.feedback} />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -317,126 +219,304 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
           )}
 
           {activeTab === 'coding' && checkpoint?.questionType === 'mixed' && (
-            <div className="max-w-3xl mx-auto space-y-6">
-              {/* Prompt */}
-              <div className="rounded-xl p-5" style={{ background: 'var(--color-surface-container)', border: '1px solid var(--theme-border-strong)' }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="material-symbols-outlined text-base" style={{ color: '#818cf8' }}>terminal</span>
-                  <p className="font-label text-xs uppercase font-bold tracking-wider" style={{ color: '#818cf8' }}>Coding Challenge</p>
+            <div className="mx-auto max-w-3xl space-y-5">
+              <div className="course-surface rounded-[1.7rem] p-5">
+                <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: '#4338ca' }}>
+                  Coding Challenge
+                </p>
+                <div className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                  <MarkdownRenderer content={checkpoint.codingQuestion?.prompt} />
                 </div>
-                <MarkdownRenderer content={checkpoint.codingQuestion?.prompt} className="font-body text-sm mb-3" />
                 {checkpoint.codingQuestion?.expectedBehavior && (
-                  <div className="p-3 rounded-lg" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)' }}>
-                    <p className="font-label text-[10px] uppercase font-bold mb-1" style={{ color: '#34d399' }}>Expected Behavior</p>
-                    <MarkdownRenderer content={checkpoint.codingQuestion.expectedBehavior} className="font-body text-xs" />
+                  <div className="course-surface-soft mt-4 rounded-[1.2rem] p-4">
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: '#15803d' }}>
+                      Expected Behavior
+                    </p>
+                    <div className="mt-2 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                      <MarkdownRenderer content={checkpoint.codingQuestion.expectedBehavior} />
+                    </div>
                   </div>
                 )}
               </div>
-              {/* Code Files */}
-              {codeFiles.map((f, i) => (
-                <div key={i} className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--theme-border-strong)' }}>
-                  <div className="flex items-center gap-2 px-4 py-2" style={{ background: 'var(--color-surface-container-high)', borderBottom: '1px solid var(--theme-border-strong)' }}>
-                    <span className="material-symbols-outlined text-sm" style={{ color: 'var(--theme-text-faint)' }}>description</span>
-                    <input value={f.fileName} onChange={e => updateFile(i, 'fileName', e.target.value)} disabled={isReview}
-                      className="flex-1 bg-transparent border-none outline-none font-label text-[10px] uppercase font-bold"
-                      style={{ color: 'var(--theme-text-heading)' }} placeholder="filename" />
+
+              {codeFiles.map((file, index) => (
+                <div key={index} className="overflow-hidden rounded-[1.7rem] border border-black/10">
+                  <div className="course-surface flex items-center gap-3 border-b border-black/10 px-4 py-3">
+                    <span className="material-symbols-outlined text-[18px]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                      description
+                    </span>
+                    <input
+                      value={file.fileName}
+                      onChange={(event) => updateFile(index, 'fileName', event.target.value)}
+                      disabled={isReview}
+                      className="flex-1 bg-transparent font-label text-[11px] font-bold uppercase tracking-[0.18em] outline-none"
+                      style={{ color: 'var(--theme-text-heading)' }}
+                      placeholder="filename"
+                    />
                     {codeFiles.length > 1 && !isReview && (
-                      <button onClick={() => removeFile(i)} className="w-6 h-6 rounded flex items-center justify-center hover:bg-red-500/20">
-                        <span className="material-symbols-outlined text-sm text-red-400">close</span>
+                      <button type="button" onClick={() => removeFile(index)} className="text-[#b91c1c]">
+                        <span className="material-symbols-outlined text-[18px]">close</span>
                       </button>
                     )}
                   </div>
-                  <div className="relative flex font-mono text-[13px] overflow-hidden rounded-b-xl"
-                    style={{ 
-                      background: '#1e1e1e',
-                      borderTop: 'none',
-                      minHeight: '200px'
-                    }}>
-                    {/* Line Numbers Gutter */}
-                    <div ref={el => gutterRefs.current[i] = el}
-                      className="shrink-0 w-10 py-5 bg-[#1e1e1e] text-[#858585] text-[11px] text-right pr-3 select-none border-r border-[#333333] overflow-hidden leading-relaxed">
-                      {(f.content.split('\n').map((_, idx) => (
-                        <div key={idx} className="h-[21px]">{idx + 1}</div>
-                      )))}
-                      {/* Add extra empty line for breathing room */}
-                      <div className="h-[20px]"></div>
+
+                  <div className="course-code-surface flex min-h-[220px] overflow-hidden">
+                    <div
+                      ref={(element) => {
+                        gutterRefs.current[index] = element;
+                      }}
+                      className="w-12 shrink-0 overflow-hidden border-r border-white/8 bg-[#111318] py-5 pr-3 text-right font-mono text-[11px] text-[#677083]"
+                    >
+                      {file.content.split('\n').map((_, lineIndex) => (
+                        <div key={lineIndex} className="h-[21px]">
+                          {lineIndex + 1}
+                        </div>
+                      ))}
                     </div>
-                    {/* Textarea */}
-                    <textarea value={f.content} 
-                      onChange={e => updateFile(i, 'content', e.target.value)} 
-                      onScroll={e => syncScroll(e, i)}
+                    <textarea
+                      value={file.content}
+                      onChange={(event) => updateFile(index, 'content', event.target.value)}
+                      onScroll={(event) => syncScroll(event, index)}
                       disabled={isReview}
-                      rows={10} placeholder="Paste your code here..."
-                      className="flex-1 p-5 bg-transparent outline-none disabled:opacity-60 leading-relaxed custom-scroll whitespace-pre overflow-auto"
-                      style={{ 
-                        color: '#d4d4d4',
-                        caretColor: '#ffffff',
-                        resize: 'none',
-                        lineHeight: '21px'
-                      }} />
+                      rows={10}
+                      placeholder="Paste your code here..."
+                      className="custom-scroll flex-1 resize-none bg-transparent p-5 font-mono text-[13px] leading-[21px] text-[#e5e7eb] outline-none"
+                    />
                   </div>
                 </div>
               ))}
+
               {!isReview && (
-                <button onClick={addFile} className="w-full py-3 rounded-xl font-label text-xs font-bold flex items-center justify-center gap-2 transition-all hover:bg-white/5 active:scale-95"
-                  style={{ border: '1px dashed var(--theme-border-strong)', color: 'var(--theme-text-muted)' }}>
-                  <span className="material-symbols-outlined text-sm">add</span> Add File
+                <button type="button" onClick={addFile} className="course-outline-button w-full justify-center">
+                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  Add File
                 </button>
               )}
+
               {result?.codingScore && (
-                <div className="p-4 rounded-xl" style={{ background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.15)' }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-label text-xs uppercase font-bold" style={{ color: '#a78bfa' }}>Coding Score</p>
-                    <span className={`font-headline text-lg font-bold ${result.codingScore.score >= 60 ? 'text-emerald-400' : 'text-red-400'}`}>{result.codingScore.score}/100</span>
+                <div className="course-surface-soft rounded-[1.6rem] p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: '#4338ca' }}>
+                      Coding Score
+                    </p>
+                    <span className="font-headline text-2xl font-bold" style={{ color: result.codingScore.score >= 60 ? '#15803d' : '#b91c1c' }}>
+                      {result.codingScore.score}/100
+                    </span>
                   </div>
-                  <p className="font-body text-xs" style={{ color: 'var(--theme-text-body)' }}>{result.codingScore.feedback}</p>
+                  <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                    {result.codingScore.feedback}
+                  </p>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="shrink-0 p-5 flex items-center justify-between" style={{ borderTop: '1px solid var(--theme-border)' }}>
-          {result && (
-            <div className="flex items-center gap-2">
-              <span className={`w-3 h-3 rounded-full ${result.passed ? 'bg-emerald-400' : 'bg-red-400'}`} />
-              <span className="font-label text-xs font-bold" style={{ color: result.passed ? '#34d399' : '#ef4444' }}>
-                {result.passed ? 'Passed!' : 'Not passed yet'}
-              </span>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/5 px-5 py-5 md:px-7">
+          {result ? (
+            <div className="course-stat-chip" style={{ color: result.passed ? '#15803d' : '#b91c1c' }}>
+              {result.passed ? 'Checkpoint passed' : 'Keep refining your answers'}
             </div>
+          ) : (
+            <div />
           )}
-          {!result && <div />}
+
           {!isReview && attemptsUsed < maxAttempts ? (
-            <button onClick={handleSubmit} disabled={submitting}
-              className="px-8 py-3 rounded-xl font-label text-sm font-bold text-white disabled:opacity-50 flex items-center gap-2 transition-all hover:scale-[1.02]"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 0 20px rgba(99,102,241,0.3)' }}>
+            <button type="button" onClick={handleSubmit} disabled={submitting} className="course-primary-button">
               {submitting ? (
-                <><div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Grading...</>
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Grading
+                </>
               ) : (
-                <><span className="material-symbols-outlined text-base">send</span> Submit ({maxAttempts - attemptsUsed} left)</>
+                <>
+                  <span className="material-symbols-outlined text-[18px]">send</span>
+                  Submit ({maxAttempts - attemptsUsed} left)
+                </>
               )}
             </button>
           ) : (
-            <button onClick={onClose} className="px-6 py-3 rounded-xl font-label text-sm font-bold transition-all hover:bg-white/5"
-              style={{ border: '1px solid var(--theme-border)', color: 'var(--theme-text-body)' }}>Close</button>
+            <button type="button" onClick={onClose} className="course-outline-button">
+              Close
+            </button>
           )}
         </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function DayCard({ day, index, isCurrent, isLocked, courseId, onStartCheckpoint }) {
+  const navigate = useNavigate();
+  const checkpointStatus = day.checkpoint?.status || 'locked';
+  const showCheckpointButton =
+    (isCurrent || checkpointStatus === 'available' || checkpointStatus === 'passed' || checkpointStatus === 'failed_all') &&
+    day.status !== 'ready';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.4, ease: 'easeOut' }}
+      className="course-surface relative overflow-hidden rounded-[2rem] p-6 md:p-7"
+      style={{ opacity: isLocked ? 0.62 : 1 }}
+    >
+      <div className="pointer-events-none absolute inset-0">
+        <div
+          className="absolute inset-x-0 top-0 h-28"
+          style={{
+            background: isCurrent
+              ? 'linear-gradient(180deg, rgba(67, 56, 202, 0.14), transparent)'
+              : day.status === 'ready'
+              ? 'linear-gradient(180deg, rgba(21, 128, 61, 0.12), transparent)'
+              : 'linear-gradient(180deg, rgba(15, 23, 42, 0.05), transparent)',
+          }}
+        />
+      </div>
+
+      <div className="relative z-10">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.4rem] font-headline text-xl font-bold"
+              style={{
+                background: isCurrent ? 'rgba(67, 56, 202, 0.12)' : 'rgba(15, 23, 42, 0.06)',
+                color: isCurrent ? '#4338ca' : 'var(--theme-text-heading)',
+              }}
+            >
+              {day.dayNumber}
+            </div>
+            <div>
+              <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                Playlist Day {day.dayNumber}
+              </p>
+              <h3 className="mt-2 font-serif text-3xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+                {day.isFiller ? `Focus: ${day.fillerTopic}` : `Study block for day ${day.dayNumber}`}
+              </h3>
+              <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                {day.videos.length} video{day.videos.length === 1 ? '' : 's'} planned for this day, with about{' '}
+                {formatDuration(day.totalDuration)} of study time.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {isCurrent && <span className="course-kicker">Current Day</span>}
+            <StatusPill status={day.status} />
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-3 md:grid-cols-3">
+          <div className="course-surface-soft rounded-[1.35rem] px-4 py-4">
+            <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+              Videos
+            </p>
+            <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+              {day.videos.length}
+            </p>
+          </div>
+          <div className="course-surface-soft rounded-[1.35rem] px-4 py-4">
+            <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+              Estimated Time
+            </p>
+            <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+              {formatDuration(day.totalDuration)}
+            </p>
+          </div>
+          <div className="course-surface-soft rounded-[1.35rem] px-4 py-4">
+            <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+              Checkpoint
+            </p>
+            <p className="mt-2 font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+              {day.status === 'ready'
+                ? 'Passed'
+                : checkpointStatus === 'failed_all'
+                ? 'Attempts finished'
+                : checkpointStatus === 'passed'
+                ? 'Passed'
+                : 'Pending'}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-2">
+          {day.videos.slice(0, 4).map((video, videoIndex) => (
+            <div key={video.videoId || videoIndex} className="course-surface-soft flex items-center gap-3 rounded-[1.2rem] px-4 py-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4338ca]">
+                <span className="font-label text-xs font-bold">{String(videoIndex + 1).padStart(2, '0')}</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+                  {video.title}
+                </p>
+                <p className="mt-1 truncate font-body text-xs" style={{ color: 'var(--theme-text-body)' }}>
+                  {video.channel || 'YouTube'} • {formatDuration(video.duration)}
+                </p>
+              </div>
+            </div>
+          ))}
+          {day.videos.length > 4 && (
+            <p className="pl-1 font-label text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+              + {day.videos.length - 4} more video{day.videos.length - 4 === 1 ? '' : 's'}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-7 flex flex-col gap-3 md:flex-row">
+          <button
+            type="button"
+            onClick={() => !isLocked && navigate(`/playlist/${courseId}/day/${index}`)}
+            disabled={isLocked}
+            className="course-primary-button justify-center disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-[18px]">play_circle</span>
+            {day.status === 'ready' ? `Review Day ${day.dayNumber}` : `Start Day ${day.dayNumber}`}
+          </button>
+
+          {showCheckpointButton && (
+            <button type="button" onClick={() => onStartCheckpoint(index)} className="course-outline-button justify-center">
+              <span className="material-symbols-outlined text-[18px]">quiz</span>
+              {checkpointStatus === 'passed'
+                ? 'Review Checkpoint'
+                : checkpointStatus === 'failed_all'
+                ? 'Open Results'
+                : 'Take Checkpoint'}
+            </button>
+          )}
+        </div>
+
+        {day.status === 'ready' && (
+          <div className="course-surface-soft mt-5 flex items-center gap-3 rounded-[1.3rem] px-4 py-4">
+            <span className="material-symbols-outlined text-[20px]" style={{ color: '#15803d' }}>
+              verified
+            </span>
+            <p className="font-body text-sm font-semibold" style={{ color: '#15803d' }}>
+              Day complete. The checkpoint for this day has been passed.
+            </p>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="course-shell flex min-h-screen items-center justify-center px-6">
+      <div className="course-surface flex flex-col items-center gap-4 rounded-[2rem] px-8 py-10 text-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#111827] border-t-transparent" />
+        <p className="font-body text-sm" style={{ color: 'var(--theme-text-body)' }}>
+          Building your playlist plan...
+        </p>
       </div>
     </div>
   );
 }
 
-// ══════════════════════════════════════════════════
-//  MAIN PAGE
-// ══════════════════════════════════════════════════
 export default function PlaylistCourseMap() {
   const { courseId } = useParams();
-  const { user, isLoaded } = useUser();
+  const { user } = useUser();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Checkpoint state
   const [checkpointDay, setCheckpointDay] = useState(null);
   const [checkpointData, setCheckpointData] = useState(null);
   const [loadingCheckpoint, setLoadingCheckpoint] = useState(false);
@@ -446,11 +526,16 @@ export default function PlaylistCourseMap() {
       const res = await fetch(`${API_BASE}/api/course/${courseId}`);
       const data = await res.json();
       if (data.success) setCourse(data.course);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }, [courseId]);
 
-  useEffect(() => { fetchCourse(); }, [fetchCourse]);
+  useEffect(() => {
+    fetchCourse();
+  }, [fetchCourse]);
 
   const handleStartCheckpoint = async (dayIdx) => {
     setLoadingCheckpoint(true);
@@ -459,153 +544,190 @@ export default function PlaylistCourseMap() {
       const res = await fetch(`${API_BASE}/api/course/${courseId}/day/${dayIdx}/checkpoint`);
       const data = await res.json();
       if (data.success) setCheckpointData(data.checkpoint);
-    } catch (e) { console.error(e); }
-    finally { setLoadingCheckpoint(false); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingCheckpoint(false);
+    }
   };
 
+  const days = course?.days || [];
+
+  const stats = useMemo(() => {
+    const totalVideos = days.reduce((sum, day) => sum + day.videos.length, 0);
+    const totalDuration = days.reduce((sum, day) => sum + day.totalDuration, 0);
+    const completedDays = days.filter((day) => day.status === 'ready').length;
+    const progressPct = days.length > 0 ? Math.round((completedDays / days.length) * 100) : 0;
+    return { totalVideos, totalDuration, completedDays, progressPct };
+  }, [days]);
+
   if (loading) {
-    return (
-      <><div className="fixed inset-0 z-0" style={{ background: 'var(--color-background)' }} />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#8b5cf6', borderTopColor: 'transparent' }} />
-            <p className="font-body text-sm" style={{ color: 'var(--theme-text-body)' }}>Loading study plan...</p>
-          </div>
-        </div></>
-    );
+    return <LoadingState />;
   }
 
   if (!course || !course.days) {
     return (
-      <><div className="fixed inset-0 z-0" style={{ background: 'var(--color-background)' }} />
-        <div className="relative z-10 min-h-screen flex items-center justify-center flex-col gap-4">
-          <span className="material-symbols-outlined text-5xl" style={{ color: 'var(--theme-text-faint)' }}>error_outline</span>
-          <p className="font-body text-lg" style={{ color: 'var(--theme-text-body)' }}>Course not found.</p>
-          <Link to="/dashboard" className="font-label text-sm font-bold underline" style={{ color: 'var(--color-primary)' }}>← Back to Dashboard</Link>
-        </div></>
+      <div className="course-shell flex min-h-screen items-center justify-center px-6">
+        <div className="course-surface max-w-xl rounded-[2rem] px-8 py-10 text-center">
+          <h1 className="font-serif text-4xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+            Playlist course not found
+          </h1>
+          <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+            We could not load this study plan. Head back to the dashboard and open it again.
+          </p>
+          <Link to="/dashboard" className="course-primary-button mt-6">
+            Return to Dashboard
+          </Link>
+        </div>
+      </div>
     );
   }
 
-  const days = course.days || [];
-  const totalVideos = days.reduce((sum, d) => sum + d.videos.length, 0);
-  const totalDuration = days.reduce((sum, d) => sum + d.totalDuration, 0);
-  const completedDays = days.filter(d => d.status === 'ready').length;
-  const progressPct = days.length > 0 ? Math.round((completedDays / days.length) * 100) : 0;
   const currentDayIndex = course.currentDayIndex || 0;
 
   return (
-    <>
-      <div className="fixed inset-0 z-0 grid-bg" style={{ background: 'var(--color-background)' }} />
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-600/10 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-violet-600/10 blur-[150px]" />
-      </div>
-
-      {/* Modals */}
+    <div className="course-shell">
       {checkpointData && checkpointDay !== null && (
-        <CheckpointModal checkpoint={checkpointData} courseId={courseId} dayIndex={checkpointDay} clerkId={user?.id}
-          onClose={() => { setCheckpointData(null); setCheckpointDay(null); }}
-          onSubmitted={() => fetchCourse()} />
+        <CheckpointModal
+          checkpoint={checkpointData}
+          courseId={courseId}
+          dayIndex={checkpointDay}
+          clerkId={user?.id}
+          onClose={() => {
+            setCheckpointData(null);
+            setCheckpointDay(null);
+          }}
+          onSubmitted={() => fetchCourse()}
+        />
       )}
 
-      <main className="relative z-10 min-h-screen pt-28 pb-24 px-6 max-w-3xl mx-auto font-body">
-
-        {/* Header */}
-        <div className="mb-10 text-center animate-blur-text" style={{ animationDelay: '0.1s' }}>
-          <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-xs font-label uppercase tracking-widest mb-6 hover:opacity-80 transition-opacity" style={{ color: 'var(--theme-text-muted)' }}>
-            <span className="material-symbols-outlined text-sm">arrow_back</span> Dashboard
-          </Link>
-          <div className="flex justify-center mb-4">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-label text-[10px] font-bold uppercase tracking-widest"
-              style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>smart_display</span> YouTube Playlist
-            </span>
-          </div>
-          <h1 className="font-headline text-3xl sm:text-4xl md:text-5xl font-bold italic forge-gradient-text leading-tight max-w-3xl mx-auto">{course.course_title}</h1>
-          <div className="flex items-center justify-center gap-6 mt-6 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-lg" style={{ color: '#818cf8' }}>video_library</span>
-              <span className="font-label text-xs font-bold" style={{ color: 'var(--theme-text-heading)' }}>{totalVideos} videos</span>
-            </div>
-            <div className="w-px h-4" style={{ background: 'var(--theme-border-strong)' }} />
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-lg" style={{ color: '#a78bfa' }}>calendar_today</span>
-              <span className="font-label text-xs font-bold" style={{ color: 'var(--theme-text-heading)' }}>{days.length} days</span>
-            </div>
-            <div className="w-px h-4" style={{ background: 'var(--theme-border-strong)' }} />
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-lg" style={{ color: '#34d399' }}>timer</span>
-              <span className="font-label text-xs font-bold" style={{ color: 'var(--theme-text-heading)' }}>{formatDayDuration(totalDuration)} total</span>
-            </div>
+      {loadingCheckpoint && (
+        <div className="course-modal-backdrop fixed inset-0 z-40 flex items-center justify-center">
+          <div className="course-surface flex flex-col items-center gap-4 rounded-[2rem] px-8 py-8 text-center">
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#111827] border-t-transparent" />
+            <p className="font-body text-sm" style={{ color: 'var(--theme-text-body)' }}>
+              Preparing checkpoint questions...
+            </p>
           </div>
         </div>
+      )}
 
-
-        {/* Progress Card */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }}
-          className="rounded-2xl p-6 mb-10" style={{ background: 'var(--dash-card-bg)', border: '1px solid var(--dash-card-border)', backdropFilter: 'blur(24px)' }}>
-          <div className="flex items-center justify-between flex-wrap gap-6">
-            <div className="flex items-center gap-5">
-              <div className="relative shrink-0">
-                <ProgressRing pct={progressPct} size={72} stroke={5} color="#6366f1" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="font-headline text-lg font-black" style={{ color: 'var(--color-primary)' }}>{progressPct}%</span>
-                </div>
-              </div>
-              <div>
-                <p className="font-headline text-xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>Study Plan Progress</p>
-                <p className="font-body text-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>{completedDays} of {days.length} days completed • ~{course.hoursPerDay}h/day</p>
-              </div>
+      <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-4 pb-20 pt-28 md:px-6 lg:px-8">
+        <motion.section
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
+          className="course-hero-card overflow-hidden rounded-[2.5rem] px-6 py-8 md:px-10 md:py-10"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Link to="/dashboard" className="course-outline-button">
+                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                Dashboard
+              </Link>
+              <span className="course-kicker">
+                <span className="material-symbols-outlined text-[14px]">smart_display</span>
+                Playlist Course
+              </span>
             </div>
-            {currentDayIndex < days.length && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'rgba(129,140,248,0.06)', border: '1px solid rgba(129,140,248,0.15)' }}>
-                <span className="material-symbols-outlined" style={{ color: '#818cf8', fontSize: '18px' }}>play_circle</span>
-                <span className="font-label text-xs font-bold" style={{ color: '#818cf8' }}>Currently on Day {currentDayIndex + 1}</span>
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Day Timeline */}
-        <div className="space-y-0 animate-blur-text" style={{ animationDelay: '0.25s' }}>
-          {days.map((day, i) => (
-            <DayCard key={day._id || i} day={day} index={i}
-              isCurrent={i === currentDayIndex}
-              isLocked={i > currentDayIndex && day.status !== 'ready'}
-              totalDays={days.length}
-              courseId={courseId}
-              onStartCheckpoint={handleStartCheckpoint} />
-          ))}
-        </div>
-
-        {/* Loading checkpoint overlay */}
-        {loadingCheckpoint && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-10 h-10 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
-              <p className="font-body text-sm text-white">Generating checkpoint questions...</p>
+            <div className="course-stat-chip">
+              <span className="material-symbols-outlined text-[18px]" style={{ color: '#4338ca' }}>
+                event_note
+              </span>
+              Day {Math.min(currentDayIndex + 1, days.length)} of {days.length}
             </div>
           </div>
-        )}
 
-        {/* Finish Badge */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.5 }} className="mt-16 flex justify-center">
-          <div className="relative z-10 px-8 py-5 rounded-full flex items-center gap-5 cursor-default transition-all duration-500 hover:-translate-y-2"
-            style={{ background: 'linear-gradient(145deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.9) 100%)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', boxShadow: progressPct === 100 ? '0 0 40px rgba(52,211,153,0.3)' : '0 4px 20px rgba(0,0,0,0.3)' }}>
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-[0_0_30px_rgba(99,102,241,0.5)] ${progressPct === 100 ? 'bg-linear-to-br from-emerald-500 to-green-600' : 'bg-linear-to-br from-indigo-500 to-violet-600'}`}>
-              <span className="material-symbols-outlined text-3xl">{progressPct === 100 ? 'emoji_events' : 'sports_score'}</span>
-            </div>
+          <div className="mt-8 grid gap-8 lg:grid-cols-[1.35fr_0.95fr]">
             <div>
-              <h3 className="font-headline text-xl italic font-black text-white drop-shadow-md tracking-wider">
-                {progressPct === 100 ? 'Playlist Complete!' : 'The Final Milestone'}
-              </h3>
-              <p className="font-label text-[10px] md:text-xs text-indigo-200/60 tracking-widest uppercase mt-1 font-bold">
-                {progressPct === 100 ? 'You conquered every single day' : 'Your journey to mastery awaits'}
+              <p className="font-label text-[11px] font-bold uppercase tracking-[0.24em]" style={{ color: 'rgba(15, 23, 42, 0.44)' }}>
+                Structured Study Plan
+              </p>
+              <h1 className="mt-4 font-serif text-4xl font-semibold leading-tight md:text-6xl" style={{ color: 'var(--theme-text-heading)' }}>
+                {course.course_title}
+              </h1>
+              <p className="mt-4 max-w-3xl font-body text-sm leading-7 md:text-[15px]" style={{ color: 'var(--theme-text-body)' }}>
+                Your playlist has been reshaped into day-by-day study blocks with checkpoints so
+                each session feels intentional instead of overwhelming.
               </p>
             </div>
+
+            <div className="course-surface-soft rounded-[2rem] p-6">
+              <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                Plan Progress
+              </p>
+              <div className="mt-5 grid gap-3">
+                <div className="course-surface rounded-[1.3rem] px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                      Completion
+                    </span>
+                    <span className="font-label text-xs font-bold" style={{ color: '#4338ca' }}>
+                      {stats.progressPct}%
+                    </span>
+                  </div>
+                  <div className="mt-3 course-progress-track">
+                    <div className="course-progress-fill" style={{ width: `${stats.progressPct}%` }} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="course-surface rounded-[1.3rem] px-4 py-4">
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                      Videos
+                    </p>
+                    <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+                      {stats.totalVideos}
+                    </p>
+                  </div>
+                  <div className="course-surface rounded-[1.3rem] px-4 py-4">
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                      Total Time
+                    </p>
+                    <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+                      {formatDuration(stats.totalDuration)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </motion.div>
+        </motion.section>
+
+        <section className="space-y-6">
+          {days.map((day, index) => (
+            <DayCard
+              key={day._id || index}
+              day={day}
+              index={index}
+              isCurrent={index === currentDayIndex}
+              isLocked={index > currentDayIndex && day.status !== 'ready'}
+              courseId={courseId}
+              onStartCheckpoint={handleStartCheckpoint}
+            />
+          ))}
+        </section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.45 }}
+          className="course-surface mx-auto max-w-3xl rounded-[2rem] px-6 py-8 text-center"
+        >
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#eef2ff] text-[#4338ca]">
+            <span className="material-symbols-outlined text-[30px]">
+              {stats.progressPct === 100 ? 'emoji_events' : 'sports_score'}
+            </span>
+          </div>
+          <h2 className="mt-4 font-serif text-3xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+            {stats.progressPct === 100 ? 'Playlist Complete' : 'Keep the streak alive'}
+          </h2>
+          <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+            {stats.progressPct === 100
+              ? 'Every planned day is complete. You can revisit any session or checkpoint whenever you want.'
+              : `${stats.completedDays} of ${days.length} study days are complete so far.`}
+          </p>
+        </motion.section>
       </main>
-    </>
+    </div>
   );
 }

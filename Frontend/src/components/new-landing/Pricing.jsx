@@ -114,7 +114,7 @@ const Pricing = () => {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_ShJJUB86k3Q2Oq',
                 amount: data.amount,
                 currency: data.currency,
-                name: "StudyHelper AI",
+                name: "Cluss AI",
                 description: `Upgrade to ${plan.toUpperCase()}`,
                 order_id: data.order.id,
                 handler: async function (response) {

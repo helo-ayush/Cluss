@@ -1,44 +1,49 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
-import SubtopicListItem from '../components/SubtopicListItem';
-import { ShimmerButton } from '../components/magicui/ShimmerButton';
-import TutorChatPanel from '../components/TutorChatPanel';
+import { motion } from 'motion/react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import SubtopicListItem from '../components/SubtopicListItem';
+import TutorChatPanel from '../components/TutorChatPanel';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
-// ─── Quiz Modal Component ───
-// ─── Quiz Modal Component ───
 function QuizModal({ questions, initialResults, onSubmit, onClose }) {
-  const [answers, setAnswers] = useState(initialResults ? initialResults.results.map(r => r.selectedAnswer || null) : Array(questions.length).fill(null));
-  const [submitted, setSubmitted] = useState(!!initialResults);
+  const [answers, setAnswers] = useState(
+    initialResults ? initialResults.results.map((result) => result.selectedAnswer || null) : Array(questions.length).fill(null)
+  );
+  const [submitted, setSubmitted] = useState(Boolean(initialResults));
   const [results, setResults] = useState(initialResults || null);
   const [submitting, setSubmitting] = useState(false);
-  
   const [currentIdx, setCurrentIdx] = useState(0);
   const [hintsActive, setHintsActive] = useState({});
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
-    let timer;
-    if (cooldown > 0) {
-      timer = setInterval(() => setCooldown(c => c - 1), 1000);
-    }
+    if (cooldown <= 0) return undefined;
+    const timer = setInterval(() => setCooldown((value) => value - 1), 1000);
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  const handleSelect = (qIdx, option) => {
+  const currentQuestion = questions[currentIdx] || { question: '', options: [] };
+  const currentResult = submitted ? results?.results?.[currentIdx] : null;
+  const answeredCount = answers.filter((answer) => answer !== null).length;
+
+  const handleSelect = (questionIndex, option) => {
     if (submitted) return;
-    const newAnswers = [...answers];
-    newAnswers[qIdx] = option;
-    setAnswers(newAnswers);
+    const next = [...answers];
+    next[questionIndex] = option;
+    setAnswers(next);
   };
 
-  const handleShowHint = () => {
-    if (cooldown > 0 || submitted) return;
-    setHintsActive(prev => ({ ...prev, [currentIdx]: true }));
-    setCooldown(60);
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    const data = await onSubmit(answers);
+    setResults(data);
+    setSubmitted(true);
+    setSubmitting(false);
+    setCurrentIdx(0);
   };
 
   const handleRetake = () => {
@@ -50,278 +55,341 @@ function QuizModal({ questions, initialResults, onSubmit, onClose }) {
     setCooldown(0);
   };
 
-  const handleSubmit = async () => {
-    if (submitting) return;
-    setSubmitting(true);
-    const data = await onSubmit(answers);
-    setResults(data);
-    setSubmitted(true);
-    setSubmitting(false);
-    setCurrentIdx(0); // Go back to first question to review
+  const showHint = () => {
+    if (submitted || cooldown > 0) return;
+    setHintsActive((prev) => ({ ...prev, [currentIdx]: true }));
+    setCooldown(60);
   };
 
-  const answeredCount = answers.filter(a => a !== null).length;
-  const currentQ = questions[currentIdx];
-  const currentResult = submitted ? results?.results?.[currentIdx] : null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6"
-      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
-      onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}>
-
-      <div className="relative liquid-glass md:rounded-2xl w-full h-full md:h-auto md:max-h-[85vh] max-w-5xl flex flex-col md:flex-row overflow-hidden"
-        style={{ border: '1px solid var(--theme-border-strong)' }}>
-
-        {/* ── Close Button (Absolute) ── */}
-        <button onClick={onClose} className="absolute top-3 right-3 md:top-5 md:right-5 z-20 w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all hover:bg-white/10"
-          style={{ background: 'var(--theme-glass-bg)', border: '1px solid var(--theme-border)' }}>
-          <span className="material-symbols-outlined text-sm" style={{ color: 'var(--theme-text-muted)' }}>close</span>
-        </button>
-
-        {/* ── Left Sidebar (Nav Grid) ── */}
-        <div className="shrink-0 flex flex-col md:w-64 lg:w-72 border-b md:border-b-0 md:border-r" 
-          style={{ borderColor: 'var(--theme-border)', background: 'var(--theme-nav-bg)' }}>
-          
-          {/* Sidebar Header */}
-          <div className="p-4 md:p-6 pb-3" style={{ borderBottom: '1px solid var(--theme-border)' }}>
-            <h2 className="font-headline text-lg md:text-xl font-bold italic truncate pr-8" style={{ color: 'var(--theme-text-heading)' }}>
-              {submitted ? (results?.passed ? '🎉 Complete!' : '📚 Review') : '🧠 Module Quiz'}
-            </h2>
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-xs font-label" style={{ color: 'var(--theme-text-muted)' }}>
-                {submitted ? 'Review Mode' : `${answeredCount}/${questions.length} Answered`}
-              </span>
-              {submitted && results && (
-                <span className={`font-label text-xs font-bold ${results.passed ? 'text-emerald-400' : 'text-red-400'}`}>
-                   Score: {results.score}%
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Questions Grid */}
-          <div className="p-4 md:p-6 flex-1 overflow-x-auto md:overflow-y-auto custom-scroll flex flex-row md:flex-col" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <div className="flex flex-row md:grid md:grid-cols-5 gap-2 md:gap-2.5 w-max md:w-full">
-              {questions.map((_, i) => {
-                const isActive = i === currentIdx;
-                const isAnswered = answers[i] !== null;
-                let bg = 'var(--theme-glass-bg)';
-                let border = 'var(--theme-border)';
-                let text = 'var(--theme-text-faint)';
-
-                if (submitted && results) {
-                  const res = results.results[i];
-                  if (res.correct) { bg = 'rgba(34,197,94,0.15)'; border = 'rgba(34,197,94,0.4)'; text = '#22c55e'; }
-                  else { bg = 'rgba(239,68,68,0.15)'; border = 'rgba(239,68,68,0.4)'; text = '#ef4444'; }
-                } else if (isAnswered) {
-                  bg = 'rgba(139,92,246,0.15)'; border = 'rgba(139,92,246,0.4)'; text = '#8b5cf6';
-                }
-                
-                if (isActive && !submitted) {
-                  border = '#8b5cf6';
-                } else if (isActive && submitted) {
-                  border = 'var(--theme-text-heading)';
-                }
-
-                return (
-                  <button key={i} onClick={() => setCurrentIdx(i)}
-                    className="shrink-0 w-10 h-10 md:w-full md:aspect-square rounded-lg flex items-center justify-center text-xs font-label font-bold transition-all hover:scale-105 cursor-pointer"
-                    style={{ background: bg, border: `1.5px solid ${border}`, color: text }}>
-                    {i + 1}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Sidebar Footer (Persistent Submit/Retake) */}
-          <div className="p-4 md:p-6" style={{ borderTop: '1px solid var(--theme-border)', background: 'var(--theme-glass-bg)' }}>
-            {submitted ? (
-               <button onClick={handleRetake} className="w-full py-3.5 rounded-xl font-label text-sm font-bold transition-all hover:bg-white/5 cursor-pointer" style={{ border: '1px solid var(--theme-border)', color: 'var(--theme-text-body)' }}>
-                 Retake Quiz
-               </button>
-            ) : (
-               <button onClick={handleSubmit} disabled={submitting}
-                 className="w-full py-3.5 rounded-xl font-label text-sm font-bold transition-all disabled:opacity-50 forge-btn-primary text-on-primary flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-                 {submitting ? (<><div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div> Grading...</>) : 'Submit Quiz'}
-               </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Right Panel (Question View) ── */}
-        <div className="flex-1 flex flex-col min-w-0" style={{ background: 'var(--theme-nav-bg)', opacity: 0.8 }}>
-          
-          <div className="flex-1 overflow-y-auto p-5 md:p-10 custom-scroll relative">
-            <div className="animate-blur-text max-w-3xl mx-auto" key={`q-${currentIdx}`}>
-              
-              {/* Question Text */}
-              <div className="flex flex-col md:flex-row md:items-start gap-4 mb-6 md:mb-8 mt-2 md:mt-0">
-                <span className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center font-label text-sm font-bold self-start"
-                  style={{
-                    background: submitted ? (currentResult?.correct ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)') : 'rgba(139,92,246,0.15)',
-                    border: `1px solid ${submitted ? (currentResult?.correct ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)') : 'rgba(139,92,246,0.4)'}`,
-                    color: submitted ? (currentResult?.correct ? '#22c55e' : '#ef4444') : '#8b5cf6'
-                  }}>
-                  {submitted ? (currentResult?.correct ? '✓' : '✗') : currentIdx + 1}
-                </span>
-                <div className="flex-1 min-w-0 pt-1">
-                  <MarkdownRenderer content={currentQ.question} className="font-body text-lg md:text-xl font-semibold leading-relaxed" />
+    <div className="course-modal-backdrop fixed inset-0 z-[1000] flex items-center justify-center p-0 md:p-6" onClick={(event) => {
+      if (event.target === event.currentTarget && !submitting) onClose();
+    }}>
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+        className="course-modal-panel flex h-screen min-h-0 w-full max-w-6xl flex-col overflow-hidden md:h-[min(90vh,900px)] md:rounded-[2rem]"
+      >
+        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+          <aside className="course-surface-soft flex min-h-0 shrink-0 flex-col overflow-hidden border-b border-black/5 md:w-[290px] md:border-b-0 md:border-r">
+            <div className="px-5 pb-4 pt-5 md:px-6 md:pb-5 md:pt-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-label text-[10px] font-bold uppercase tracking-[0.24em]" style={{ color: 'rgba(15, 23, 42, 0.44)' }}>
+                    Module Quiz
+                  </p>
+                  <h2 className="mt-2 font-serif text-2xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+                    {submitted ? (results?.passed ? 'Passed' : 'Review Mode') : 'Assessment'}
+                  </h2>
                 </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white/70 transition hover:bg-white"
+                >
+                  <span className="material-symbols-outlined text-[18px]" style={{ color: 'var(--theme-text-muted)' }}>
+                    close
+                  </span>
+                </button>
               </div>
 
-              {/* Options */}
-              <div className="space-y-3 md:ml-13">
-                {currentQ.options.map((opt, oIdx) => {
-                  const isSelected = answers[currentIdx] === opt;
-                  let optBg = 'var(--theme-glass-bg)';
-                  let optBorder = 'var(--theme-border)';
-                  let optColor = 'var(--theme-text-body)';
-                  let optIcon = '';
+              <div className="mt-5 grid gap-3">
+                <div className="course-surface rounded-[1.4rem] px-4 py-4">
+                  <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                    Progress
+                  </p>
+                  <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+                    {submitted && results ? `${results.score}%` : `${answeredCount}/${questions.length}`}
+                  </p>
+                </div>
+                <div className="course-surface rounded-[1.4rem] px-4 py-4">
+                  <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                    Status
+                  </p>
+                  <p className="mt-2 font-body text-sm font-semibold" style={{ color: submitted ? (results?.passed ? '#15803d' : '#b91c1c') : 'var(--theme-text-body-strong)' }}>
+                    {submitted ? (results?.passed ? 'Quiz cleared' : 'Needs another attempt') : 'Answer every question and submit'}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-                  if (submitted && currentResult) {
-                    if (opt === currentResult.correctAnswer) { optBg = 'rgba(34,197,94,0.08)'; optBorder = 'rgba(34,197,94,0.4)'; optColor = '#22c55e'; optIcon = 'check_circle'; }
-                    else if (isSelected && !currentResult.correct) { optBg = 'rgba(239,68,68,0.08)'; optBorder = 'rgba(239,68,68,0.4)'; optColor = '#ef4444'; optIcon = 'cancel'; }
-                  } else if (isSelected) { optBg = 'rgba(139,92,246,0.08)'; optBorder = 'rgba(139,92,246,0.5)'; optColor = '#a78bfa'; }
+            <div
+              className="modal-scroll min-h-0 flex-1 px-5 pb-5 md:px-6"
+            >
+              <div className="grid grid-cols-4 gap-2 md:grid-cols-3">
+                {questions.map((_, index) => {
+                  const active = currentIdx === index;
+                  const answered = answers[index] !== null;
+                  let background = 'rgba(255,255,255,0.68)';
+                  let color = 'rgba(15, 23, 42, 0.42)';
+                  let border = 'rgba(15, 23, 42, 0.08)';
+
+                  if (submitted && results) {
+                    const questionResult = results.results[index];
+                    background = questionResult.correct ? 'rgba(21, 128, 61, 0.12)' : 'rgba(185, 28, 28, 0.12)';
+                    color = questionResult.correct ? '#15803d' : '#b91c1c';
+                    border = questionResult.correct ? 'rgba(21, 128, 61, 0.18)' : 'rgba(185, 28, 28, 0.18)';
+                  } else if (answered) {
+                    background = 'rgba(67, 56, 202, 0.12)';
+                    color = '#4338ca';
+                    border = 'rgba(67, 56, 202, 0.18)';
+                  }
+
+                  if (active) {
+                    border = submitted ? border : 'rgba(17, 24, 39, 0.24)';
+                  }
 
                   return (
-                    <button key={oIdx} onClick={() => handleSelect(currentIdx, opt)} disabled={submitted}
-                      className="w-full text-left px-5 py-4 rounded-xl text-sm md:text-base font-body transition-all cursor-pointer disabled:cursor-default flex items-start gap-4 hover:border-indigo-500/30 group"
-                      style={{ background: optBg, border: `1px solid ${optBorder}`, color: optColor }}>
-                      <div className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs mt-0.5"
-                        style={{ border: `1.5px solid ${isSelected || (submitted && opt === currentResult?.correctAnswer) ? optColor : 'var(--theme-border)'}`, background: isSelected ? optColor : 'transparent', color: isSelected ? 'white' : 'transparent' }}>
-                        {isSelected && !submitted && '•'}
-                      </div>
-                      <span className="flex-1 leading-relaxed">{opt}</span>
-                      {optIcon && <span className="material-symbols-outlined text-xl shrink-0 mt-0.5" style={{ color: optColor }}>{optIcon}</span>}
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => setCurrentIdx(index)}
+                      className="flex aspect-square items-center justify-center rounded-2xl border text-sm font-bold transition hover:-translate-y-[1px]"
+                      style={{ background, color, borderColor: border }}
+                    >
+                      {index + 1}
                     </button>
                   );
                 })}
               </div>
+            </div>
 
-              {/* Hint / Explanation Section (Bottom) */}
-              {!submitted ? (
-                <div className="mt-8 md:ml-13">
-                  {!hintsActive[currentIdx] ? (
-                    <button 
-                      onClick={handleShowHint}
-                      disabled={cooldown > 0}
-                      className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-label font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer w-full md:w-max justify-center md:justify-start"
-                      style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8' }}
-                    >
-                      <span className="material-symbols-outlined text-base">lightbulb</span>
-                      {cooldown > 0 ? `Hint Available in ${cooldown}s` : 'Reveal Hint (60s cooldown)'}
-                    </button>
-                  ) : (
-                    <div className="px-5 py-5 rounded-xl text-sm font-body leading-relaxed" 
-                      style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)', color: 'var(--theme-text-body)' }}>
-                      <span className="font-bold flex items-center gap-2 mb-3 text-base" style={{ color: '#818cf8' }}>
-                        <span className="material-symbols-outlined text-sm">lightbulb</span>
-                        Hint
-                      </span>
-                      <MarkdownRenderer content={currentQ.hint || "Review the exact concepts learned in the video for clues."} />
-                    </div>
-                  )}
-                </div>
+            <div className="border-t border-black/5 px-5 py-5 md:px-6">
+              {submitted ? (
+                <button type="button" onClick={handleRetake} className="course-outline-button w-full justify-center">
+                  <span className="material-symbols-outlined text-[18px]">replay</span>
+                  Retake Quiz
+                </button>
               ) : (
-                currentResult && (
-                  <div className="mt-8 md:ml-13 px-5 py-5 rounded-xl text-sm font-body leading-relaxed" 
-                    style={{ background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.2)', color: 'var(--theme-text-body)' }}>
-                    <span className="font-bold flex items-center gap-2 mb-3 text-base" style={{ color: '#a78bfa' }}>
-                      <span className="material-symbols-outlined text-sm">lightbulb</span>
-                      Explanation
-                    </span>
-                    <MarkdownRenderer content={currentResult.explanation} />
-                  </div>
-                )
+                <button type="button" onClick={handleSubmit} disabled={submitting} className="course-primary-button w-full justify-center">
+                  {submitting ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Grading
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[18px]">task_alt</span>
+                      Submit Quiz
+                    </>
+                  )}
+                </button>
               )}
             </div>
-          </div>
+          </aside>
 
-          {/* ── Footer Navigation (Next/Back) ── */}
-          <div className="shrink-0 p-5 md:p-6 flex items-center justify-between gap-4 border-t" style={{ borderColor: 'var(--theme-border)', background: 'var(--theme-nav-bg)' }}>
-            <button 
-              onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))}
-              disabled={currentIdx === 0}
-              className="px-5 md:px-6 py-3 rounded-xl font-label text-sm font-bold transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 hover:bg-white/5"
-              style={{ border: '1px solid var(--theme-border)', color: 'var(--theme-text-body)' }}>
-              <span className="material-symbols-outlined text-sm">arrow_back</span>
-              <span className="hidden sm:inline">Previous</span>
-            </button>
-            
-            {submitted && currentIdx === questions.length - 1 && (
-               <button onClick={onClose} className="px-6 md:px-8 py-3 rounded-xl font-label text-sm font-bold transition-all cursor-pointer forge-btn-primary text-on-primary shadow-[0_0_20px_rgba(34,197,94,0.2)]">
-                 {results?.passed ? 'Continue Course →' : 'Close Review'}
-               </button>
-            )}
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="shrink-0 border-b border-black/5 px-5 py-4 md:px-10">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCurrentIdx((value) => Math.max(0, value - 1))}
+                  disabled={currentIdx === 0}
+                  className="course-outline-button disabled:opacity-40"
+                >
+                  <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                  Back
+                </button>
 
-            <button 
-              onClick={() => setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1))}
-              disabled={currentIdx === questions.length - 1}
-              className="px-5 md:px-6 py-3 rounded-xl font-label text-sm font-bold transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 hover:bg-white/5"
-              style={{ border: '1px solid var(--theme-border)', color: 'var(--theme-text-body)' }}>
-              <span className="hidden sm:inline">Next</span>
-              <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </button>
-          </div>
+                <div className="course-stat-chip">
+                  <span className="material-symbols-outlined text-[18px]" style={{ color: '#4338ca' }}>
+                    help
+                  </span>
+                  Question {currentIdx + 1} / {questions.length}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentIdx((value) => Math.min(questions.length - 1, value + 1))}
+                  disabled={currentIdx === questions.length - 1}
+                  className="course-outline-button disabled:opacity-40"
+                >
+                  Next
+                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="modal-scroll min-h-0 flex-1 px-5 py-6 md:px-10 md:py-8"
+            >
+              <div className="mx-auto max-w-3xl">
+                <div className="course-surface rounded-[2rem] p-5 md:p-7">
+                  <div className="flex flex-wrap items-start gap-4">
+                    <div
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                      style={{
+                        background: submitted
+                          ? currentResult?.correct
+                            ? 'rgba(21, 128, 61, 0.12)'
+                            : 'rgba(185, 28, 28, 0.12)'
+                          : 'rgba(67, 56, 202, 0.12)',
+                        color: submitted
+                          ? currentResult?.correct
+                            ? '#15803d'
+                            : '#b91c1c'
+                          : '#4338ca',
+                      }}
+                    >
+                      <span className="font-label text-sm font-bold">
+                        {submitted ? (currentResult?.correct ? 'OK' : 'NO') : String(currentIdx + 1).padStart(2, '0')}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-label text-[10px] font-bold uppercase tracking-[0.24em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                        Question {currentIdx + 1}
+                      </p>
+                      <div className="mt-3 font-body text-lg font-semibold leading-8" style={{ color: 'var(--theme-text-heading)' }}>
+                        <MarkdownRenderer content={currentQuestion.question} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  {currentQuestion.options.map((option, optionIndex) => {
+                    const selected = answers[currentIdx] === option;
+                    let background = 'rgba(255, 255, 255, 0.72)';
+                    let border = 'rgba(15, 23, 42, 0.08)';
+                    let color = 'var(--theme-text-body-strong)';
+                    let icon = 'radio_button_unchecked';
+
+                    if (submitted && currentResult) {
+                      if (option === currentResult.correctAnswer) {
+                        background = 'rgba(21, 128, 61, 0.1)';
+                        border = 'rgba(21, 128, 61, 0.18)';
+                        color = '#15803d';
+                        icon = 'check_circle';
+                      } else if (selected && !currentResult.correct) {
+                        background = 'rgba(185, 28, 28, 0.1)';
+                        border = 'rgba(185, 28, 28, 0.18)';
+                        color = '#b91c1c';
+                        icon = 'cancel';
+                      }
+                    } else if (selected) {
+                      background = 'rgba(67, 56, 202, 0.1)';
+                      border = 'rgba(67, 56, 202, 0.18)';
+                      color = '#4338ca';
+                      icon = 'check_circle';
+                    }
+
+                    return (
+                      <button
+                        key={optionIndex}
+                        type="button"
+                        onClick={() => handleSelect(currentIdx, option)}
+                        disabled={submitted}
+                        className="course-surface flex w-full items-start gap-4 rounded-[1.5rem] px-5 py-4 text-left transition hover:-translate-y-[1px] disabled:cursor-default"
+                        style={{ background, borderColor: border, color }}
+                      >
+                        <span className="material-symbols-outlined mt-0.5 text-[20px]">{icon}</span>
+                        <span className="flex-1 font-body text-sm leading-7 md:text-[15px]">{option}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {!submitted ? (
+                  <div className="course-surface-soft mt-6 rounded-[1.6rem] p-5">
+                    {!hintsActive[currentIdx] ? (
+                      <button type="button" onClick={showHint} disabled={cooldown > 0} className="course-outline-button">
+                        <span className="material-symbols-outlined text-[18px]">lightbulb</span>
+                        {cooldown > 0 ? `Hint in ${cooldown}s` : 'Reveal Hint'}
+                      </button>
+                    ) : (
+                      <>
+                        <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: '#4338ca' }}>
+                          Hint
+                        </p>
+                        <div className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                          <MarkdownRenderer content={currentQuestion.hint || 'Review the lesson carefully and focus on the exact idea used in the video.'} />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : currentResult ? (
+                  <div className="course-surface-soft mt-6 rounded-[1.6rem] p-5">
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: '#4338ca' }}>
+                      Explanation
+                    </p>
+                    <div className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                      <MarkdownRenderer content={currentResult.explanation} />
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+          </section>
         </div>
-
-      </div>
+      </motion.div>
     </div>
   );
 }
 
-// ─── Confirmation Modal ───
 function ConfirmModal({ onConfirm, onCancel }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
-      <div className="relative group max-w-md w-full">
-        {/* Glow effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 to-purple-600/20 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-        <div className="relative liquid-glass rounded-2xl p-8 w-full text-center" style={{ border: '1px solid rgba(99,102,241,0.2)' }}>
-          <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(99,102,241,0.2)]" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)' }}>
-            <span className="material-symbols-outlined text-4xl" style={{ color: '#818cf8' }}>psychology_alt</span>
-          </div>
-          <h3 className="font-headline text-2xl font-bold italic mb-3" style={{ color: 'var(--theme-text-heading)' }}>
-            Incomplete Module
-          </h3>
-          <p className="text-sm md:text-base leading-relaxed mb-8" style={{ color: 'var(--theme-text-body)' }}>
-            You haven't completed all the video lectures in this module. Forging ahead now will be significantly harder. Are you sure you want to proceed to the quiz?
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button onClick={onCancel}
-              className="flex-1 py-3.5 rounded-xl font-label text-sm font-bold cursor-pointer transition-all hover:bg-white/5"
-              style={{ background: 'var(--theme-glass-bg)', border: '1px solid var(--theme-border)', color: 'var(--theme-text-body)' }}
-            >Go Back</button>
-            <button onClick={onConfirm}
-              className="flex-1 py-3.5 rounded-xl font-label text-sm font-bold cursor-pointer transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:scale-[1.02] forge-btn-primary text-on-primary"
-            >Take Quiz Anyway</button>
-          </div>
+    <div className="course-modal-backdrop fixed inset-0 z-[1000] flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: 'easeOut' }}
+        className="course-modal-panel w-full max-w-xl rounded-[2rem] p-6 md:p-8"
+      >
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#eef2ff] text-[#4338ca]">
+          <span className="material-symbols-outlined text-[30px]">psychology_alt</span>
         </div>
+        <h3 className="mt-5 text-center font-serif text-3xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+          Jump to the quiz anyway?
+        </h3>
+        <p className="mt-4 text-center font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+          Some lessons are still unwatched. You can still attempt the quiz, but it will be much
+          harder and you may miss key ideas.
+        </p>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <button type="button" onClick={onCancel} className="course-outline-button flex-1 justify-center">
+            Go Back
+          </button>
+          <button type="button" onClick={onConfirm} className="course-primary-button flex-1 justify-center">
+            Open Quiz
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="course-shell flex min-h-screen items-center justify-center px-6">
+      <div className="course-surface flex flex-col items-center gap-4 rounded-[2rem] px-8 py-10 text-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#111827] border-t-transparent" />
+        <p className="font-body text-sm" style={{ color: 'var(--theme-text-body)' }}>
+          Opening your lesson room...
+        </p>
       </div>
     </div>
   );
 }
 
-// ─── Main Page ───
 export default function LearnHub() {
   const { courseId, moduleIndex: modIdxStr } = useParams();
   const moduleIndex = parseInt(modIdxStr, 10);
-  const navigate = useNavigate();
   const { user, isLoaded } = useUser();
 
   const [usageData, setUsageData] = useState(null);
   const [isTutorOpen, setIsTutorOpen] = useState(false);
-
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeSubIdx, setActiveSubIdx] = useState(0);
   const [markingComplete, setMarkingComplete] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
-  const [prepStatus, setPrepStatus] = useState(null); // null = unknown until first fetch
-  const prepTriggered = React.useRef(false);
-  const fetchDone = React.useRef(false);
+  const [prepStatus, setPrepStatus] = useState(null);
+
+  const prepTriggered = useRef(false);
+  const fetchDone = useRef(false);
 
   const fetchCourse = useCallback(async () => {
     try {
@@ -329,9 +397,9 @@ export default function LearnHub() {
       const data = await res.json();
       if (data.success) {
         setCourse(data.course);
-        const mod = data.course.modules[moduleIndex];
-        if (mod) {
-          const status = mod.prepStatus || 'pending';
+        const currentModule = data.course.modules[moduleIndex];
+        if (currentModule) {
+          const status = currentModule.prepStatus || 'pending';
           setPrepStatus(status);
           if (status === 'ready' || status === 'preparing' || status === 'failed') {
             prepTriggered.current = true;
@@ -347,70 +415,106 @@ export default function LearnHub() {
   }, [courseId, moduleIndex]);
 
   useEffect(() => {
+    setActiveSubIdx(0);
+  }, [courseId, moduleIndex]);
+
+  useEffect(() => {
     fetchCourse();
   }, [fetchCourse]);
 
   useEffect(() => {
     if (isLoaded && user) {
       fetch(`${API_BASE}/api/user/${user.id}/usage`)
-        .then(res => res.json())
-        .then(data => data.success && setUsageData(data))
-        .catch(err => console.error(err));
+        .then((res) => res.json())
+        .then((data) => data.success && setUsageData(data))
+        .catch((err) => console.error(err));
     }
   }, [isLoaded, user]);
 
-  // Auto-trigger preparation ONLY after initial fetch confirms it's pending (once only)
   useEffect(() => {
-    if (!fetchDone.current) return; // Wait for fetch to complete first
-    if (prepTriggered.current) return;
-    if (prepStatus !== 'pending') return;
+    const modalOpen = showQuiz || showConfirm;
+    if (!modalOpen) return undefined;
+    if (typeof document === 'undefined') return undefined;
+
+    const prevOverflow = document.body.style.overflow;
+    const prevPaddingRight = document.body.style.paddingRight;
+
+    document.body.style.overflow = 'hidden';
+
+    // Avoid layout shift when the scrollbar disappears.
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPaddingRight;
+    };
+  }, [showQuiz, showConfirm]);
+
+  useEffect(() => {
+    if (!fetchDone.current || prepTriggered.current || prepStatus !== 'pending') return;
     prepTriggered.current = true;
 
     fetch(`${API_BASE}/api/course/${courseId}/module/${moduleIndex}/prepare`, { method: 'POST' })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setPrepStatus('preparing');
-          console.log('Triggered module preparation');
-        }
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setPrepStatus('preparing');
       })
-      .catch(err => console.error('Failed to trigger preparation:', err));
+      .catch((err) => console.error('Failed to trigger preparation:', err));
   }, [prepStatus, courseId, moduleIndex]);
 
-  // Poll prep status while preparing
   useEffect(() => {
-    if (prepStatus !== 'preparing') return;
+    if (prepStatus !== 'preparing') return undefined;
+
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`${API_BASE}/api/course/${courseId}/module/${moduleIndex}/prep-status`);
         const data = await res.json();
         if (data.success) {
           setPrepStatus(data.prepStatus);
-          // Fetch the full course every time we poll, to incrementally show ready subtopics
-          fetchCourse(); 
+          fetchCourse();
           if (data.prepStatus === 'ready' || data.prepStatus === 'failed') {
             clearInterval(interval);
           }
         }
-      } catch (e) { /* ignore */ }
+      } catch (err) {
+        console.error(err);
+      }
     }, 3000);
+
     return () => clearInterval(interval);
   }, [prepStatus, courseId, moduleIndex, fetchCourse]);
 
   const currentModule = course?.modules?.[moduleIndex];
   const subtopics = currentModule?.subtopics || [];
-  const activeSubtopic = subtopics[activeSubIdx];
-  const watchedCount = subtopics.filter(s => s.status === 'completed').length;
-  const allWatched = watchedCount === subtopics.length;
 
-  // Collect all quiz questions from the module
-  const allQuizQuestions = subtopics.flatMap(s => s.quiz || []);
+  useEffect(() => {
+    if (subtopics.length === 0) return;
+    if (activeSubIdx >= subtopics.length) setActiveSubIdx(0);
+  }, [activeSubIdx, subtopics.length]);
+
+  const activeSubtopic = subtopics[activeSubIdx];
+  const watchedCount = subtopics.filter((subtopic) => subtopic.status === 'completed').length;
+  const allWatched = subtopics.length > 0 && watchedCount === subtopics.length;
+  const allQuizQuestions = subtopics.flatMap((subtopic) => subtopic.quiz || []);
+  const isPreparing = prepStatus === 'preparing' || prepStatus === 'pending';
+  const hasTutorAccess = usageData ? usageData.plan === 'pro' || usageData.plan === 'ultra' : false;
+
+  const moduleProgress = useMemo(() => {
+    if (subtopics.length === 0) return 0;
+    return Math.round((watchedCount / subtopics.length) * 100);
+  }, [subtopics.length, watchedCount]);
 
   const handleMarkWatched = async () => {
     if (markingComplete || !activeSubtopic || activeSubtopic.status === 'completed') return;
     try {
       setMarkingComplete(true);
-      await fetch(`${API_BASE}/api/course/${courseId}/module/${moduleIndex}/subtopic/${activeSubIdx}/watched`, { method: 'POST' });
+      await fetch(
+        `${API_BASE}/api/course/${courseId}/module/${moduleIndex}/subtopic/${activeSubIdx}/watched`,
+        { method: 'POST' }
+      );
       await fetchCourse();
     } catch (err) {
       console.error('Mark watched failed:', err);
@@ -422,20 +526,19 @@ export default function LearnHub() {
   const handleQuizClick = () => {
     if (allWatched) {
       setShowQuiz(true);
-    } else {
-      setShowConfirm(true);
+      return;
     }
+    setShowConfirm(true);
   };
 
   const handleQuizSubmit = async (userAnswers) => {
     const res = await fetch(`${API_BASE}/api/course/${courseId}/module/${moduleIndex}/grade-module`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userAnswers })
+      body: JSON.stringify({ userAnswers }),
     });
     const data = await res.json();
     if (data.passed) {
-      // Refresh course so UI updates
       setTimeout(() => fetchCourse(), 500);
     }
     return data;
@@ -447,249 +550,331 @@ export default function LearnHub() {
   };
 
   if (loading) {
-    return (
-      <>
-        <div className="fixed inset-0 z-0" style={{ background: 'var(--color-background)' }}></div>
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#8b5cf6', borderTopColor: 'transparent' }}></div>
-        </div>
-      </>
-    );
+    return <LoadingState />;
   }
 
   if (!currentModule) {
     return (
-      <>
-        <div className="fixed inset-0 z-0" style={{ background: 'var(--color-background)' }}></div>
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <p className="font-body" style={{ color: 'var(--theme-text-body)' }}>Module not found.</p>
+      <div className="course-shell flex min-h-screen items-center justify-center px-6">
+        <div className="course-surface max-w-xl rounded-[2rem] px-8 py-10 text-center">
+          <h1 className="font-serif text-4xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+            Module not found
+          </h1>
+          <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+            This lesson room does not exist anymore. Return to the course map and open another module.
+          </p>
+          <Link to={`/course/${courseId}`} className="course-primary-button mt-6">
+            Back to Course Map
+          </Link>
         </div>
-      </>
+      </div>
     );
   }
 
-  const isPreparing = prepStatus === 'preparing' || prepStatus === 'pending';
-
   return (
     <>
-      <div className="fixed inset-0 z-0" style={{ background: 'var(--color-background)' }}></div>
+      <div className="course-shell">
+        {showConfirm && (
+          <ConfirmModal
+            onConfirm={() => {
+              setShowConfirm(false);
+              setShowQuiz(true);
+            }}
+            onCancel={() => setShowConfirm(false)}
+          />
+        )}
 
-      {/* Modals */}
-      {showConfirm && (
-        <ConfirmModal
-          onConfirm={() => { setShowConfirm(false); setShowQuiz(true); }}
-          onCancel={() => setShowConfirm(false)}
-        />
-      )}
-      {showQuiz && allQuizQuestions.length > 0 && (
-        <QuizModal
-          questions={allQuizQuestions}
-          initialResults={currentModule?.quizReport}
-          onSubmit={handleQuizSubmit}
-          onClose={handleQuizClose}
-        />
-      )}
+        {showQuiz && allQuizQuestions.length > 0 && (
+          <QuizModal
+            questions={allQuizQuestions}
+            initialResults={currentModule.quizReport}
+            onSubmit={handleQuizSubmit}
+            onClose={handleQuizClose}
+          />
+        )}
 
-      <div className="relative z-10 min-h-screen pt-28 pb-20 px-4 md:px-6 lg:px-8 max-w-[1400px] mx-auto font-body">
-
-        {/* ─── Breadcrumb & Header ─── */}
-        <div className="mb-8 animate-blur-text" style={{ animationDelay: '0.1s' }}>
-          <Link to={`/course/${courseId}`}
-            className="inline-flex items-center gap-1.5 text-[11px] font-label uppercase tracking-[0.15em] mb-4 transition-colors hover:scale-[1.02]"
-            style={{ color: 'var(--theme-text-muted)' }}>
-            <span className="material-symbols-outlined text-[14px]">arrow_back</span>
-            Back to Course Map
-          </Link>
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.6)] animate-pulse"></div>
-                <span className="font-label text-xs uppercase tracking-widest font-bold" style={{ color: 'var(--theme-text-muted)' }}>
+        <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 overflow-x-hidden px-3 pb-24 pt-24 md:gap-8 md:px-6 md:pb-20 md:pt-28 lg:px-8">
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: 'easeOut' }}
+            className="course-hero-card overflow-hidden rounded-[2rem] px-5 py-6 md:rounded-[2.5rem] md:px-10 md:py-10"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Link to={`/course/${courseId}`} className="course-outline-button">
+                  <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                  Course Map
+                </Link>
+                <span className="course-kicker">
+                  <span className="material-symbols-outlined text-[14px]">video_library</span>
                   Module {moduleIndex + 1}
                 </span>
-                <span className="text-xs" style={{ color: 'var(--theme-text-faint)' }}>•</span>
-                <span className="font-label text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                  {watchedCount}/{subtopics.length} Watched
+              </div>
+              <div className="course-stat-chip">
+                <span className="material-symbols-outlined text-[18px]" style={{ color: '#4338ca' }}>
+                  stack_star
                 </span>
+                {watchedCount}/{subtopics.length} lessons completed
               </div>
-              <h1 className="font-serif text-3xl md:text-5xl lg:text-5xl font-bold italic leading-tight" style={{ color: 'var(--theme-text-heading)' }}>
-                {activeSubtopic?.subtopic_title || currentModule.module_title}
-              </h1>
-            </div>
-          </div>
-        </div>
-
-        {/* ─── Main Grid Layout ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-          {/* ═══ LEFT: VIDEO PLAYER (8 Cols) ═══ */}
-          <div className="lg:col-span-8 xl:col-span-8 lg:sticky lg:top-28 flex flex-col gap-6">
-            
-            {/* Video Container */}
-            <div className="animate-blur-text" style={{ animationDelay: '0.2s' }}>
-              {activeSubtopic?.videoId && activeSubtopic.videoId !== 'none' ? (
-                <div className="video-glow aspect-video w-full rounded-2xl overflow-hidden shadow-2xl relative" style={{ background: '#000' }}>
-                  <iframe
-                    className="absolute inset-0 w-full h-full"
-                    src={`https://www.youtube.com/embed/${activeSubtopic.videoId}?rel=0&modestbranding=1&autohide=1&showinfo=0`}
-                    title={activeSubtopic?.subtopic_title}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-              ) : isPreparing ? (
-                <div className="video-glow aspect-video w-full rounded-2xl overflow-hidden relative flex flex-col items-center justify-center p-8 text-center glass-pill">
-                  <div className="w-14 h-14 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin mb-6"></div>
-                  <h3 className="font-serif text-2xl italic mb-3" style={{ color: 'var(--theme-text-heading)' }}>
-                    Forging the perfect video lesson...
-                  </h3>
-                  <p className="text-sm max-w-md" style={{ color: 'var(--theme-text-body)' }}>
-                    Our AI is currently scouring YouTube, reading transcripts, and curating the absolute best tutorial for this exact topic.
-                  </p>
-                </div>
-              ) : (
-                <div className="video-glow aspect-video w-full rounded-2xl overflow-hidden relative flex flex-col items-center justify-center p-8 text-center glass-pill">
-                  <span className="material-symbols-outlined text-6xl mb-4" style={{ color: 'var(--theme-text-faint)' }}>videocam_off</span>
-                  <p className="font-label text-sm uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>No video found for this subtopic.</p>
-                </div>
-              )}
             </div>
 
-            {/* Video Controls & Info Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-blur-text" style={{ animationDelay: '0.3s' }}>
-              
-              {/* Channel Meta */}
-              <div className="flex-1 min-w-0 flex items-center gap-3 px-5 py-3.5 rounded-2xl" style={{ background: 'var(--dash-card-bg)', border: '1px solid var(--theme-border-strong)', backdropFilter: 'blur(20px)' }}>
-                {activeSubtopic?.videoId && activeSubtopic.videoId !== 'none' ? (
-                  <>
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(99,102,241,0.1)' }}>
-                      <span className="material-symbols-outlined text-lg" style={{ color: '#6366f1' }}>smart_display</span>
-                    </div>
-                    <div className="truncate">
-                      <p className="font-label text-[10px] uppercase tracking-widest font-bold mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Source</p>
-                      <p className="font-body text-xs font-semibold truncate" style={{ color: 'var(--theme-text-heading)' }}>{activeSubtopic.channelTitle || 'YouTube Tutorial'}</p>
-                    </div>
-                  </>
-                ) : (
-                   <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Waiting for video source...</span>
-                )}
-              </div>
-
-              {/* Mark Button */}
-              {activeSubtopic?.status !== 'completed' && activeSubtopic?.videoId && activeSubtopic.videoId !== 'none' && (
-                <button
-                  onClick={handleMarkWatched}
-                  disabled={markingComplete}
-                  className="relative shrink-0 px-8 py-3.5 rounded-2xl font-label text-sm font-bold flex items-center justify-center gap-2.5 transition-all duration-300 active:scale-[0.98] cursor-pointer disabled:opacity-50 group overflow-hidden"
-                  style={{
-                    background: 'var(--theme-glass-bg)',
-                    border: '1px solid var(--theme-border-strong)',
-                    color: 'var(--theme-text-heading)'
-                  }}
-                >
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, transparent 100%)' }}></div>
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" style={{ boxShadow: 'inset 0 0 12px rgba(99,102,241,0.2)' }}></div>
-                  
-                  {markingComplete ? (
-                    <><div className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin relative z-10 block"></div><span className="relative z-10">Saving...</span></>
-                  ) : (
-                    <><span className="material-symbols-outlined text-[18px] text-indigo-400 relative z-10 group-hover:scale-110 transition-transform duration-300">task_alt</span><span className="relative z-10">Mark as Watched</span></>
-                  )}
-                </button>
-              )}
-              {activeSubtopic?.status === 'completed' && (
-                <div className="shrink-0 px-8 py-3.5 rounded-2xl flex items-center justify-center gap-2" style={{ background: 'var(--theme-glass-bg)', border: '1px solid rgba(99,102,241,0.3)' }}>
-                  <span className="material-symbols-outlined text-[18px]" style={{ color: '#818cf8' }}>check_circle</span>
-                  <span className="font-label text-sm font-bold" style={{ color: '#818cf8' }}>Completed</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ═══ RIGHT: CURRICULUM SIDEBAR (4 Cols) ═══ */}
-          <aside className="lg:col-span-4 xl:col-span-4 animate-blur-text" style={{ animationDelay: '0.4s' }}>
-            <div className="panel-card p-6 h-full flex flex-col" style={{ maxHeight: 'calc(100vh - 140px)', position: 'sticky', top: '112px' }}>
-              
-              <div className="mb-5">
-                <h2 className="font-headline text-lg font-bold mb-1" style={{ color: 'var(--theme-text-heading)' }}>
-                  Module Curriculum
-                </h2>
-                <p className="text-xs font-body" style={{ color: 'var(--theme-text-muted)' }}>
-                  {currentModule.module_title}
+            <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[1.4fr_0.9fr]">
+              <div className="min-w-0">
+                <p className="font-label text-[11px] font-bold uppercase tracking-[0.24em]" style={{ color: 'rgba(15, 23, 42, 0.44)' }}>
+                  Active Lesson
+                </p>
+                <h1 className="mt-4 break-words font-serif text-[2.35rem] font-semibold leading-[1.02] sm:text-5xl md:text-6xl" style={{ color: 'var(--theme-text-heading)' }}>
+                  {activeSubtopic?.subtopic_title || currentModule.module_title}
+                </h1>
+                <p className="mt-4 max-w-3xl font-body text-sm leading-7 md:text-[15px]" style={{ color: 'var(--theme-text-body)' }}>
+                  Learn through the curated video, mark each lesson complete, then unlock the
+                  next module by clearing the assessment at the end.
                 </p>
               </div>
 
-              {/* Prep Loading Banner */}
-              {isPreparing && (
-                <div className="flex items-center gap-3 text-xs font-label mb-5 px-4 py-3 rounded-xl" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                  <div className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin shrink-0"></div>
-                  <span style={{ color: '#818cf8', lineHeight: 1.4 }}>AI is structuring content...</span>
-                </div>
-              )}
-
-              {/* Subtopic Playlist */}
-              <div className="flex-1 overflow-y-auto custom-scroll pr-2 -mr-2 space-y-2 mb-6">
-                {subtopics.map((sub, i) => (
-                  <SubtopicListItem
-                    key={sub._id || i}
-                    subtopic={sub}
-                    index={i}
-                    isActive={i === activeSubIdx}
-                    status={sub.status}
-                    onClick={(idx) => setActiveSubIdx(idx)}
-                  />
-                ))}
-              </div>
-
-              {/* Quiz Trigger Container at Bottom */}
-              <div className="pt-5" style={{ borderTop: '1px solid var(--theme-border)' }}>
-                {!isPreparing && allQuizQuestions.length > 0 ? (
-                  <div onClick={handleQuizClick} className="cursor-pointer group relative">
-                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/30 to-purple-600/30 rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-500"></div>
-                    <ShimmerButton
-                      background="linear-gradient(135deg, #312e81, #4c1d95)"
-                      shimmerColor="rgba(255,255,255,0.4)"
-                      shimmerSize="2.5em"
-                      borderRadius="16px"
-                      className="w-full relative py-4 font-label text-sm font-black uppercase tracking-widest flex items-center justify-center transition-all group-hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <div className="flex items-center gap-3 text-white">
-                        <span className="material-symbols-outlined text-[20px] shadow-sm">psychology</span>
-                        {currentModule?.quizReport ? 'Review Quiz Report' : 'Take Module Quiz'}
-                      </div>
-                    </ShimmerButton>
+              <div className="course-surface-soft min-w-0 rounded-[1.75rem] p-5 md:rounded-[2rem] md:p-6">
+                <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(15, 23, 42, 0.44)' }}>
+                  Module Status
+                </p>
+                <div className="mt-4 grid gap-3">
+                  <div className="course-surface rounded-[1.35rem] px-4 py-4">
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                      Prep
+                    </p>
+                    <p className="mt-2 font-body text-sm font-semibold" style={{ color: isPreparing ? '#4338ca' : prepStatus === 'failed' ? '#b91c1c' : 'var(--theme-text-heading)' }}>
+                      {isPreparing ? 'Curating videos and quizzes' : prepStatus === 'failed' ? 'Preparation failed' : 'Ready to study'}
+                    </p>
                   </div>
-                ) : (
-                  <button
-                    disabled
-                    className="w-full py-4 rounded-2xl font-label text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2 opacity-40 cursor-not-allowed"
-                    style={{ background: 'var(--theme-glass-bg)', color: 'var(--theme-text-muted)', border: '1px solid var(--theme-border)' }}
-                  >
-                    <span className="material-symbols-outlined text-[20px]">psychology</span>
-                    Quiz Unavailable
-                  </button>
-                )}
+                  <div className="course-surface rounded-[1.35rem] px-4 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                        Progress
+                      </p>
+                      <span className="font-label text-xs font-bold" style={{ color: '#4338ca' }}>
+                        {moduleProgress}%
+                      </span>
+                    </div>
+                    <div className="mt-3 course-progress-track">
+                      <motion.div
+                        className="course-progress-fill"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${moduleProgress}%` }}
+                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-              
             </div>
-          </aside>
+          </motion.section>
 
-        </div>
+          <div className="grid min-w-0 gap-6 lg:grid-cols-12 lg:gap-8">
+            <section className="min-w-0 lg:col-span-8">
+              <div className="space-y-6 lg:sticky lg:top-28">
+                <div className="course-surface w-full overflow-hidden rounded-[1.75rem] p-2.5 md:rounded-[2.2rem] md:p-4">
+                  {activeSubtopic?.videoId && activeSubtopic.videoId !== 'none' ? (
+                    <div className="aspect-video overflow-hidden rounded-[1.2rem] bg-black md:rounded-[1.6rem]">
+                      <iframe
+                        className="h-full w-full"
+                        src={`https://www.youtube.com/embed/${activeSubtopic.videoId}?rel=0&modestbranding=1&autohide=1&showinfo=0`}
+                        title={activeSubtopic.subtopic_title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : isPreparing ? (
+                    <div className="flex aspect-video flex-col items-center justify-center rounded-[1.2rem] bg-[#f8fafc] px-5 text-center md:rounded-[1.6rem] md:px-6">
+                      <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#4338ca] border-t-transparent" />
+                      <h2 className="mt-5 font-serif text-[2rem] font-semibold md:mt-6 md:text-3xl" style={{ color: 'var(--theme-text-heading)' }}>
+                        Curating your lesson
+                      </h2>
+                      <p className="mt-3 max-w-md font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                        We are searching YouTube, checking transcripts, and preparing the quiz for this
+                        exact subtopic.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex aspect-video flex-col items-center justify-center rounded-[1.2rem] bg-[#f8fafc] px-5 text-center md:rounded-[1.6rem] md:px-6">
+                      <span className="material-symbols-outlined text-[56px]" style={{ color: 'rgba(15, 23, 42, 0.28)' }}>
+                        videocam_off
+                      </span>
+                      <p className="mt-4 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                        No video was attached to this lesson.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid min-w-0 items-start gap-4 md:grid-cols-[1.1fr_0.9fr]">
+                  <div className="course-surface min-w-0 rounded-[1.75rem] p-5 md:rounded-[2rem] md:p-6">
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                      Lesson Source
+                    </p>
+                    <div className="mt-4 flex items-start gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#eef2ff] text-[#4338ca]">
+                        <span className="material-symbols-outlined text-[22px]">smart_display</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+                          {activeSubtopic?.channelTitle || 'YouTube lesson'}
+                        </p>
+                        <p className="mt-2 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                          Watch the lesson, then mark it complete to keep the module progress moving.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="course-surface min-w-0 rounded-[1.75rem] p-5 md:rounded-[2rem] md:p-6">
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                      Lesson Action
+                    </p>
+                    <div className="mt-4 flex flex-col gap-4">
+                      {activeSubtopic?.status === 'completed' ? (
+                        <div className="course-surface-soft flex items-center gap-3 rounded-[1.4rem] px-4 py-4">
+                          <span className="material-symbols-outlined text-[22px]" style={{ color: '#15803d' }}>
+                            check_circle
+                          </span>
+                          <div>
+                            <p className="font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+                              Lesson completed
+                            </p>
+                            <p className="font-body text-xs" style={{ color: 'var(--theme-text-body)' }}>
+                              This lesson is already marked as watched.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleMarkWatched}
+                          disabled={markingComplete || !activeSubtopic?.videoId || activeSubtopic.videoId === 'none'}
+                          className="course-primary-button w-full justify-center disabled:opacity-40"
+                        >
+                          {markingComplete ? (
+                            <>
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              Saving
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-[18px]">task_alt</span>
+                              Mark as Watched
+                            </>
+                          )}
+                        </button>
+                      )}
+
+                      <p className="font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                        Module quiz unlocks when the lessons are done, but you can still attempt it early.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <aside className="min-w-0 lg:col-span-4">
+              <div className="space-y-6 lg:sticky lg:top-28">
+                <div
+                  id="learn-module-quiz"
+                  className="course-surface min-w-0 scroll-mt-32 rounded-[1.75rem] p-5 md:rounded-[2.2rem] md:p-6"
+                >
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                        Lesson Rail
+                      </p>
+                      <h2 className="mt-2 break-words font-serif text-[1.8rem] font-semibold leading-tight md:text-2xl" style={{ color: 'var(--theme-text-heading)' }}>
+                        {currentModule.module_title}
+                      </h2>
+                    </div>
+                    <div className="shrink-0 rounded-full bg-[#eef2ff] px-3 py-2 text-[#4338ca]">
+                      <span className="font-label text-[11px] font-bold uppercase tracking-[0.18em]">
+                        {watchedCount}/{subtopics.length}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isPreparing && (
+                    <div className="course-surface-soft mt-5 flex items-center gap-3 rounded-[1.4rem] px-4 py-4">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#4338ca] border-t-transparent" />
+                      <p className="font-body text-sm" style={{ color: '#4338ca' }}>
+                        AI is still preparing some content for this module.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-5 space-y-2.5">
+                    {subtopics.map((subtopic, index) => (
+                      <SubtopicListItem
+                        key={subtopic._id || index}
+                        subtopic={subtopic}
+                        index={index}
+                        isActive={index === activeSubIdx}
+                        status={subtopic.status}
+                        onClick={(clickedIndex) => setActiveSubIdx(clickedIndex)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="course-surface min-w-0 rounded-[1.75rem] p-5 md:rounded-[2.2rem] md:p-6">
+                  <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                    Module Quiz
+                  </p>
+                  <h2 className="mt-2 font-serif text-[1.8rem] font-semibold leading-tight md:text-2xl" style={{ color: 'var(--theme-text-heading)' }}>
+                    Finish strong
+                  </h2>
+                  <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                    Review what you learned in this module and pass the quiz to unlock the next one.
+                  </p>
+
+                  <div className="mt-5 course-progress-track">
+                    <motion.div
+                      className="course-progress-fill"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${moduleProgress}%` }}
+                      transition={{ duration: 0.5, ease: 'easeOut' }}
+                    />
+                  </div>
+                  <p className="mt-3 font-label text-xs font-bold" style={{ color: '#4338ca' }}>
+                    {moduleProgress}% lesson completion
+                  </p>
+
+                  <div className="mt-6">
+                    {!isPreparing && allQuizQuestions.length > 0 ? (
+                      <button type="button" onClick={handleQuizClick} className="course-primary-button w-full justify-center">
+                        <span className="material-symbols-outlined text-[18px]">psychology</span>
+                        {currentModule.quizReport ? 'Review Quiz Report' : 'Take Module Quiz'}
+                      </button>
+                    ) : (
+                      <button type="button" disabled className="course-outline-button w-full justify-center opacity-50">
+                        <span className="material-symbols-outlined text-[18px]">lock</span>
+                        Quiz Unavailable
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </main>
+
+        <button
+          type="button"
+          onClick={() => setIsTutorOpen(true)}
+          className="course-floating-button fixed bottom-5 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full transition hover:scale-105 active:scale-95 md:bottom-6 md:right-6 md:h-14 md:w-14"
+        >
+          <span className="material-symbols-outlined text-[22px] text-white md:text-[24px]">smart_toy</span>
+          {!hasTutorAccess ? (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#f59e0b] text-white">
+              <span className="material-symbols-outlined text-[10px]">lock</span>
+            </span>
+          ) : null}
+        </button>
       </div>
-
-      {/* Floating AI Tutor Button */}
-      <button
-        onClick={() => setIsTutorOpen(true)}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-[0_8px_32px_rgba(99,102,241,0.4)] hover:scale-110 active:scale-95 transition-all"
-        style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', border: '1px solid rgba(255,255,255,0.2)' }}
-      >
-        <span className="material-symbols-outlined text-white text-2xl">smart_toy</span>
-        {!usageData || usageData.plan !== 'pro' ? (
-           <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center border-2 border-background">
-             <span className="material-symbols-outlined text-[10px] text-white">lock</span>
-           </span>
-        ) : null}
-      </button>
 
       <TutorChatPanel
         isOpen={isTutorOpen}
@@ -698,7 +883,7 @@ export default function LearnHub() {
         moduleIndex={moduleIndex}
         subtopicIndex={activeSubIdx}
         topicTitle={activeSubtopic?.subtopic_title}
-        isPro={usageData?.plan === 'pro'}
+        hasTutorAccess={hasTutorAccess}
       />
     </>
   );

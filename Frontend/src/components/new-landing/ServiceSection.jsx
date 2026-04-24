@@ -10,7 +10,7 @@ const services = [
     },
     {
         id: '02',
-        name: 'YouTube RAG Study Chat',
+        name: 'YouTube RAG Cluss Chat',
         description: 'Interact with your courses like never before. Chat directly with your materials; our RAG engine answers your questions by searching through exact video transcripts to find the perfect answer.'
     },
     {
