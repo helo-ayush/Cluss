@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import Leaderboard from '../components/Leaderboard';
-import { MagicCard } from '../components/magicui/MagicCard';
+
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
@@ -58,47 +58,40 @@ function ForgeProgressPanel() {
   const step = FORGE_STEPS[activeStep];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl p-8" style={{
-      background: 'var(--dash-card-bg)',
-      border: '1px solid var(--dash-card-border)',
-      backdropFilter: 'blur(24px)',
-    }}>
-      <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full pointer-events-none" style={{
-        background: `radial-gradient(circle, ${step.color}15, transparent 70%)`,
+    <div className="relative overflow-hidden rounded-[40px] bg-white shadow-sm p-12">
+      <div className="absolute top-0 left-1/4 w-72 h-72 rounded-full pointer-events-none" style={{
+        background: `radial-gradient(circle, ${step.color}10, transparent 70%)`,
         filter: 'blur(60px)', transition: 'background 0.8s ease'
       }} />
-      <div className="relative z-10">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="relative w-10 h-10 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full animate-ping" style={{ background: `${step.color}20` }} />
-            <div className="w-3 h-3 rounded-full" style={{ background: step.color }} />
+      <div className="relative z-10 max-w-2xl">
+        <div className="flex items-center gap-5 mb-10">
+          <div className="relative w-12 h-12 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full animate-ping" style={{ background: `${step.color}25` }} />
+            <div className="w-4 h-4 rounded-full" style={{ background: step.color }} />
           </div>
           <div>
-            <p className="font-label text-xs uppercase tracking-[0.2em] font-bold" style={{ color: step.color }}>AI is forging your path</p>
-            <p className="font-body text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>This usually takes 15-30 seconds</p>
+            <p className="text-xs uppercase tracking-[0.25em] font-bold" style={{ color: step.color }}>AI is forging your path</p>
+            <p className="text-sm text-gray-500 mt-1.5 font-medium">This usually takes 15-30 seconds</p>
           </div>
         </div>
 
-        <div className="space-y-2 mb-6">
+        <div className="space-y-4 mb-10">
           {FORGE_STEPS.map((s, i) => (
-            <div key={i} className="flex items-center gap-3 transition-all duration-500" style={{ opacity: i <= activeStep ? 1 : 0.2 }}>
-              <span className="material-symbols-outlined text-base shrink-0" style={{
-                color: i < activeStep ? '#34d399' : i === activeStep ? s.color : 'var(--theme-text-faint)',
-                fontSize: '16px'
-              }}>{i < activeStep ? 'check_circle' : s.icon}</span>
-              <span className="font-body text-sm" style={{
-                color: i === activeStep ? 'var(--theme-text-heading)' : 'var(--theme-text-muted)',
-                fontWeight: i === activeStep ? 600 : 400
-              }}>{s.text}</span>
+            <div key={i} className="flex items-center gap-4 transition-all duration-500" style={{ opacity: i <= activeStep ? 1 : 0.2 }}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${i < activeStep ? 'bg-green-50' : i === activeStep ? 'bg-indigo-50' : 'bg-gray-50'}`}>
+                <span className="material-symbols-outlined text-[14px]" style={{
+                  color: i < activeStep ? '#22c55e' : i === activeStep ? s.color : '#94a3b8'
+                }}>{i < activeStep ? 'check' : s.icon}</span>
+              </div>
+              <span className={`text-sm font-medium ${i === activeStep ? 'text-gray-900' : 'text-gray-500'}`}>{s.text}</span>
             </div>
           ))}
         </div>
 
-        <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--theme-border)' }}>
+        <div className="h-2 rounded-full bg-gray-50 overflow-hidden">
           <motion.div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #4f46e5, #6366f1, #818cf8)' }}
             animate={{ width: `${pct}%` }} transition={{ duration: 0.4 }} />
         </div>
-        <p className="text-right font-label text-xs mt-1.5" style={{ color: 'var(--theme-text-faint)' }}>{Math.round(pct)}%</p>
       </div>
     </div>
   );
@@ -117,49 +110,45 @@ function DeleteCourseModal({ course, onConfirm, onCancel }) {
   };
  
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)' }}>
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: -20 }}
-        className="relative overflow-hidden rounded-3xl p-8 max-w-md w-full text-center shadow-[0_32px_64px_rgba(0,0,0,0.5)] border border-white/10"
-        style={{ background: 'linear-gradient(145deg, rgba(30,41,59,0.95) 0%, rgba(15,23,42,0.95) 100%)' }}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="relative overflow-hidden rounded-[32px] p-8 max-w-md w-full text-center bg-white shadow-2xl border border-gray-100"
       >
-        {/* Decorative severe background glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-[100px] bg-red-500/20 blur-[50px] rounded-full pointer-events-none" />
-
-        <div className="mx-auto w-16 h-16 rounded-full flex flex-col items-center justify-center mb-6 border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.3)] bg-red-500/10 text-red-500">
+        <div className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-6 bg-red-50 text-red-500">
            <span className="material-symbols-outlined text-3xl">delete_forever</span>
         </div>
         
-        <h3 className="font-headline text-2xl font-black italic mb-3 text-white tracking-wide">
+        <h3 className="text-2xl font-bold mb-3 text-gray-900 tracking-tight">
           Delete Course
         </h3>
-        <p className="text-sm mb-6 text-white/60 leading-relaxed">
-          You are about to permanently delete <strong className="text-white/90">"{course.course_title}"</strong>. All associated progress, quizzes, and data will be wiped out.
+        <p className="text-sm mb-8 text-gray-500 leading-relaxed font-medium">
+          You are about to permanently delete <strong className="text-gray-900">"{course.course_title}"</strong>. This action cannot be undone.
         </p>
 
-        <div className="bg-black/30 rounded-2xl p-5 mb-8 border border-white/5">
-           <p className="text-xs font-label text-red-400 mb-3 tracking-widest uppercase font-bold">
-             Type <span className="text-white bg-red-500/20 px-2 py-0.5 rounded ml-1 mr-1 border border-red-500/30">delete</span> below
+        <div className="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100">
+           <p className="text-[10px] font-bold text-gray-400 mb-3 tracking-widest uppercase">
+             Type <span className="text-red-500 bg-red-50 px-2 py-0.5 rounded border border-red-100 mx-1">delete</span> to confirm
            </p>
            <input 
              type="text"
              value={inputVal}
              onChange={(e) => setInputVal(e.target.value)}
              placeholder="delete"
-             className="w-full px-4 py-3.5 rounded-xl border-2 border-transparent bg-white/5 text-white font-body text-center outline-none focus:border-red-500/50 focus:bg-white/10 transition-all font-bold tracking-widest uppercase placeholder:normal-case placeholder:tracking-normal placeholder:font-normal placeholder:text-white/20"
+             className="w-full px-6 py-4 rounded-xl border-2 border-transparent bg-white text-gray-900 font-bold text-center outline-none focus:border-red-500/20 transition-all tracking-widest uppercase placeholder:normal-case placeholder:tracking-normal placeholder:font-medium placeholder:text-gray-300 shadow-sm"
            />
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-3">
           <button onClick={onCancel} disabled={deleting}
-            className="flex-1 py-3.5 rounded-xl font-label text-xs sm:text-sm font-bold uppercase tracking-widest transition-all text-white/70 hover:text-white hover:bg-white/5 border border-white/10"
+            className="flex-1 py-4 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all border border-gray-100"
           >Cancel</button>
           
           <button onClick={handleConfirm} 
             disabled={deleting || inputVal.toLowerCase() !== 'delete'}
-            className="flex-1 py-3.5 rounded-xl font-label text-xs sm:text-sm font-bold uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+            className="flex-1 py-4 rounded-xl text-sm font-bold bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2 transition-all disabled:opacity-30 shadow-lg shadow-red-500/20"
           >{deleting ? <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin"></div> : 'Confirm'}</button>
         </div>
       </motion.div>
@@ -176,52 +165,65 @@ function CourseCard({ course, palette, onOpen, index, onDeleteClick }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
+      whileHover={{ y: -8, scale: 1.02 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: (index % 10) * 0.05, duration: 0.4, ease: 'easeOut' }}
+      transition={{ delay: (index % 10) * 0.05, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
       className="relative w-full cursor-pointer group"
     >
-      <div className="relative overflow-hidden rounded-2xl transition-all duration-300 group-hover:-translate-y-1.5"
-        style={{
-          background: `linear-gradient(150deg, ${palette.from} 0%, ${palette.to} 100%)`,
-          boxShadow: `0 8px 28px ${palette.from}30`,
-          height: '240px'
-        }}>
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%)',
-        }} />
-        <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full" style={{ background: 'rgba(255,255,255,0.04)' }} />
-        <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full" style={{ background: 'rgba(0,0,0,0.1)' }} />
+      <div className="relative overflow-hidden rounded-[40px] bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-500 group-hover:shadow-[0_20px_48px_rgba(0,0,0,0.08)] h-[260px]">
+        
+        {/* Glow effect on hover */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+             style={{ background: `radial-gradient(circle at 50% 0%, ${palette.from}10, transparent 70%)` }} />
 
         {/* Delete Button */}
         <button 
            onClick={(e) => { e.stopPropagation(); onDeleteClick(course); }}
-           className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center bg-black/20 hover:bg-red-500/80 hover:scale-110 transition-all z-20 opacity-0 group-hover:opacity-100"
+           className="absolute top-6 right-6 w-9 h-9 rounded-full flex items-center justify-center bg-white/60 backdrop-blur-md border border-white/80 hover:bg-red-500 hover:text-white transition-all z-20 opacity-0 group-hover:opacity-100 text-gray-500 shadow-sm"
         >
-           <span className="material-symbols-outlined text-[16px] text-white/90">delete</span>
+           <span className="material-symbols-outlined text-[18px]">delete</span>
         </button>
 
-        <div className="relative z-10 p-6 h-full flex flex-col justify-between cursor-pointer" onClick={onOpen}>
+        <div className="relative z-10 p-8 h-full flex flex-col justify-between" onClick={onOpen}>
           <div>
-            <div className="text-3xl mb-4">{palette.icon}</div>
-            <h3 className="font-headline text-base md:text-lg font-bold text-white leading-snug line-clamp-3">
+            <h3 className="font-bold text-[20px] text-gray-900 leading-[1.2] tracking-tight line-clamp-2 mb-4 group-hover:text-indigo-600 transition-colors">
               {course.course_title}
             </h3>
+            <div className="flex items-center gap-2.5">
+              <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1)]" style={{ background: palette.from }} />
+              <span className="text-gray-500 text-[10px] uppercase font-black tracking-[0.15em]">
+                {isCompleted ? 'Complete' : isActive ? 'In Progress' : 'New'}
+              </span>
+            </div>
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-white/60 text-[11px] font-label uppercase tracking-wider">
-                {isCompleted ? 'Complete' : isActive ? 'In Progress' : 'New'}
+            <div className="flex items-end justify-between mb-4">
+              <div className="flex flex-col">
+                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Progress</span>
+                <p className="text-gray-400 text-[11px] font-medium">
+                  {course.completedSubtopics}/{course.totalSubtopics} topics
+                </p>
+              </div>
+              <span className="text-3xl font-black italic tracking-tighter text-gray-900/10 group-hover:text-indigo-600/20 transition-all duration-500">
+                {pct}%
               </span>
-              <span className="text-white font-label text-sm font-bold">{pct}%</span>
             </div>
-            <div className="h-1.5 rounded-full bg-black/20 overflow-hidden">
-              <motion.div className="h-full rounded-full bg-white/90"
-                initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: (index % 10) * 0.1 }} />
+            
+            <div className="h-2 rounded-full bg-black/5 overflow-hidden p-[1px]">
+              <motion.div className="h-full rounded-full relative" 
+                style={{ 
+                  background: `linear-gradient(90deg, ${palette.from}, ${palette.to})`,
+                  boxShadow: `0 0 12px ${palette.from}40`
+                }}
+                initial={{ width: 0 }} 
+                animate={{ width: `${pct}%` }} 
+                transition={{ duration: 1, delay: (index % 10) * 0.1, ease: "circOut" }} 
+              >
+                <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" 
+                     style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)' }} />
+              </motion.div>
             </div>
-            <p className="text-white/50 text-xs font-label mt-3">
-              {course.completedSubtopics}/{course.totalSubtopics} topics
-            </p>
           </div>
         </div>
       </div>
@@ -236,7 +238,7 @@ function ActivityBars({ activityData }) {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
-    <div className="flex items-end gap-2.5 h-28">
+    <div className="flex items-end gap-3 h-32 mt-4">
       {last7.map((day, i) => {
         const pct = (day.subtopicsCompleted / maxVal) * 100;
         const todayStr = new Date().toISOString().slice(0, 10);
@@ -245,26 +247,21 @@ function ActivityBars({ activityData }) {
         const dayLabel = days[(dateObj.getDay() + 6) % 7];
 
         return (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+          <div key={i} className="flex-1 flex flex-col items-center gap-2">
             {day.subtopicsCompleted > 0 && (
-              <span className="font-label text-[9px] font-bold" style={{ color: isToday ? '#818cf8' : 'var(--theme-text-muted)' }}>
+              <span className={`text-[10px] font-bold ${isToday ? 'text-indigo-600' : 'text-gray-400'}`}>
                 {day.subtopicsCompleted}
               </span>
             )}
-            <div className="w-full relative rounded-lg overflow-hidden" style={{ height: '80px', background: 'var(--theme-border)' }}>
-              <motion.div className="absolute bottom-0 left-0 right-0 rounded-lg"
-                style={{ background: isToday ? 'linear-gradient(180deg, #818cf8, #4f46e5)' : 'linear-gradient(180deg, rgba(99,102,241,0.5), rgba(99,102,241,0.2))' }}
+            <div className="w-full relative rounded-md overflow-hidden bg-gray-50 h-24">
+              <motion.div className={`absolute bottom-0 left-0 right-0 rounded-t-md ${isToday ? 'bg-indigo-500' : 'bg-indigo-100'}`}
                 initial={{ height: 0 }} animate={{ height: `${Math.max(pct, day.subtopicsCompleted > 0 ? 10 : 0)}%` }}
                 transition={{ duration: 0.7, delay: i * 0.07, ease: 'easeOut' }}
               />
-              {isToday && (
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white animate-pulse" />
-              )}
             </div>
-            <span className="font-label text-[9px]" style={{
-              color: isToday ? '#818cf8' : 'var(--theme-text-faint)',
-              fontWeight: isToday ? 700 : 400
-            }}>{dayLabel}</span>
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? 'text-indigo-600' : 'text-gray-400'}`}>
+              {dayLabel}
+            </span>
           </div>
         );
       })}
@@ -282,53 +279,34 @@ function MiniCalendar({ activityData }) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const activityByDate = {};
-  activityData.forEach(a => { activityByDate[a.date] = a.subtopicsCompleted; });
-
-  const getDateStr = d => `${year}-${String(month + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-  const isToday = d => d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-
-  const cells = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  activityData.forEach(d => { activityByDate[d.date] = d.subtopicsCompleted > 0; });
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-3">
-        <span className="font-label text-xs font-bold" style={{ color: 'var(--theme-text-heading)' }}>{monthName} {year}</span>
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm font-bold text-gray-900">{monthName} {year}</span>
         <div className="flex gap-1">
-          <button onClick={() => setDate(new Date(year, month - 1, 1))} className="calender-nav-btn">
-            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>chevron_left</span>
+          <button onClick={() => setDate(new Date(year, month - 1))} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400">
+            <span className="material-symbols-outlined text-sm">chevron_left</span>
           </button>
-          <button onClick={() => setDate(new Date(year, month + 1, 1))} className="calender-nav-btn">
-            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>chevron_right</span>
+          <button onClick={() => setDate(new Date(year, month + 1))} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400">
+            <span className="material-symbols-outlined text-sm">chevron_right</span>
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-7 mb-1">
-        {['M','T','W','T','F','S','S'].map((d, i) => (
-          <div key={i} className="text-center font-label text-[9px]" style={{ color: 'var(--theme-text-faint)' }}>{d}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-y-0.5 flex-1">
-        {cells.map((d, i) => {
-          if (!d) return <div key={i} />;
-          const ds = getDateStr(d);
-          const count = activityByDate[ds] || 0;
-          const todayCell = isToday(d);
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {['M','T','W','T','F','S','S'].map(d => <span key={d} className="text-[9px] font-bold text-gray-400 uppercase">{d}</span>)}
+        {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="h-7" />)}
+        {Array.from({ length: daysInMonth }, (_, i) => {
+          const d = i + 1;
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const active = activityByDate[dateStr];
+          const isT = today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
           return (
-            <div key={i} className="flex items-center justify-center py-0.5">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center relative" style={{
-                background: todayCell ? 'var(--color-primary)' : count > 0 ? 'rgba(99,102,241,0.12)' : 'transparent',
-                boxShadow: todayCell ? '0 0 10px rgba(99,102,241,0.5)' : 'none',
-              }}>
-                <span className="font-label text-[10px]" style={{
-                  color: todayCell ? '#fff' : count > 0 ? 'var(--color-primary)' : 'var(--theme-text-body)',
-                  fontWeight: todayCell || count > 0 ? 700 : 400
-                }}>{d}</span>
-                {count > 0 && !todayCell && (
-                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: 'var(--color-primary)' }} />
-                )}
-              </div>
+            <div key={d} className={`h-7 w-7 flex items-center justify-center rounded-full text-[10px] font-bold transition-all ${
+              isT ? 'bg-indigo-600 text-white shadow-md' : active ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-50'
+            }`}>
+              {d}
             </div>
           );
         })}
@@ -338,15 +316,15 @@ function MiniCalendar({ activityData }) {
 }
 
 // ─── Section Header ───
-function SectionHeader({ icon, title, subtitle, color = 'var(--color-primary)' }) {
+function SectionHeader({ icon, title, subtitle, color = '#6366f1' }) {
   return (
-    <div className="flex items-center gap-3 mb-5">
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}12` }}>
-        <span className="material-symbols-outlined" style={{ color, fontSize: '20px' }}>{icon}</span>
+    <div className="flex items-center gap-4 mb-6">
+      <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0" style={{ background: `${color}15` }}>
+        <span className="material-symbols-outlined" style={{ color, fontSize: '22px' }}>{icon}</span>
       </div>
       <div>
-        <h3 className="font-headline text-[15px] font-bold" style={{ color: 'var(--theme-text-heading)' }}>{title}</h3>
-        {subtitle && <p className="font-body text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{subtitle}</p>}
+        <h3 className="text-2xl font-bold text-gray-900 tracking-tight leading-none">{title}</h3>
+        {subtitle && <p className="text-sm text-gray-500 mt-1.5 font-medium">{subtitle}</p>}
       </div>
     </div>
   );
@@ -407,20 +385,15 @@ const getStreakQuote = (count) => {
 function StatCard({ icon, label, value, color, delay, quote }) {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.4, ease: "easeOut" }} className="h-full">
-      <MagicCard
-        className="liquid-glass rounded-2xl h-full flex flex-col group cursor-default"
-        gradientColor={`${color}15`}
-        gradientFrom={color}
-        gradientTo="#0f172a"
-      >
+      <div className="rounded-[40px] h-full flex flex-col group cursor-default bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_48px_rgba(0,0,0,0.08)]">
         <div className="p-8 flex flex-col h-full justify-between">
           <div className="mb-6">
-            <h3 className="font-headline text-5xl font-black italic tracking-tight mb-2" style={{ color: 'var(--theme-text-heading)' }}>{value}</h3>
-            <p className="font-label text-xs font-bold tracking-widest uppercase mb-4" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
+            <h3 className="text-6xl font-black italic tracking-tighter mb-2 text-gray-900 group-hover:text-indigo-600 transition-colors">{value}</h3>
+            <p className="text-[11px] font-black tracking-[0.2em] uppercase mb-4 text-gray-400">{label}</p>
           </div>
-          <p className="leading-relaxed font-body text-sm italic opacity-80" style={{ color: 'var(--theme-text-body)' }}>"{quote}"</p>
+          <p className="leading-relaxed text-sm font-medium italic text-gray-500/80">"{quote}"</p>
         </div>
-      </MagicCard>
+      </div>
     </motion.div>
   );
 }
@@ -446,45 +419,38 @@ function PlaylistImportPanel() {
   const step = PLAYLIST_STEPS[activeStep];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl p-8" style={{
-      background: 'var(--dash-card-bg)',
-      border: '1px solid var(--dash-card-border)',
-      backdropFilter: 'blur(24px)',
-    }}>
-      <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full pointer-events-none" style={{
-        background: `radial-gradient(circle, ${step.color}15, transparent 70%)`,
+    <div className="relative overflow-hidden rounded-[40px] bg-white shadow-sm p-12">
+      <div className="absolute top-0 left-1/4 w-72 h-72 rounded-full pointer-events-none" style={{
+        background: `radial-gradient(circle, ${step.color}10, transparent 70%)`,
         filter: 'blur(60px)', transition: 'background 0.8s ease'
       }} />
-      <div className="relative z-10">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="relative w-10 h-10 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full animate-ping" style={{ background: `${step.color}20` }} />
-            <div className="w-3 h-3 rounded-full" style={{ background: step.color }} />
+      <div className="relative z-10 max-w-2xl">
+        <div className="flex items-center gap-5 mb-10">
+          <div className="relative w-12 h-12 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full animate-ping" style={{ background: `${step.color}25` }} />
+            <div className="w-4 h-4 rounded-full" style={{ background: step.color }} />
           </div>
           <div>
-            <p className="font-label text-xs uppercase tracking-[0.2em] font-bold" style={{ color: step.color }}>Importing Playlist</p>
-            <p className="font-body text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>This usually takes 10-20 seconds</p>
+            <p className="text-xs uppercase tracking-[0.25em] font-bold" style={{ color: step.color }}>Importing Playlist</p>
+            <p className="text-sm text-gray-500 mt-1.5 font-medium">This usually takes 10-20 seconds</p>
           </div>
         </div>
-        <div className="space-y-2 mb-6">
+        <div className="space-y-4 mb-10">
           {PLAYLIST_STEPS.map((s, i) => (
-            <div key={i} className="flex items-center gap-3 transition-all duration-500" style={{ opacity: i <= activeStep ? 1 : 0.2 }}>
-              <span className="material-symbols-outlined text-base shrink-0" style={{
-                color: i < activeStep ? '#34d399' : i === activeStep ? s.color : 'var(--theme-text-faint)',
-                fontSize: '16px'
-              }}>{i < activeStep ? 'check_circle' : s.icon}</span>
-              <span className="font-body text-sm" style={{
-                color: i === activeStep ? 'var(--theme-text-heading)' : 'var(--theme-text-muted)',
-                fontWeight: i === activeStep ? 600 : 400
-              }}>{s.text}</span>
+            <div key={i} className="flex items-center gap-4 transition-all duration-500" style={{ opacity: i <= activeStep ? 1 : 0.2 }}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${i < activeStep ? 'bg-green-50' : i === activeStep ? 'bg-indigo-50' : 'bg-gray-50'}`}>
+                <span className="material-symbols-outlined text-[14px]" style={{
+                  color: i < activeStep ? '#22c55e' : i === activeStep ? s.color : '#94a3b8'
+                }}>{i < activeStep ? 'check' : s.icon}</span>
+              </div>
+              <span className={`text-sm font-medium ${i === activeStep ? 'text-gray-900' : 'text-gray-500'}`}>{s.text}</span>
             </div>
           ))}
         </div>
-        <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--theme-border)' }}>
+        <div className="h-2 rounded-full bg-gray-50 overflow-hidden">
           <motion.div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #4f46e5, #6366f1, #818cf8)' }}
             animate={{ width: `${pct}%` }} transition={{ duration: 0.4 }} />
         </div>
-        <p className="text-right font-label text-xs mt-1.5" style={{ color: 'var(--theme-text-faint)' }}>{Math.round(pct)}%</p>
       </div>
     </div>
   );
@@ -494,80 +460,62 @@ function PlaylistImportPanel() {
 //  TOPIC ANALYSIS MODAL (Outdated only, pre-selected)
 // ═══════════════════════════════════════════════
 function TopicAnalysisModalInline({ loading, blocks, onClose, onRemove }) {
-  // All outdated topics pre-selected for removal
   const [selected, setSelected] = useState(() => new Set((blocks || []).map(b => b.topicName)));
   const [removing, setRemoving] = useState(false);
 
-  // Synchronize selection if blocks change
-  useEffect(() => {
-    if (blocks && blocks.length > 0) {
-      setSelected(new Set(blocks.map(b => b.topicName)));
-    }
-  }, [blocks]);
+  useEffect(() => { if (blocks && blocks.length > 0) { setSelected(new Set(blocks.map(b => b.topicName))); } }, [blocks]);
 
-  const toggle = (name) => {
-    setSelected(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; });
-  };
+  const toggle = (name) => { setSelected(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; }); };
 
-  const handleRemove = async () => {
-    if (selected.size === 0) return;
-    setRemoving(true);
-    await onRemove([...selected]);
-    setRemoving(false);
-  };
+  const handleRemove = async () => { if (selected.size === 0) return; setRemoving(true); await onRemove([...selected]); setRemoving(false); };
 
   const items = blocks || [];
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="relative rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
-        style={{ background: 'var(--color-background)', border: '1px solid var(--theme-border-strong)' }}>
-        <div className="p-6 pb-4" style={{ borderBottom: '1px solid var(--theme-border)' }}>
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="relative rounded-[32px] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden bg-white shadow-2xl">
+        <div className="p-8 pb-6 bg-white">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-headline text-xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>🧹 Outdated Topics Found</h2>
-              <p className="font-body text-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-                {loading ? 'AI is scanning your curriculum...' : items.length > 0 ? 'Uncheck any topics you want to keep. The rest will be removed.' : 'No outdated topics detected — your curriculum looks great!'}
+              <h2 className="text-2xl font-bold text-gray-900 tracking-tight">🧹 Outdated Topics Found</h2>
+              <p className="text-sm mt-1.5 text-gray-500 font-medium">
+                {loading ? 'AI is scanning your curriculum...' : items.length > 0 ? 'Uncheck any topics you want to keep. The rest will be removed.' : 'No outdated topics detected!'}
               </p>
             </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-all"
-              style={{ border: '1px solid var(--theme-border)' }}>
-              <span className="material-symbols-outlined text-sm" style={{ color: 'var(--theme-text-muted)' }}>close</span>
+            <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-all text-gray-400">
+              <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 space-y-2 custom-scroll">
+        <div className="flex-1 overflow-y-auto p-8 pt-0 space-y-3 custom-scroll">
           {loading ? (
              <div className="flex flex-col items-center justify-center py-16 gap-4">
-                <div className="w-10 h-10 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
-                <p className="font-label text-xs uppercase tracking-widest font-black text-indigo-500/80">Scanning Playlist Content</p>
+                <div className="w-10 h-10 rounded-full border-3 border-indigo-500 border-t-transparent animate-spin" />
+                <p className="text-sm font-bold text-gray-900">Scanning playlist content...</p>
              </div>
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <span className="material-symbols-outlined text-5xl" style={{ color: '#34d399' }}>verified</span>
-              <p className="font-body text-sm" style={{ color: 'var(--theme-text-muted)' }}>All topics are up to date!</p>
+              <span className="material-symbols-outlined text-5xl text-green-500">verified</span>
+              <p className="text-sm font-medium text-gray-500">All topics are up to date!</p>
             </div>
           ) : items.map(b => (
-            <label key={b.topicName} className="flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all hover:bg-white/5"
-              style={{ background: selected.has(b.topicName) ? 'rgba(239,68,68,0.06)' : 'transparent', border: `1px solid ${selected.has(b.topicName) ? 'rgba(239,68,68,0.3)' : 'var(--theme-border)'}` }}>
+            <label key={b.topicName} className={`flex items-start gap-4 p-6 rounded-[24px] cursor-pointer transition-all border ${selected.has(b.topicName) ? 'bg-red-50/50 border-red-100' : 'bg-gray-50/50 border-transparent hover:bg-gray-50'}`}>
               <input type="checkbox" checked={selected.has(b.topicName)} onChange={() => toggle(b.topicName)}
                 className="mt-1 w-4 h-4 rounded accent-red-500" />
               <div className="flex-1">
-                <p className="font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>{b.topicName}</p>
-                <MarkdownRenderer content={b.reason} className="font-body text-xs mt-0.5" />
-                <p className="font-label text-[10px] mt-1" style={{ color: 'var(--theme-text-faint)' }}>{b.videoIndices.length} videos</p>
+                <p className={`text-sm font-bold ${selected.has(b.topicName) ? 'text-red-700' : 'text-gray-900'}`}>{b.topicName}</p>
+                <MarkdownRenderer content={b.reason} className="text-xs mt-1.5 text-gray-600 leading-relaxed" />
+                <p className="text-[10px] font-bold text-gray-400 mt-2 uppercase tracking-widest">{b.videoIndices.length} videos</p>
               </div>
             </label>
           ))}
         </div>
         {!loading && items.length > 0 && (
-          <div className="p-6 flex items-center justify-between gap-4" style={{ borderTop: '1px solid var(--theme-border)' }}>
-            <p className="font-label text-xs" style={{ color: 'var(--theme-text-muted)' }}>{selected.size} topic{selected.size !== 1 ? 's' : ''} will be removed</p>
+          <div className="p-8 pt-6 bg-gray-50/30 flex items-center justify-between gap-4">
+            <p className="text-xs font-bold text-gray-400">{selected.size} topic{selected.size !== 1 ? 's' : ''} will be removed</p>
             <button onClick={handleRemove} disabled={selected.size === 0 || removing}
-              className="px-6 py-3 rounded-xl font-label text-sm font-bold text-white disabled:opacity-30 flex items-center gap-2 transition-all hover:scale-[1.02]"
-              style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', boxShadow: '0 0 20px rgba(239,68,68,0.3)' }}>
-              <span className="material-symbols-outlined text-base">{removing ? 'sync' : 'delete_sweep'}</span>
+              className="px-8 py-3 rounded-full text-sm font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20 disabled:opacity-30 flex items-center gap-2 transition-all">
+              <span className="material-symbols-outlined text-[18px]">{removing ? 'sync' : 'delete_sweep'}</span>
               {removing ? 'Removing...' : 'Remove Selected'}
             </button>
           </div>
@@ -597,46 +545,36 @@ function FillerModalInline({ loading, suggestions, onClose, onAdd }) {
   const items = suggestions?.missingSuggestions || [];
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="relative rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
-        style={{ background: 'var(--color-background)', border: '1px solid var(--theme-border-strong)' }}>
-        <div className="p-6 pb-4" style={{ borderBottom: '1px solid var(--theme-border)' }}>
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="relative rounded-[32px] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden bg-white shadow-2xl">
+        <div className="p-8 pb-6 bg-white">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-headline text-xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>🔮 Trending Missing Topics</h2>
-              <p className="font-body text-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+              <h2 className="text-2xl font-bold text-gray-900 tracking-tight">🔮 Trending Missing Topics</h2>
+              <p className="text-sm mt-1.5 text-gray-500 font-medium">
                 {loading ? 'AI is analyzing your curriculum for gaps...' : `${items.length} missing topic${items.length !== 1 ? 's' : ''} found`}
               </p>
             </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-all"
-              style={{ border: '1px solid var(--theme-border)' }}>
-              <span className="material-symbols-outlined text-sm" style={{ color: 'var(--theme-text-muted)' }}>close</span>
+            <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-all text-gray-400">
+              <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scroll">
+        <div className="flex-1 overflow-y-auto p-8 pt-0 space-y-3 custom-scroll">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
-              <div className="relative">
-                <div className="w-14 h-14 rounded-full border-3 border-indigo-500/20 animate-ping absolute inset-0" />
-                <div className="w-14 h-14 rounded-full border-3 border-indigo-500 border-t-transparent animate-spin" />
-              </div>
-              <div className="text-center">
-                <p className="font-body text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-heading)' }}>Analyzing curriculum gaps...</p>
-                <p className="font-body text-xs" style={{ color: 'var(--theme-text-muted)' }}>This may take 10–15 seconds</p>
-              </div>
+              <div className="w-10 h-10 rounded-full border-3 border-indigo-500 border-t-transparent animate-spin" />
+              <p className="text-sm font-bold text-gray-900">AI is finding gaps in curriculum...</p>
             </div>
           ) : items.map(s => (
-            <label key={s.topicName} className="flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all hover:bg-white/5"
-              style={{ background: selected.has(s.topicName) ? 'rgba(99,102,241,0.06)' : 'transparent', border: `1px solid ${selected.has(s.topicName) ? 'rgba(99,102,241,0.3)' : 'var(--theme-border)'}` }}>
-              <input type="checkbox" checked={selected.has(s.topicName)} onChange={() => toggle(s.topicName)} className="mt-1 w-4 h-4 accent-indigo-500" />
+            <label key={s.topicName} className={`flex items-start gap-4 p-6 rounded-[24px] cursor-pointer transition-all border ${selected.has(s.topicName) ? 'bg-indigo-50/50 border-indigo-100' : 'bg-gray-50/50 border-transparent hover:bg-gray-50'}`}>
+              <input type="checkbox" checked={selected.has(s.topicName)} onChange={() => toggle(s.topicName)} className="mt-1 w-4 h-4 rounded accent-indigo-500" />
               <div className="flex-1">
-                <p className="font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>{s.topicName}</p>
-                <MarkdownRenderer content={s.reason} className="font-body text-xs mt-0.5" />
-                <div className="flex flex-wrap gap-2 mt-2">
+                <p className={`text-sm font-bold ${selected.has(s.topicName) ? 'text-indigo-700' : 'text-gray-900'}`}>{s.topicName}</p>
+                <MarkdownRenderer content={s.reason} className="text-xs mt-1.5 text-gray-600 leading-relaxed" />
+                <div className="flex flex-wrap gap-2 mt-3">
                   {s.subtopics.map((sub, i) => (
-                    <span key={i} className="px-2 py-0.5 rounded-full font-label text-[9px]" style={{ background: 'rgba(99,102,241,0.08)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.15)' }}>
+                    <span key={i} className="px-2.5 py-1 rounded-full text-[9px] font-bold bg-indigo-50 text-indigo-500 border border-indigo-100/50 uppercase tracking-wider">
                       {sub.title}
                     </span>
                   ))}
@@ -646,12 +584,11 @@ function FillerModalInline({ loading, suggestions, onClose, onAdd }) {
           ))}
         </div>
         {!loading && items.length > 0 && (
-          <div className="p-6 flex items-center justify-between gap-4" style={{ borderTop: '1px solid var(--theme-border)' }}>
-            <p className="font-label text-xs" style={{ color: 'var(--theme-text-muted)' }}>{selected.size} topics selected</p>
+          <div className="p-8 pt-6 bg-gray-50/30 flex items-center justify-between gap-4">
+            <p className="text-xs font-bold text-gray-400">{selected.size} topics selected</p>
             <button onClick={handleAdd} disabled={selected.size === 0 || adding}
-              className="px-6 py-3 rounded-xl font-label text-sm font-bold text-white disabled:opacity-30 flex items-center gap-2 transition-all hover:scale-[1.02]"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 0 20px rgba(99,102,241,0.3)' }}>
-              <span className="material-symbols-outlined text-base">{adding ? 'sync' : 'add_circle'}</span>
+              className="px-8 py-3 rounded-full text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 disabled:opacity-30 flex items-center gap-2 transition-all">
+              <span className="material-symbols-outlined text-[18px]">{adding ? 'sync' : 'add_circle'}</span>
               {adding ? 'Processing...' : 'Add Selected Topics'}
             </button>
           </div>
@@ -701,13 +638,24 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isLoaded || !user) return;
     
-    // Check for query param from Landing page
     const searchParams = new URLSearchParams(loc.search);
     const qParam = searchParams.get('q');
+    const actionParam = searchParams.get('action');
+
+    let modified = false;
     if (qParam) {
       setQuery(qParam);
       setTimeout(() => inputRef.current?.focus(), 500);
-      // Clean up URL
+      modified = true;
+    }
+    if (actionParam) {
+      setActiveTab(actionParam === 'import' ? 'playlist' : 'forge');
+      if (actionParam === 'forge') setTimeout(() => inputRef.current?.focus(), 500);
+      if (actionParam === 'import') setTimeout(() => document.getElementById('playlistUrlInput')?.focus(), 500);
+      modified = true;
+    }
+    
+    if (modified) {
       nav('/dashboard', { replace: true });
     }
     
@@ -944,12 +892,12 @@ export default function Dashboard() {
   return (
     <>
       <SignedIn>
-        {/* ── Background ── */}
-        <div className="fixed inset-0 z-0" style={{ background: 'var(--color-background)' }} />
-        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 60%)', filter: 'blur(80px)' }} />
-          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(79,70,229,0.04) 0%, transparent 60%)', filter: 'blur(80px)' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(129,140,248,0.03) 0%, transparent 60%)', filter: 'blur(60px)' }} />
+        {/* ── Superb Mesh Background ── */}
+        <div className="fixed inset-0 z-0 bg-[#f8fafc] overflow-hidden">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-200/40 blur-[120px] animate-pulse" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-200/30 blur-[120px]" />
+          <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-purple-100/40 blur-[100px]" />
+          <div className="absolute bottom-[20%] left-[10%] w-[25%] h-[25%] rounded-full bg-indigo-50/50 blur-[80px]" />
         </div>
 
         <main className="relative z-10 min-h-screen pt-28 pb-20 px-6 lg:px-8 max-w-[1200px] mx-auto">
@@ -990,48 +938,26 @@ export default function Dashboard() {
             className="mb-10">
             <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
               <div>
-                <p className="font-label text-[10px] sm:text-xs uppercase tracking-[0.25em] mb-1 sm:mb-2" style={{ color: 'var(--theme-text-muted)' }}>
+                <p className="text-[10px] uppercase tracking-[0.3em] mb-2 font-bold text-gray-400">
                   {greeting}
                 </p>
-                <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]" style={{ color: 'var(--theme-text-heading)' }}>
-                  {user?.firstName || 'Learner'}<span style={{ color: 'var(--color-primary)' }}>.</span>
+                <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] text-gray-900">
+                  {user?.firstName || 'Learner'}<span className="text-indigo-500">.</span>
                 </h1>
               </div>
               {activityMeta.streak > 0 && (
                 <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3 }}
-                  className="flex items-center gap-2.5 px-5 py-2.5 rounded-full"
-                  style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)' }}>
-                  <span className="text-xl">🔥</span>
+                  className="flex items-center gap-3 px-6 py-3 rounded-[24px] bg-white border border-gray-100 shadow-sm">
+                  <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-xl">🔥</div>
                   <div>
-                    <p className="font-label text-sm font-black leading-none" style={{ color: '#818cf8' }}>{activityMeta.streak} day streak</p>
-                    <p className="font-label text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{activityMeta.totalThisWeek} topics this week</p>
+                    <p className="text-sm font-bold text-gray-900 leading-none">{activityMeta.streak} day streak</p>
+                    <p className="text-[11px] mt-1 text-gray-500 font-medium">{activityMeta.totalThisWeek} topics this week</p>
                   </div>
                 </motion.div>
               )}
             </div>
 
-            {/* ── Tab Toggle ── */}
-            <div className="flex items-center gap-2 mb-6">
-              {[
-                { key: 'forge', icon: 'auto_awesome', label: 'Forge Path' },
-                { key: 'playlist', icon: 'smart_display', label: 'Import Playlist' },
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className="relative px-5 py-2.5 rounded-full font-label text-xs font-bold transition-all duration-300 flex items-center gap-2"
-                  style={{
-                    background: activeTab === tab.key ? 'var(--color-primary)' : 'transparent',
-                    color: activeTab === tab.key ? '#fff' : 'var(--theme-text-muted)',
-                    border: `1px solid ${activeTab === tab.key ? 'var(--color-primary)' : 'var(--theme-border-strong)'}`,
-                    boxShadow: activeTab === tab.key ? '0 0 20px rgba(99,102,241,0.3)' : 'none',
-                  }}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+
 
             {/* ── Hero Content (Conditional on Tab) ── */}
             <AnimatePresence mode="wait">
@@ -1043,63 +969,53 @@ export default function Dashboard() {
                   </motion.div>
                 ) : (
                   <motion.div key="forge-input" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="relative overflow-hidden rounded-2xl p-8 md:p-10" style={{
-                      background: 'var(--dash-card-bg)',
-                      border: '1px solid var(--dash-card-border)',
-                      backdropFilter: 'blur(24px)',
-                    }}>
-                    <div className="absolute top-0 right-0 w-72 h-72 pointer-events-none" style={{
-                      background: 'radial-gradient(circle at top right, rgba(99,102,241,0.06), transparent 60%)',
-                    }} />
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-2">
-                         <p className="font-label text-[11px] uppercase tracking-[0.25em] font-bold" style={{ color: 'var(--color-primary)' }}>
-                          Forge a New Path
-                        </p>
+                    className="bg-white/40 backdrop-blur-2xl rounded-[48px] border border-white/60 shadow-[0_20px_64px_rgba(0,0,0,0.06)] p-10 md:p-14 relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col max-w-2xl">
+                      <div className="flex items-center justify-between mb-4">
                         {usageData && usageData.plan === 'pro' ? (
-                          <span className="px-2 py-0.5 rounded-full font-label text-[9px] font-bold uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                          <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-900">
                             PRO PLAN
                           </span>
                         ) : usageData ? (
-                          <span className="px-2 py-0.5 rounded-full font-label text-[9px] font-bold uppercase bg-white/5 text-white/60 border border-white/10">
+                          <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-600">
                             {usageData.usage.activeCourses}/{usageData.limits.maxCourses} Courses
                           </span>
                         ) : null}
                       </div>
-                      <h2 className="font-serif text-2xl md:text-3xl font-bold mb-6" style={{ color: 'var(--theme-text-heading)' }}>
-                        What do you want to <span className="italic" style={{ color: 'var(--color-primary)' }}>learn</span> today?
+                      <h2 className="text-3xl md:text-5xl font-medium text-gray-900 mb-2 leading-tight">
+                        What do you want to learn today?
                       </h2>
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 max-w-2xl">
-                        <div className="flex-1 flex items-center rounded-xl px-4 py-3" style={{
-                          background: 'var(--dash-input-bg)',
-                          border: '1px solid var(--dash-input-border)',
-                        }}>
-                          <span className="material-symbols-outlined mr-3" style={{ color: 'var(--theme-text-faint)', fontSize: '20px' }}>search</span>
+                      <p className="text-gray-500 mb-8">StudyHelper will automatically generate a tailored curriculum just for you.</p>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <div className="flex-1 flex items-center bg-gray-50 rounded-full px-6 py-4 border border-gray-200 focus-within:border-black transition-colors">
+                          <span className="material-symbols-outlined text-gray-400 mr-3">search</span>
                           <input
                             ref={inputRef} type="text"
-                            className="flex-1 bg-transparent border-none outline-none font-body text-sm"
-                            style={{ color: 'var(--theme-text-heading)' }}
+                            className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder:text-gray-400"
                             placeholder="e.g. Machine Learning, Web Development, Data Science..."
                             value={query} onChange={e => setQuery(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleCreateCourse()}
                           />
                         </div>
                         <button onClick={handleCreateCourse} disabled={!query.trim() || (usageData && !usageData.canCreateCourse)}
-                          className="forge-btn-primary px-7 py-3 rounded-xl font-label text-sm font-bold text-white disabled:opacity-30 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shrink-0">
-                          <span className="material-symbols-outlined text-base">rocket_launch</span> Forge
+                          className="group relative cursor-pointer px-8 py-4 bg-[#e5e9eb] flex gap-2 rounded-full overflow-hidden shrink-0 items-center justify-center disabled:opacity-50">
+                          <div className='absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-500'></div>
+                          <div className='relative z-10 flex gap-2 text-gray-900 group-hover:text-white transition-colors duration-500 font-medium'>
+                            Forge Path
+                          </div>
                         </button>
                       </div>
                       {usageData && !usageData.canCreateCourse && (
-                        <div className="mt-4 p-3 rounded-xl border border-red-500/20 bg-red-500/5 flex items-start gap-3">
-                          <span className="material-symbols-outlined text-red-400 text-lg">error</span>
+                        <div className="mt-6 p-4 rounded-2xl border border-red-100 bg-red-50 flex items-start gap-3">
+                          <span className="material-symbols-outlined text-red-500 text-xl">error</span>
                           <div>
-                            <p className="font-label text-xs font-bold text-red-400">Limit Reached</p>
-                            <p className="font-body text-xs text-white/70 mt-0.5">
+                            <p className="font-bold text-red-600 text-sm">Limit Reached</p>
+                            <p className="text-sm text-red-500 mt-1">
                               {usageData.usage.activeCourses >= usageData.limits.maxCourses 
                                 ? `You have reached the maximum of ${usageData.limits.maxCourses} free courses. Delete an existing course or upgrade to Pro.`
                                 : `You can only create ${usageData.limits.coursesPerWeek} free course per week. Upgrade to Pro for unlimited access.`}
                             </p>
-                            <Link to="/#pricing" className="inline-block mt-2 px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded">
+                            <Link to="/#pricing" className="inline-block mt-3 px-4 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-xs font-bold rounded-full transition-colors">
                               View Pro Plan
                             </Link>
                           </div>
@@ -1117,186 +1033,144 @@ export default function Dashboard() {
                 ) : wizardStage === 2 && draftCourse ? (
                   /* ═══ STAGE 2: OPTIMIZE & SAVE WIZARD ═══ */
                   <motion.div key="playlist-wizard" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="relative overflow-hidden rounded-2xl p-8 md:p-10" style={{
-                      background: 'var(--dash-card-bg)',
-                      border: '1px solid var(--dash-card-border)',
-                      backdropFilter: 'blur(24px)',
-                    }}>
-                    {/* Background gradient */}
-                    <div className="absolute top-0 right-0 w-72 h-72 pointer-events-none" style={{
-                      background: 'radial-gradient(circle at top right, rgba(99,102,241,0.06), transparent 60%)',
-                    }} />
-                    <div className="relative z-10">
+                    className="bg-white/40 backdrop-blur-2xl rounded-[48px] border border-white/60 shadow-[0_20px_64px_rgba(0,0,0,0.06)] p-10 md:p-14 relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col">
 
                       {/* Step indicator */}
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)' }}>
-                            <span className="material-symbols-outlined text-xs" style={{ color: '#22c55e' }}>check</span>
+                      <div className="flex items-center gap-4 mb-8">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center bg-green-50 border border-green-100">
+                            <span className="material-symbols-outlined text-[14px] text-green-600">check</span>
                           </div>
-                          <span className="font-label text-[10px] uppercase font-bold" style={{ color: '#22c55e' }}>Step 1</span>
+                          <span className="text-[10px] uppercase font-bold text-green-600 tracking-wider">Imported</span>
                         </div>
-                        <div className="w-8 h-px" style={{ background: 'var(--theme-border-strong)' }} />
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}>
-                            <span className="font-label text-[10px] font-bold" style={{ color: '#818cf8' }}>2</span>
+                        <div className="w-10 h-px bg-gray-100" />
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center bg-indigo-50 border border-indigo-100">
+                            <span className="text-[10px] font-bold text-indigo-600">2</span>
                           </div>
-                          <span className="font-label text-[10px] uppercase font-bold" style={{ color: '#818cf8' }}>Optimize & Save</span>
+                          <span className="text-[10px] uppercase font-bold text-indigo-600 tracking-wider">Optimize</span>
                         </div>
                       </div>
 
                       {/* Course Title */}
-                      <h2 className="font-serif text-2xl md:text-3xl font-bold mb-1" style={{ color: 'var(--theme-text-heading)' }}>
+                      <h2 className="text-3xl md:text-5xl font-medium text-gray-900 mb-2 leading-tight">
                         {draftCourse.course_title}
                       </h2>
-                      <p className="font-body text-sm mb-6" style={{ color: 'var(--theme-text-muted)' }}>
+                      <p className="text-gray-500 mb-10 font-medium">
                         {draftCourse.days?.reduce((sum, d) => sum + d.videos.length, 0)} videos • {draftCourse.days?.length} days • ~{draftCourse.hoursPerDay}h/day
                       </p>
 
-                      {/* Greyed-out inputs */}
-                      <div className="space-y-3 max-w-2xl mb-8 opacity-40 pointer-events-none select-none">
-                        <div className="flex items-center rounded-xl px-4 py-3" style={{ background: 'var(--dash-input-bg)', border: '1px solid var(--dash-input-border)' }}>
-                          <span className="material-symbols-outlined mr-3" style={{ color: 'var(--theme-text-faint)', fontSize: '20px' }}>link</span>
-                          <span className="font-body text-sm" style={{ color: 'var(--theme-text-faint)' }}>{playlistUrl || 'Playlist URL'}</span>
-                        </div>
-                        <div className="flex items-center gap-3 rounded-xl px-4 py-3 w-fit" style={{ background: 'var(--dash-input-bg)', border: '1px solid var(--dash-input-border)' }}>
-                          <span className="material-symbols-outlined" style={{ color: 'var(--theme-text-faint)', fontSize: '20px' }}>schedule</span>
-                          <span className="font-label text-xs" style={{ color: 'var(--theme-text-faint)' }}>Hours/day: {hoursPerDay}</span>
-                        </div>
-                      </div>
-
-                      {/* Optimization Tools */}
-                      <div className="mb-8">
-                        <p className="font-label text-[11px] uppercase tracking-[0.2em] font-bold mb-4" style={{ color: 'var(--theme-text-muted)' }}>AI Optimization Tools</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
-                          {/* Optimize Button */}
-                          <button onClick={handleRunOptimizer} disabled={analyzing || optimizeApplied}
-                            className="p-5 rounded-xl text-left transition-all hover:scale-[1.01] disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed group"
-                            style={{ background: optimizeApplied ? 'rgba(34,197,94,0.05)' : 'rgba(239,68,68,0.04)', border: `1px solid ${optimizeApplied ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.15)'}` }}>
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: optimizeApplied ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.08)' }}>
-                                <span className="material-symbols-outlined" style={{ color: optimizeApplied ? '#22c55e' : '#ef4444', fontSize: '20px' }}>{optimizeApplied ? 'check_circle' : analyzing ? 'sync' : 'cleaning_services'}</span>
-                              </div>
-                              <div>
-                                <p className="font-label text-sm font-bold" style={{ color: 'var(--theme-text-heading)' }}>Optimize Curriculum</p>
-                                <p className="font-label text-[10px] uppercase" style={{ color: 'rgba(34,197,94,0.8)' }}>FREE</p>
-                              </div>
-                            </div>
-                            <p className="font-body text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                              {optimizeApplied ? 'Outdated topics removed!' : analyzing ? 'Scanning curriculum...' : 'AI scans and removes outdated topics'}
-                            </p>
-                          </button>
-
-                          {/* Filler Button */}
-                          {usageData?.plan === 'pro' ? (
-                            <button onClick={handleOpenFillerModal} disabled={fillersApplied}
-                              className="p-5 rounded-xl text-left transition-all hover:scale-[1.01] disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed group"
-                              style={{ background: fillersApplied ? 'rgba(34,197,94,0.05)' : 'rgba(99,102,241,0.04)', border: `1px solid ${fillersApplied ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.15)'}` }}>
-                              <div className="flex items-center gap-3 mb-2">
-                                <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: fillersApplied ? 'rgba(34,197,94,0.1)' : 'rgba(99,102,241,0.08)' }}>
-                                  <span className="material-symbols-outlined" style={{ color: fillersApplied ? '#22c55e' : '#818cf8', fontSize: '20px' }}>{fillersApplied ? 'check_circle' : 'auto_fix_high'}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
+                        {/* Filler Optimization */}
+                        <div className="space-y-4">
+                          <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 px-1">Curriculum Optimization</h4>
+                          
+                          {usageData && usageData.plan === 'pro' ? (
+                            <button
+                              onClick={() => setShowFillerModal(true)}
+                              className={`w-full p-6 rounded-[24px] text-left transition-all relative overflow-hidden border ${
+                                fillersApplied 
+                                  ? 'bg-green-50 border-green-100 text-green-700' 
+                                  : 'bg-indigo-50/50 border-indigo-100 hover:bg-indigo-50 text-indigo-700'
+                              }`}
+                            >
+                              <div className="flex items-center gap-4 mb-2">
+                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${fillersApplied ? 'bg-green-100' : 'bg-indigo-100'}`}>
+                                  <span className="material-symbols-outlined text-[20px]">{fillersApplied ? 'verified' : 'auto_awesome'}</span>
                                 </div>
                                 <div>
-                                  <p className="font-label text-sm font-bold" style={{ color: 'var(--theme-text-heading)' }}>Find Missing Topics</p>
-                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">PRO</span>
+                                  <p className="text-sm font-bold leading-none">Find Missing Topics</p>
+                                  {fillersApplied && <span className="text-[10px] font-bold uppercase mt-1 inline-block">Applied</span>}
                                 </div>
                               </div>
-                              <p className="font-body text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                                {fillersApplied ? 'Trending topics added!' : 'AI finds trending topics missing from the curriculum'}
+                              <p className="text-xs font-medium opacity-80 leading-relaxed">
+                                {fillersApplied ? 'Trending topics added to your plan!' : 'AI scans for missing trending topics to bridge the gap in your curriculum.'}
                               </p>
                             </button>
                           ) : (
-                            <div className="p-5 rounded-xl text-left opacity-50 cursor-not-allowed" style={{ background: 'rgba(99,102,241,0.03)', border: '1px solid var(--theme-border)' }}>
-                              <div className="flex items-center gap-3 mb-2">
-                                <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.06)' }}>
-                                  <span className="material-symbols-outlined" style={{ color: 'var(--theme-text-faint)', fontSize: '20px' }}>lock</span>
+                            <div className="w-full p-6 rounded-[24px] text-left border border-gray-100 bg-gray-50 opacity-60">
+                              <div className="flex items-center gap-4 mb-2">
+                                <div className="w-10 h-10 rounded-2xl bg-gray-200 flex items-center justify-center">
+                                  <span className="material-symbols-outlined text-[20px] text-gray-400">lock</span>
                                 </div>
                                 <div>
-                                  <p className="font-label text-sm font-bold" style={{ color: 'var(--theme-text-faint)' }}>Find Missing Topics</p>
-                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-amber-500/10 text-amber-600 border border-amber-500/15">PRO ONLY</span>
+                                  <p className="text-sm font-bold text-gray-400">Find Missing Topics</p>
+                                  <span className="px-2 py-0.5 rounded text-[8px] font-bold uppercase bg-amber-100 text-amber-700 mt-1 inline-block">PRO ONLY</span>
                                 </div>
                               </div>
-                              <p className="font-body text-xs" style={{ color: 'var(--theme-text-faint)' }}>Upgrade to Pro to unlock AI-powered topic suggestions</p>
+                              <p className="text-xs text-gray-400 font-medium">Upgrade to Pro to unlock AI-powered topic gap analysis.</p>
                             </div>
                           )}
+                        </div>
+
+                        {/* Summary / Stats Info */}
+                        <div className="flex flex-col justify-center p-6 rounded-[24px] border border-dashed border-gray-200 bg-gray-50/50">
+                           <div className="flex items-center gap-3 mb-6">
+                              <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500">
+                                <span className="material-symbols-outlined text-[20px]">bolt</span>
+                              </div>
+                              <p className="text-sm font-medium text-gray-600">This plan is ready for action. You can always edit subtopics later.</p>
+                           </div>
+                           <div className="flex items-center gap-4">
+                              <div className="flex-1 px-4 py-3 rounded-2xl bg-white border border-gray-100 text-center">
+                                 <p className="text-xl font-bold text-gray-900">{draftCourse.days?.length}</p>
+                                 <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Days</p>
+                              </div>
+                              <div className="flex-1 px-4 py-3 rounded-2xl bg-white border border-gray-100 text-center">
+                                 <p className="text-xl font-bold text-gray-900">{draftCourse.hoursPerDay}h</p>
+                                 <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Daily</p>
+                              </div>
+                           </div>
                         </div>
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-4">
                         <button onClick={handleDiscardDraft}
-                          className="px-5 py-3 rounded-xl font-label text-xs font-bold flex items-center gap-2 transition-all hover:bg-white/5 cursor-pointer"
-                          style={{ border: '1px solid var(--theme-border)', color: 'var(--theme-text-muted)' }}>
-                          <span className="material-symbols-outlined text-sm">undo</span>
+                          className="px-8 py-4 rounded-full text-sm font-bold text-gray-500 border border-gray-200 hover:bg-gray-50 transition-all">
                           Start Over
                         </button>
                         <button onClick={handleSaveCourse}
-                          className="px-8 py-3.5 rounded-xl font-label text-sm font-bold text-white flex items-center gap-2.5 transition-all hover:scale-[1.02] cursor-pointer"
-                          style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', boxShadow: '0 0 24px rgba(34,197,94,0.3)' }}>
-                          <span className="material-symbols-outlined text-base">rocket_launch</span>
-                          Save & Start Learning
+                          className="group relative cursor-pointer px-10 py-4 bg-black flex gap-3 rounded-full overflow-hidden shrink-0 items-center justify-center shadow-lg">
+                          <div className='absolute inset-0 bg-indigo-600 translate-y-full group-hover:translate-y-0 transition-transform duration-500'></div>
+                          <div className='relative z-10 flex gap-2 text-white font-bold items-center'>
+                            <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
+                            Save & Start Learning
+                          </div>
                         </button>
                       </div>
                     </div>
                   </motion.div>
                 ) : (
+                  /* ═══ STAGE 1: IMPORT URL ═══ */
                   <motion.div key="playlist-input" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="relative overflow-hidden rounded-2xl p-8 md:p-10" style={{
-                      background: 'var(--dash-card-bg)',
-                      border: '1px solid var(--dash-card-border)',
-                      backdropFilter: 'blur(24px)',
-                    }}>
-                    {/* Subtle red-ish gradient for YouTube branding */}
-                    <div className="absolute top-0 right-0 w-72 h-72 pointer-events-none" style={{
-                      background: 'radial-gradient(circle at top right, rgba(239,68,68,0.05), transparent 60%)',
-                    }} />
-                    <div className="relative z-10">
-
-                      {/* Step indicator */}
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}>
-                            <span className="font-label text-[10px] font-bold" style={{ color: '#818cf8' }}>1</span>
-                          </div>
-                          <span className="font-label text-[10px] uppercase font-bold" style={{ color: '#818cf8' }}>Import</span>
-                        </div>
-                        <div className="w-8 h-px" style={{ background: 'var(--theme-border)' }} />
-                        <div className="flex items-center gap-1.5 opacity-30">
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'var(--theme-glass-bg)', border: '1px solid var(--theme-border)' }}>
-                            <span className="font-label text-[10px] font-bold" style={{ color: 'var(--theme-text-faint)' }}>2</span>
-                          </div>
-                          <span className="font-label text-[10px] uppercase font-bold" style={{ color: 'var(--theme-text-faint)' }}>Optimize & Save</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-label text-[11px] uppercase tracking-[0.25em] font-bold" style={{ color: '#ef4444' }}>
+                    className="bg-white/40 backdrop-blur-2xl rounded-[48px] border border-white/60 shadow-[0_20px_64px_rgba(0,0,0,0.06)] p-10 md:p-14 relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col max-w-2xl">
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="font-label text-[11px] uppercase tracking-[0.25em] font-bold text-red-500">
                           <span className="inline-flex items-center gap-1.5">
                             <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>smart_display</span>
                             Import YouTube Playlist
                           </span>
                         </p>
                       </div>
-                      <h2 className="font-serif text-2xl md:text-3xl font-bold mb-2" style={{ color: 'var(--theme-text-heading)' }}>
-                        Turn any playlist into a <span className="italic" style={{ color: '#ef4444' }}>study plan</span>
+                      <h2 className="text-3xl md:text-5xl font-medium text-gray-900 mb-2 leading-tight">
+                        Turn any playlist into a study plan
                       </h2>
-                      <p className="font-body text-sm mb-6" style={{ color: 'var(--theme-text-muted)' }}>
+                      <p className="text-gray-500 mb-8">
                         Paste a YouTube playlist link and we'll organize it into daily study sessions.
                       </p>
 
                       {/* Playlist URL Input */}
-                      <div className="space-y-4 max-w-2xl">
-                        <div className="flex-1 flex items-center rounded-xl px-4 py-3" style={{
-                          background: 'var(--dash-input-bg)',
-                          border: '1px solid var(--dash-input-border)',
-                        }}>
-                          <span className="material-symbols-outlined mr-3" style={{ color: 'var(--theme-text-faint)', fontSize: '20px' }}>link</span>
+                      <div className="space-y-4">
+                        <div className="flex-1 flex items-center bg-gray-50 rounded-full px-6 py-4 border border-gray-200 focus-within:border-black transition-colors">
+                          <span className="material-symbols-outlined text-gray-400 mr-3">link</span>
                           <input
                             ref={playlistInputRef}
+                            id="playlistUrlInput"
                             type="text"
-                            className="flex-1 bg-transparent border-none outline-none font-body text-sm"
-                            style={{ color: 'var(--theme-text-heading)' }}
+                            className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder:text-gray-400"
                             placeholder="https://youtube.com/playlist?list=PLxxxxxx"
                             value={playlistUrl}
                             onChange={e => { setPlaylistUrl(e.target.value); setPlaylistError(''); }}
@@ -1306,12 +1180,9 @@ export default function Dashboard() {
 
                         {/* Hours Per Day + Submit */}
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                          <div className="flex items-center gap-3 rounded-xl px-4 py-3" style={{
-                            background: 'var(--dash-input-bg)',
-                            border: '1px solid var(--dash-input-border)',
-                          }}>
-                            <span className="material-symbols-outlined" style={{ color: 'var(--theme-text-faint)', fontSize: '20px' }}>schedule</span>
-                            <span className="font-label text-xs" style={{ color: 'var(--theme-text-muted)' }}>Hours/day:</span>
+                          <div className="flex items-center gap-3 bg-gray-50 rounded-full px-6 py-4 border border-gray-200">
+                            <span className="material-symbols-outlined text-gray-400">schedule</span>
+                            <span className="text-sm font-medium text-gray-500">Hours/day:</span>
                             <input
                               type="number"
                               min="0.5"
@@ -1319,31 +1190,29 @@ export default function Dashboard() {
                               step="0.5"
                               value={hoursPerDay}
                               onChange={e => setHoursPerDay(parseFloat(e.target.value) || 2)}
-                              className="w-16 bg-transparent border-none outline-none font-headline text-lg font-bold text-center"
-                              style={{ color: 'var(--theme-text-heading)' }}
+                              className="w-16 bg-transparent border-none outline-none font-bold text-gray-900 text-center"
                             />
                           </div>
 
                           <button
                             onClick={handleImportPlaylist}
                             disabled={!playlistUrl.trim()}
-                            className="px-7 py-3 rounded-xl font-label text-sm font-bold text-white disabled:opacity-30 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shrink-0"
-                            style={{
-                              background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                              boxShadow: '0 0 20px rgba(239,68,68,0.3)',
-                            }}
+                            className="group relative cursor-pointer px-8 py-4 bg-red-500 flex gap-2 rounded-full overflow-hidden shrink-0 items-center justify-center disabled:opacity-50"
                           >
-                            <span className="material-symbols-outlined text-base">download</span>
-                            Build Study Plan
+                            <div className='absolute inset-0 bg-red-600 translate-y-full group-hover:translate-y-0 transition-transform duration-500'></div>
+                            <div className='relative z-10 flex gap-2 text-white font-medium items-center'>
+                              <span className="material-symbols-outlined text-base">download</span>
+                              Build Study Plan
+                            </div>
                           </button>
                         </div>
                       </div>
 
                       {/* Error Message */}
                       {playlistError && (
-                        <div className="mt-4 p-3 rounded-xl border border-red-500/20 bg-red-500/5 flex items-start gap-3">
-                          <span className="material-symbols-outlined text-red-400 text-lg">error</span>
-                          <p className="font-body text-xs text-red-400">{playlistError}</p>
+                        <div className="mt-6 p-4 rounded-2xl border border-red-100 bg-red-50 flex items-start gap-3">
+                          <span className="material-symbols-outlined text-red-500 text-xl">error</span>
+                          <p className="text-sm text-red-500 font-medium">{playlistError}</p>
                         </div>
                       )}
                     </div>
@@ -1355,11 +1224,7 @@ export default function Dashboard() {
 
           {/* ══ OVERALL PROGRESS ══ */}
           <section className="mb-6">
-            <div className="rounded-2xl p-6 md:px-8 md:py-7" style={{
-              background: 'var(--dash-card-bg)',
-              border: '1px solid var(--dash-card-border)',
-              backdropFilter: 'blur(20px)',
-            }}>
+            <div className="bg-white/40 backdrop-blur-2xl rounded-[40px] p-10 shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/60" >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <SectionHeader icon="donut_large" title="Overall Progress" subtitle="Your journey so far" color="#6366f1" />
                 {loading ? (
@@ -1378,20 +1243,18 @@ export default function Dashboard() {
                     <div className="relative shrink-0">
                       <ProgressRing pct={progressPct} size={88} stroke={6} color="#6366f1" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="font-headline text-xl font-black" style={{ color: 'var(--color-primary)' }}>{progressPct}%</span>
+                        <span className="text-xl font-bold text-gray-900">{progressPct}%</span>
                       </div>
                     </div>
                     <div>
-                      <p className="font-body text-balance" style={{ color: 'var(--theme-text-body)' }}>
-                        <span className="font-bold text-lg" style={{ color: 'var(--theme-text-heading)' }}>{stats.completedSubtopics}</span> of {stats.totalSubtopics} topics completed
+                      <p className="text-gray-600 text-balance">
+                        <span className="font-bold text-xl text-gray-900">{stats.completedSubtopics}</span> of {stats.totalSubtopics} topics completed
                       </p>
-                      <div className="flex gap-2.5 mt-2.5 flex-wrap">
-                        <span className="inline-block px-3 py-1 rounded-full font-label text-[11px] font-bold"
-                          style={{ background: 'rgba(99,102,241,0.08)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.12)' }}>
+                      <div className="flex gap-2.5 mt-3 flex-wrap">
+                        <span className="inline-block px-4 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
                           {activeCourses} active
                         </span>
-                        <span className="inline-block px-3 py-1 rounded-full font-label text-[11px] font-bold"
-                          style={{ background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.12)' }}>
+                        <span className="inline-block px-4 py-1 rounded-full text-[11px] font-bold bg-green-50 text-green-600 border border-green-100">
                           {completedCourses} done
                         </span>
                       </div>
@@ -1405,11 +1268,7 @@ export default function Dashboard() {
           {/* ══ MY COURSES (AI-Generated) ══ */}
           {activeTab === 'forge' && (
           <section className="mb-10">
-            <div className="rounded-2xl p-6 md:p-8" style={{
-              background: 'var(--dash-card-bg)',
-              border: '1px solid var(--dash-card-border)',
-              backdropFilter: 'blur(20px)',
-            }}>
+            <div className="bg-white/40 backdrop-blur-2xl rounded-[40px] p-10 shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/60" >
               <SectionHeader icon="auto_stories" title="My Courses" subtitle="Continue where you left off" color="#818cf8" />
               
               {loading ? (
@@ -1422,7 +1281,7 @@ export default function Dashboard() {
                   <p className="font-body text-sm" style={{ color: 'var(--theme-text-muted)' }}>No courses yet. Forge one above!</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 max-h-[760px] overflow-y-auto custom-scroll pr-2 -mr-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[1000px] overflow-y-auto custom-scroll pr-2 -mr-2">
                   {courses.filter(c => c.sourceType !== 'playlist').map((course, i) => (
                     <CourseCard key={course._id} course={course} palette={CARD_PALETTES[i % CARD_PALETTES.length]} index={i} onOpen={() => nav(`/course/${course._id}`)} onDeleteClick={setCourseToDelete} />
                   ))}
@@ -1435,11 +1294,7 @@ export default function Dashboard() {
           {/* ══ MY PLAYLIST COURSES ══ */}
           {activeTab === 'playlist' && (
           <section className="mb-10">
-            <div className="rounded-2xl p-6 md:p-8" style={{
-              background: 'var(--dash-card-bg)',
-              border: '1px solid var(--dash-card-border)',
-              backdropFilter: 'blur(20px)',
-            }}>
+            <div className="bg-white/40 backdrop-blur-2xl rounded-[40px] p-10 shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/60" >
               <SectionHeader icon="playlist_play" title="My Playlist Courses" subtitle="Imported from YouTube" color="#ef4444" />
               
               {loading ? (
@@ -1452,64 +1307,71 @@ export default function Dashboard() {
                   <p className="font-body text-sm" style={{ color: 'var(--theme-text-muted)' }}>No imported playlists yet. Paste a YouTube link above!</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 max-h-[760px] overflow-y-auto custom-scroll pr-2 -mr-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[1000px] overflow-y-auto custom-scroll pr-2 -mr-2">
                   {playlistCourses.map((course, i) => {
-                    const palette = { from: '#450a0a', to: '#dc2626', icon: '📺' };
+                    const palette = { from: '#ef4444', to: '#dc2626', icon: '📺' };
+                    const pct = course.progress;
                     return (
                       <motion.div
                         key={course._id}
                         initial={{ opacity: 0, y: 16 }}
+                        whileHover={{ y: -8, scale: 1.02 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.05, duration: 0.4 }}
+                        transition={{ delay: i * 0.05, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
                         className="relative w-full cursor-pointer group"
-                        onClick={() => nav(`/playlist/${course._id}`)}
                       >
-                        <div className="relative overflow-hidden rounded-2xl transition-all duration-300 group-hover:-translate-y-1.5"
-                          style={{
-                            background: `linear-gradient(150deg, ${palette.from} 0%, ${palette.to} 100%)`,
-                            boxShadow: `0 8px 28px ${palette.from}30`,
-                            height: '240px'
-                          }}>
-                          <div className="absolute inset-0" style={{
-                            backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%)',
-                          }} />
-                          <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full" style={{ background: 'rgba(255,255,255,0.04)' }} />
-                          <div className="absolute -bottom-8 -left-8 w-36 h-36 rounded-full" style={{ background: 'rgba(0,0,0,0.1)' }} />
+                        <div className="relative overflow-hidden rounded-[40px] bg-white/40 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-500 group-hover:shadow-[0_20px_48px_rgba(0,0,0,0.08)] h-[260px]">
+                          
+                          {/* Glow effect on hover */}
+                          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                               style={{ background: `radial-gradient(circle at 50% 0%, #ef444410, transparent 70%)` }} />
 
                           {/* Delete Button */}
                           <button 
-                            onClick={(e) => { e.stopPropagation(); setCourseToDelete(course); }}
-                            className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center bg-black/20 hover:bg-red-500/80 hover:scale-110 transition-all z-20 opacity-0 group-hover:opacity-100"
+                             onClick={(e) => { e.stopPropagation(); setCourseToDelete(course); }}
+                             className="absolute top-6 right-6 w-9 h-9 rounded-full flex items-center justify-center bg-white/60 backdrop-blur-md border border-white/80 hover:bg-red-500 hover:text-white transition-all z-20 opacity-0 group-hover:opacity-100 text-gray-500 shadow-sm"
                           >
-                            <span className="material-symbols-outlined text-[16px] text-white/90">delete</span>
+                             <span className="material-symbols-outlined text-[18px]">delete</span>
                           </button>
 
-                          <div className="relative z-10 p-6 h-full flex flex-col justify-between">
+                          <div className="relative z-10 p-8 h-full flex flex-col justify-between" onClick={() => nav(`/playlist/${course._id}`)}>
                             <div>
-                              <div className="flex items-center gap-2 mb-3">
-                                <span className="text-2xl">{palette.icon}</span>
-                                <span className="px-2 py-0.5 rounded-full font-label text-[9px] font-bold uppercase bg-white/10 text-white/80 border border-white/10">
-                                  {course.totalDays} days
-                                </span>
-                              </div>
-                              <h3 className="font-headline text-base md:text-lg font-bold text-white leading-snug line-clamp-3">
+                              <h3 className="font-bold text-[20px] text-gray-900 leading-[1.2] tracking-tight line-clamp-2 mb-4 group-hover:text-red-600 transition-colors">
                                 {course.course_title}
                               </h3>
+                              <div className="flex items-center gap-3">
+                                <span className="px-3 py-1 rounded-full text-[9px] font-bold uppercase bg-white/50 text-gray-500 border border-white/80 tracking-wider">
+                                  {course.totalDays} days
+                                </span>
+                                <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
+                              </div>
                             </div>
                             <div>
-                              <div className="flex items-center justify-between mb-3">
-                                <span className="text-white/60 text-[11px] font-label uppercase tracking-wider">
-                                  {course.totalVideos} videos
+                              <div className="flex items-end justify-between mb-4">
+                                <div className="flex flex-col">
+                                  <span className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Playlist Progress</span>
+                                  <p className="text-gray-400 text-[11px] font-medium">
+                                    {course.completedDays}/{course.totalDays} days completed
+                                  </p>
+                                </div>
+                                <span className="text-3xl font-black italic tracking-tighter text-gray-900/10 group-hover:text-red-600/20 transition-all duration-500">
+                                  {pct}%
                                 </span>
-                                <span className="text-white font-label text-sm font-bold">{course.progress}%</span>
                               </div>
-                              <div className="h-1.5 rounded-full bg-black/20 overflow-hidden">
-                                <motion.div className="h-full rounded-full bg-white/90"
-                                  initial={{ width: 0 }} animate={{ width: `${course.progress}%` }} transition={{ duration: 0.8, delay: i * 0.1 }} />
+                              <div className="h-2 rounded-full bg-black/5 overflow-hidden p-[1px]">
+                                <motion.div className="h-full rounded-full relative" 
+                                  style={{ 
+                                    background: `linear-gradient(90deg, #ef4444, #f87171)`,
+                                    boxShadow: `0 0 12px rgba(239,68,68,0.3)`
+                                  }}
+                                  initial={{ width: 0 }} 
+                                  animate={{ width: `${pct}%` }} 
+                                  transition={{ duration: 1, delay: i * 0.1, ease: "circOut" }} 
+                                >
+                                  <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" 
+                                       style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)' }} />
+                                </motion.div>
                               </div>
-                              <p className="text-white/50 text-xs font-label mt-3">
-                                {course.completedDays}/{course.totalDays} days completed
-                              </p>
                             </div>
                           </div>
                         </div>
@@ -1530,11 +1392,7 @@ export default function Dashboard() {
 
             {/* Weekly Activity */}
             <div className="lg:col-span-4">
-              <div className="rounded-2xl p-6 h-full" style={{
-                background: 'var(--dash-card-bg)',
-                border: '1px solid var(--dash-card-border)',
-                backdropFilter: 'blur(20px)',
-              }}>
+              <div className="bg-white rounded-[32px] border border-gray-100 p-6 h-full shadow-sm" >
                 <SectionHeader icon="bar_chart_4_bars" title="This Week" subtitle="7 days of focus" color="#a78bfa" />
                 {loading ? (
                   <div className="flex items-end gap-2.5 h-28">
@@ -1555,11 +1413,7 @@ export default function Dashboard() {
 
             {/* Mini Calendar */}
             <div className="lg:col-span-3">
-              <div className="rounded-2xl p-6 h-full" style={{
-                background: 'var(--dash-card-bg)',
-                border: '1px solid var(--dash-card-border)',
-                backdropFilter: 'blur(20px)',
-              }}>
+              <div className="bg-white rounded-[32px] border border-gray-100 p-6 h-full shadow-sm" >
                 {loading ? (
                   <div className="h-full w-full flex flex-col pt-2">
                     <div className="flex justify-between items-center mb-4">
@@ -1578,11 +1432,7 @@ export default function Dashboard() {
 
             {/* Progress Breakdown */}
             <div className="lg:col-span-5">
-              <div className="rounded-2xl p-6 h-full" style={{
-                background: 'var(--dash-card-bg)',
-                border: '1px solid var(--dash-card-border)',
-                backdropFilter: 'blur(20px)',
-              }}>
+              <div className="bg-white rounded-[32px] border border-gray-100 p-6 h-full shadow-sm" >
                 <SectionHeader icon="timeline" title="Progress Breakdown" color="#fbbf24" />
                 {loading ? (
                   <div className="space-y-3 pt-2">{[1,2,3].map(i => <div key={i} className="h-6 skeleton rounded-full" />)}</div>
@@ -1625,7 +1475,7 @@ export default function Dashboard() {
           </section>
           
           {/* ══ STATS ROW (MOVED TO BOTTOM) ══ */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
             {loading ? (
               [1,2,3].map(i => <div key={i} className="h-64 lg:h-72 skeleton rounded-2xl" />)
             ) : (

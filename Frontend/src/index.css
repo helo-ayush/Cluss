@@ -325,6 +325,47 @@
   to { filter: blur(0); opacity: 1; transform: translateY(0); }
 }
 
+/* ══════════════════════════════════════════════════
+   New Landing Page Animations (Cluss Design)
+   ══════════════════════════════════════════════════ */
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Dot bullet used in reference sections */
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: black;
+  flex-shrink: 0;
+}
+
+/* Rounded 4xl for reference cards */
+.rounded-4xl {
+  border-radius: 2rem;
+}
+
+/* Perspective utility for 3D card effect */
+.perspective-near {
+  perspective: 1000px;
+}
+
 video {
   object-fit: cover;
   width: 100%;

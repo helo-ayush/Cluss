@@ -7,28 +7,17 @@ export function useTheme() {
 }
 
 export default function ThemeProvider({ children }) {
-  const [isDark, setIsDark] = useState(() => {
-    const saved = localStorage.getItem('focusforge-theme');
-    if (saved) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
   useEffect(() => {
     const root = document.documentElement;
-    if (isDark) {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else {
-      root.classList.add('light');
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('focusforge-theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
+    root.classList.add('light');
+    root.classList.remove('dark');
+    localStorage.setItem('focusforge-theme', 'light');
+  }, []);
 
-  const toggleTheme = () => setIsDark(prev => !prev);
+  const toggleTheme = () => { /* disabled */ };
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+    <ThemeContext.Provider value={{ isDark: false, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
