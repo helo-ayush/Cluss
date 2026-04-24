@@ -83,14 +83,14 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
   };
 
   return (
-    <div className="course-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6" onClick={(event) => {
+    <div className="course-modal-backdrop fixed inset-0 z-[1100] flex items-stretch justify-center p-0 md:items-center md:p-6" onClick={(event) => {
       if (event.target === event.currentTarget) onClose();
     }}>
       <motion.div
         initial={{ opacity: 0, y: 22, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.28, ease: 'easeOut' }}
-        className="course-modal-panel flex h-full w-full max-w-5xl flex-col overflow-hidden md:h-auto md:max-h-[90vh] md:rounded-[2rem]"
+        className="course-modal-panel flex h-screen w-full max-w-6xl flex-col overflow-hidden md:h-[min(92vh,960px)] md:rounded-[2rem]"
       >
         <div className="flex items-start justify-between gap-4 border-b border-black/5 px-5 py-5 md:px-7">
           <div>
@@ -143,9 +143,9 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-5 py-6 md:px-7">
+        <div className="custom-scroll flex-1 overflow-y-auto overscroll-contain px-4 py-5 md:px-8 md:py-6">
           {activeTab === 'theory' && (
-            <div className="mx-auto max-w-3xl space-y-5">
+            <div className="mx-auto w-full max-w-4xl space-y-5">
               {(checkpoint?.theoryQuestions || []).map((question, index) => {
                 const feedback = result?.theoryScores?.find((entry) => entry.questionIndex === index);
                 return (
@@ -198,7 +198,7 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
           )}
 
           {activeTab === 'coding' && checkpoint?.questionType === 'mixed' && (
-            <div className="mx-auto max-w-3xl space-y-5">
+            <div className="mx-auto w-full max-w-4xl space-y-5">
               <div className="course-surface rounded-[1.7rem] p-5">
                 <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: '#4338ca' }}>
                   Coding Challenge
@@ -291,7 +291,7 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/5 px-5 py-5 md:px-7">
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-t border-black/5 px-5 py-5 md:px-7">
           {result ? (
             <div className="course-stat-chip" style={{ color: result.passed ? '#15803d' : '#b91c1c' }}>
               {result.passed ? 'Checkpoint passed' : 'Keep refining your answers'}
@@ -397,9 +397,9 @@ export default function PlaylistLearnHub() {
       const data = await res.json();
       if (data.success) {
         setCourse(data.course);
-        const day = data.course.days?.[dayIndex];
-        if (day?.checkpoint?.status === 'passed' || day?.status === 'ready') {
-          setWatchedSet(new Set(day.videos.map((_, index) => index)));
+        const d = data.course.days?.[dayIndex];
+        if (d?.checkpoint?.status === 'passed' || d?.status === 'ready') {
+          setWatchedSet(new Set(d.videos.map((_, i) => i)));
         }
       }
     } catch (err) {
@@ -420,30 +420,24 @@ export default function PlaylistLearnHub() {
     }
   }, [user]);
 
-  useEffect(() => {
-    setActiveVideoIdx(0);
-  }, [courseId, dayIndex]);
+  useEffect(() => { setActiveVideoIdx(0); }, [courseId, dayIndex]);
+  useEffect(() => { fetchCourse(); fetchUsage(); }, [fetchCourse, fetchUsage, isLoaded]);
 
   useEffect(() => {
-    fetchCourse();
-    fetchUsage();
-  }, [fetchCourse, fetchUsage, isLoaded]);
+    const shouldLock = loadingCheckpoint || showCheckpoint;
+    if (!shouldLock) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [loadingCheckpoint, showCheckpoint]);
 
   const handleMarkWatched = () => {
     let nextSet;
-    setWatchedSet((prev) => {
-      nextSet = new Set(prev);
-      nextSet.add(activeVideoIdx);
-      return nextSet;
-    });
-
-    const day = course?.days?.[dayIndex];
-    if (!day) return;
-    for (let index = activeVideoIdx + 1; index < day.videos.length; index += 1) {
-      if (!nextSet?.has(index)) {
-        setActiveVideoIdx(index);
-        return;
-      }
+    setWatchedSet((prev) => { nextSet = new Set(prev); nextSet.add(activeVideoIdx); return nextSet; });
+    const curDay = course?.days?.[dayIndex];
+    if (!curDay) return;
+    for (let i = activeVideoIdx + 1; i < curDay.videos.length; i += 1) {
+      if (!nextSet?.has(i)) { setActiveVideoIdx(i); return; }
     }
   };
 
@@ -452,45 +446,18 @@ export default function PlaylistLearnHub() {
     try {
       const res = await fetch(`${API_BASE}/api/course/${courseId}/day/${dayIndex}/checkpoint`);
       const data = await res.json();
-      if (data.success) {
-        setCheckpointData(data.checkpoint);
-        setShowCheckpoint(true);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingCheckpoint(false);
-    }
+      if (data.success) { setCheckpointData(data.checkpoint); setShowCheckpoint(true); }
+    } catch (err) { console.error(err); }
+    finally { setLoadingCheckpoint(false); }
   };
 
-  if (loading) {
-    return <LoadingState />;
-  }
-
+  // ── ALL hooks called. Now derive values. ──
   const day = course?.days?.[dayIndex];
-  if (!day) {
-    return (
-      <div className="course-shell flex min-h-screen items-center justify-center px-6">
-        <div className="course-surface max-w-xl rounded-[2rem] px-8 py-10 text-center">
-          <h1 className="font-serif text-4xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
-            Day not found
-          </h1>
-          <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
-            This study day could not be loaded. Return to the playlist overview and pick another one.
-          </p>
-          <Link to={`/playlist/${courseId}`} className="course-primary-button mt-6">
-            Back to Study Plan
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const videos = day.videos || [];
+  const videos = day?.videos || [];
   const activeVideo = videos[activeVideoIdx];
-  const allWatched = watchedSet.size >= videos.length;
-  const checkpointStatus = day.checkpoint?.status || 'locked';
-  const dayCompleted = day.status === 'ready' || checkpointStatus === 'passed';
+  const allWatched = watchedSet.size >= videos.length && videos.length > 0;
+  const checkpointStatus = day?.checkpoint?.status || 'locked';
+  const dayCompleted = day?.status === 'ready' || checkpointStatus === 'passed';
   const hasTutorAccess = usageData ? usageData.plan === 'pro' || usageData.plan === 'ultra' : false;
 
   const dayProgress = useMemo(() => {
@@ -498,108 +465,88 @@ export default function PlaylistLearnHub() {
     return Math.round((watchedSet.size / videos.length) * 100);
   }, [videos.length, watchedSet.size]);
 
+  // ── Early returns AFTER all hooks ──
+  if (loading) return <LoadingState />;
+
+  if (!day) {
+    return (
+      <div className="course-shell flex min-h-screen items-center justify-center px-6">
+        <div className="course-surface max-w-xl rounded-[2rem] px-8 py-10 text-center">
+          <h1 className="font-serif text-4xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>Day not found</h1>
+          <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+            This study day could not be loaded. Return to the playlist overview and pick another one.
+          </p>
+          <Link to={`/playlist/${courseId}`} className="course-primary-button mt-6">Back to Study Plan</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="course-shell">
         {showCheckpoint && checkpointData && (
-          <CheckpointModal
-            checkpoint={checkpointData}
-            courseId={courseId}
-            dayIndex={dayIndex}
-            clerkId={user?.id}
-            onClose={() => {
-              setShowCheckpoint(false);
-              setCheckpointData(null);
-            }}
-            onSubmitted={() => fetchCourse()}
-          />
+          <CheckpointModal checkpoint={checkpointData} courseId={courseId} dayIndex={dayIndex} clerkId={user?.id}
+            onClose={() => { setShowCheckpoint(false); setCheckpointData(null); }}
+            onSubmitted={() => fetchCourse()} />
         )}
 
         {loadingCheckpoint && (
-          <div className="course-modal-backdrop fixed inset-0 z-40 flex items-center justify-center">
+          <div className="course-modal-backdrop fixed inset-0 z-[1090] flex items-center justify-center">
             <div className="course-surface flex flex-col items-center gap-4 rounded-[2rem] px-8 py-8 text-center">
               <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#111827] border-t-transparent" />
-              <p className="font-body text-sm" style={{ color: 'var(--theme-text-body)' }}>
-                Preparing checkpoint questions...
-              </p>
+              <p className="font-body text-sm" style={{ color: 'var(--theme-text-body)' }}>Preparing checkpoint questions...</p>
             </div>
           </div>
         )}
 
         <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 overflow-x-hidden px-3 pb-24 pt-24 md:gap-8 md:px-6 md:pb-20 md:pt-28 lg:px-8">
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: 'easeOut' }}
-            className="course-hero-card overflow-hidden rounded-[2rem] px-5 py-6 md:rounded-[2.5rem] md:px-10 md:py-10"
-          >
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: 'easeOut' }}
+            className="course-hero-card overflow-hidden rounded-[2rem] px-5 py-6 md:rounded-[2.5rem] md:px-10 md:py-10">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-3">
                 <Link to={`/playlist/${courseId}`} className="course-outline-button">
-                  <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                  Study Plan
+                  <span className="material-symbols-outlined text-[18px]">arrow_back</span>Study Plan
                 </Link>
                 <span className="course-kicker">
-                  <span className="material-symbols-outlined text-[14px]">today</span>
-                  Day {day.dayNumber}
+                  <span className="material-symbols-outlined text-[14px]">today</span>Day {day.dayNumber}
                 </span>
               </div>
               <div className="course-stat-chip">
-                <span className="material-symbols-outlined text-[18px]" style={{ color: '#4338ca' }}>
-                  play_lesson
-                </span>
+                <span className="material-symbols-outlined text-[18px]" style={{ color: '#4338ca' }}>play_lesson</span>
                 {watchedSet.size}/{videos.length} watched
               </div>
             </div>
 
             <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[1.4fr_0.9fr]">
               <div className="min-w-0">
-                <p className="font-label text-[11px] font-bold uppercase tracking-[0.24em]" style={{ color: 'rgba(15, 23, 42, 0.44)' }}>
-                  Active Video
-                </p>
+                <p className="font-label text-[11px] font-bold uppercase tracking-[0.24em]" style={{ color: 'rgba(15, 23, 42, 0.44)' }}>Active Video</p>
                 <h1 className="mt-4 break-words font-serif text-[2.35rem] font-semibold leading-[1.02] sm:text-5xl md:text-6xl" style={{ color: 'var(--theme-text-heading)' }}>
                   {activeVideo?.title || `Day ${day.dayNumber}`}
                 </h1>
                 <p className="mt-4 max-w-3xl font-body text-sm leading-7 md:text-[15px]" style={{ color: 'var(--theme-text-body)' }}>
-                  Move through the videos in order, mark them off as you finish, then take the
-                  checkpoint to complete the day.
+                  Move through the videos in order, mark them off as you finish, then take the checkpoint to complete the day.
                 </p>
               </div>
 
               <div className="course-surface-soft min-w-0 rounded-[1.75rem] p-5 md:rounded-[2rem] md:p-6">
-                <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
-                  Day Snapshot
-                </p>
+                <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>Day Snapshot</p>
                 <div className="mt-5 grid gap-3">
                   <div className="course-surface rounded-[1.3rem] px-4 py-4">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
-                        Progress
-                      </span>
-                      <span className="font-label text-xs font-bold" style={{ color: '#4338ca' }}>
-                        {dayProgress}%
-                      </span>
+                      <span className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>Progress</span>
+                      <span className="font-label text-xs font-bold" style={{ color: '#4338ca' }}>{dayProgress}%</span>
                     </div>
-                    <div className="mt-3 course-progress-track">
-                      <div className="course-progress-fill" style={{ width: `${dayProgress}%` }} />
-                    </div>
+                    <div className="mt-3 course-progress-track"><div className="course-progress-fill" style={{ width: `${dayProgress}%` }} /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="course-surface rounded-[1.3rem] px-4 py-4">
-                      <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
-                        Videos
-                      </p>
-                      <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
-                        {videos.length}
-                      </p>
+                      <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>Videos</p>
+                      <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>{videos.length}</p>
                     </div>
                     <div className="course-surface rounded-[1.3rem] px-4 py-4">
-                      <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
-                        Duration
-                      </p>
-                      <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
-                        {formatDuration(day.totalDuration)}
-                      </p>
+                      <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>Duration</p>
+                      <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>{formatDuration(day.totalDuration)}</p>
                     </div>
                   </div>
                 </div>
@@ -613,91 +560,60 @@ export default function PlaylistLearnHub() {
                 <div className="course-surface w-full overflow-hidden rounded-[1.75rem] p-2.5 md:rounded-[2.2rem] md:p-4">
                   {activeVideo?.videoId ? (
                     <div className="aspect-video overflow-hidden rounded-[1.2rem] bg-black md:rounded-[1.6rem]">
-                      <iframe
-                        className="h-full w-full"
+                      <iframe className="h-full w-full"
                         src={`https://www.youtube.com/embed/${activeVideo.videoId}?rel=0&modestbranding=1&autohide=1&showinfo=0`}
                         title={activeVideo.title}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
+                        allowFullScreen />
                     </div>
                   ) : (
                     <div className="flex aspect-video flex-col items-center justify-center rounded-[1.2rem] bg-[#f8fafc] px-5 text-center md:rounded-[1.6rem] md:px-6">
-                      <span className="material-symbols-outlined text-[56px]" style={{ color: 'rgba(15, 23, 42, 0.28)' }}>
-                        videocam_off
-                      </span>
-                      <p className="mt-4 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
-                        No video is attached to this item.
-                      </p>
+                      <span className="material-symbols-outlined text-[56px]" style={{ color: 'rgba(15, 23, 42, 0.28)' }}>videocam_off</span>
+                      <p className="mt-4 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>No video is attached to this item.</p>
                     </div>
                   )}
                 </div>
 
                 <div className="grid min-w-0 gap-4 md:grid-cols-[1.1fr_0.9fr]">
                   <div className="course-surface min-w-0 rounded-[1.75rem] p-5 md:rounded-[2rem] md:p-6">
-                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
-                      Video Source
-                    </p>
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>Video Source</p>
                     <div className="mt-4 flex items-start gap-4">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#fef2f2] text-[#dc2626]">
                         <span className="material-symbols-outlined text-[22px]">smart_display</span>
                       </div>
                       <div className="min-w-0">
-                        <p className="font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
-                          {activeVideo?.channel || 'YouTube lesson'}
-                        </p>
+                        <p className="font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>{activeVideo?.channel || 'YouTube lesson'}</p>
                         <p className="mt-2 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
-                          Duration {formatDuration(activeVideo?.duration)}. Watch it fully, then mark it as
-                          complete to keep your study streak moving.
+                          Duration {formatDuration(activeVideo?.duration)}. Watch it fully, then mark it as complete to keep your study streak moving.
                         </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="course-surface min-w-0 rounded-[1.75rem] p-5 md:rounded-[2rem] md:p-6">
-                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
-                      Day Action
-                    </p>
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>Day Action</p>
                     <div className="mt-4 flex flex-col gap-4">
                       {watchedSet.has(activeVideoIdx) ? (
                         <div className="course-surface-soft flex items-center gap-3 rounded-[1.4rem] px-4 py-4">
-                          <span className="material-symbols-outlined text-[22px]" style={{ color: '#15803d' }}>
-                            check_circle
-                          </span>
+                          <span className="material-symbols-outlined text-[22px]" style={{ color: '#15803d' }}>check_circle</span>
                           <div>
-                            <p className="font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
-                              Video watched
-                            </p>
-                            <p className="font-body text-xs" style={{ color: 'var(--theme-text-body)' }}>
-                              This video is already checked off.
-                            </p>
+                            <p className="font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>Video watched</p>
+                            <p className="font-body text-xs" style={{ color: 'var(--theme-text-body)' }}>This video is already checked off.</p>
                           </div>
                         </div>
                       ) : (
                         <button type="button" onClick={handleMarkWatched} className="course-primary-button w-full justify-center">
-                          <span className="material-symbols-outlined text-[18px]">task_alt</span>
-                          Mark as Watched
+                          <span className="material-symbols-outlined text-[18px]">task_alt</span>Mark as Watched
                         </button>
                       )}
-
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <button
-                          type="button"
-                          onClick={() => dayIndex > 0 && navigate(`/playlist/${courseId}/day/${dayIndex - 1}`)}
-                          disabled={dayIndex <= 0}
-                          className="course-outline-button justify-center disabled:opacity-40"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                          Previous Day
+                        <button type="button" onClick={() => dayIndex > 0 && navigate(`/playlist/${courseId}/day/${dayIndex - 1}`)}
+                          disabled={dayIndex <= 0} className="course-outline-button justify-center disabled:opacity-40">
+                          <span className="material-symbols-outlined text-[18px]">arrow_back</span>Previous Day
                         </button>
                         {dayCompleted && dayIndex < (course?.days?.length || 0) - 1 && (
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/playlist/${courseId}/day/${dayIndex + 1}`)}
-                            className="course-outline-button justify-center"
-                          >
-                            Next Day
-                            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                          <button type="button" onClick={() => navigate(`/playlist/${courseId}/day/${dayIndex + 1}`)} className="course-outline-button justify-center">
+                            Next Day<span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                           </button>
                         )}
                       </div>
@@ -709,88 +625,50 @@ export default function PlaylistLearnHub() {
 
             <aside className="min-w-0 lg:col-span-4">
               <div className="space-y-6 lg:sticky lg:top-28">
-                <div className="course-surface min-w-0 rounded-[1.75rem] p-5 md:rounded-[2.2rem] md:p-6">
+                <div id="playlist-day-queue" className="course-surface min-w-0 rounded-[1.75rem] p-5 md:rounded-[2.2rem] md:p-6">
                   <div className="flex min-w-0 items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
-                        Video Queue
-                      </p>
-                      <h2 className="mt-2 break-words font-serif text-[1.8rem] font-semibold leading-tight md:text-2xl" style={{ color: 'var(--theme-text-heading)' }}>
-                        Day {day.dayNumber}
-                      </h2>
+                      <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>Video Queue</p>
+                      <h2 className="mt-2 break-words font-serif text-[1.8rem] font-semibold leading-tight md:text-2xl" style={{ color: 'var(--theme-text-heading)' }}>Day {day.dayNumber}</h2>
                     </div>
                     <div className="shrink-0 rounded-full bg-[#eef2ff] px-3 py-2 text-[#4338ca]">
-                      <span className="font-label text-[11px] font-bold uppercase tracking-[0.18em]">
-                        {dayProgress}%
-                      </span>
+                      <span className="font-label text-[11px] font-bold uppercase tracking-[0.18em]">{dayProgress}%</span>
                     </div>
                   </div>
-
                   <div className="mt-5 space-y-2.5">
                     {videos.map((video, index) => (
-                      <VideoListItem
-                        key={video.videoId || index}
-                        video={video}
-                        index={index}
-                        isActive={index === activeVideoIdx}
-                        isWatched={watchedSet.has(index)}
-                        onClick={(clickedIndex) => setActiveVideoIdx(clickedIndex)}
-                      />
+                      <VideoListItem key={video.videoId || index} video={video} index={index}
+                        isActive={index === activeVideoIdx} isWatched={watchedSet.has(index)}
+                        onClick={(clickedIndex) => setActiveVideoIdx(clickedIndex)} />
                     ))}
                   </div>
                 </div>
 
-                <div className="course-surface min-w-0 rounded-[1.75rem] p-5 md:rounded-[2.2rem] md:p-6">
-                  <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
-                    Day Checkpoint
-                  </p>
-                  <h2 className="mt-2 font-serif text-[1.8rem] font-semibold leading-tight md:text-2xl" style={{ color: 'var(--theme-text-heading)' }}>
-                    Validate the day
-                  </h2>
+                <div id="playlist-day-checkpoint" className="course-surface min-w-0 rounded-[1.75rem] p-5 md:rounded-[2.2rem] md:p-6">
+                  <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>Day Checkpoint</p>
+                  <h2 className="mt-2 font-serif text-[1.8rem] font-semibold leading-tight md:text-2xl" style={{ color: 'var(--theme-text-heading)' }}>Validate the day</h2>
                   <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
                     After you finish the planned videos, take the checkpoint to complete the day and unlock the next step.
                   </p>
-
-                  <div className="mt-5 course-progress-track">
-                    <div className="course-progress-fill" style={{ width: `${dayProgress}%` }} />
-                  </div>
-                  <p className="mt-3 font-label text-xs font-bold" style={{ color: '#4338ca' }}>
-                    {watchedSet.size}/{videos.length} videos complete
-                  </p>
-
+                  <div className="mt-5 course-progress-track"><div className="course-progress-fill" style={{ width: `${dayProgress}%` }} /></div>
+                  <p className="mt-3 font-label text-xs font-bold" style={{ color: '#4338ca' }}>{watchedSet.size}/{videos.length} videos complete</p>
                   <div className="mt-6">
                     {dayCompleted ? (
                       <div className="course-surface-soft flex items-center gap-3 rounded-[1.4rem] px-4 py-4">
-                        <span className="material-symbols-outlined text-[22px]" style={{ color: '#15803d' }}>
-                          verified
-                        </span>
+                        <span className="material-symbols-outlined text-[22px]" style={{ color: '#15803d' }}>verified</span>
                         <div>
-                          <p className="font-body text-sm font-semibold" style={{ color: '#15803d' }}>
-                            Day complete
-                          </p>
-                          <p className="font-body text-xs" style={{ color: 'var(--theme-text-body)' }}>
-                            Checkpoint has already been passed.
-                          </p>
+                          <p className="font-body text-sm font-semibold" style={{ color: '#15803d' }}>Day complete</p>
+                          <p className="font-body text-xs" style={{ color: 'var(--theme-text-body)' }}>Checkpoint has already been passed.</p>
                         </div>
                       </div>
                     ) : allWatched ? (
                       <button type="button" onClick={handleStartCheckpoint} disabled={loadingCheckpoint} className="course-primary-button w-full justify-center">
-                        {loadingCheckpoint ? (
-                          <>
-                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                            Preparing
-                          </>
-                        ) : (
-                          <>
-                            <span className="material-symbols-outlined text-[18px]">psychology</span>
-                            Take Day Checkpoint
-                          </>
-                        )}
+                        {loadingCheckpoint ? (<><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />Preparing</>) :
+                         (<><span className="material-symbols-outlined text-[18px]">psychology</span>Take Day Checkpoint</>)}
                       </button>
                     ) : (
                       <button type="button" disabled className="course-outline-button w-full justify-center opacity-50">
-                        <span className="material-symbols-outlined text-[18px]">lock</span>
-                        Watch All Videos First
+                        <span className="material-symbols-outlined text-[18px]">lock</span>Watch All Videos First
                       </button>
                     )}
                   </div>
@@ -799,12 +677,9 @@ export default function PlaylistLearnHub() {
             </aside>
           </div>
 
-        <button
-          type="button"
-          onClick={() => setIsTutorOpen(true)}
-          className="course-floating-button fixed bottom-5 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full transition hover:scale-105 active:scale-95 md:bottom-6 md:right-6 md:h-14 md:w-14"
-        >
-          <span className="material-symbols-outlined text-[22px] text-white md:text-[24px]">smart_toy</span>
+          <button type="button" onClick={() => setIsTutorOpen(true)}
+            className="course-floating-button fixed bottom-5 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full transition hover:scale-105 active:scale-95 md:bottom-6 md:right-6 md:h-14 md:w-14">
+            <span className="material-symbols-outlined text-[22px] text-white md:text-[24px]">smart_toy</span>
             {!hasTutorAccess ? (
               <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#f59e0b] text-white">
                 <span className="material-symbols-outlined text-[10px]">lock</span>
@@ -815,15 +690,9 @@ export default function PlaylistLearnHub() {
       </div>
 
       {course && (
-        <TutorChatPanel
-          isOpen={isTutorOpen}
-          onClose={() => setIsTutorOpen(false)}
-          courseId={courseId}
-          moduleIndex={dayIndex}
-          subtopicIndex={activeVideoIdx}
-          topicTitle={activeVideo?.title}
-          hasTutorAccess={hasTutorAccess}
-        />
+        <TutorChatPanel isOpen={isTutorOpen} onClose={() => setIsTutorOpen(false)}
+          courseId={courseId} moduleIndex={dayIndex} subtopicIndex={activeVideoIdx}
+          topicTitle={activeVideo?.title} hasTutorAccess={hasTutorAccess} />
       )}
     </>
   );

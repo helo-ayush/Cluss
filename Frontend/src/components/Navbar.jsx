@@ -13,6 +13,8 @@ const Navbar = () => {
   const pathname = location.pathname;
   const courseMatch = pathname.match(/^\/course\/([^/]+)$/);
   const learnMatch = pathname.match(/^\/course\/([^/]+)\/learn\/\d+$/);
+  const playlistCourseMatch = pathname.match(/^\/playlist\/([^/]+)$/);
+  const playlistLearnMatch = pathname.match(/^\/playlist\/([^/]+)\/day\/\d+$/);
   const mobileMenuDelay = 320;
 
   useMotionValueEvent(scrollY, "change", (latest) => {
@@ -110,6 +112,16 @@ const Navbar = () => {
     ? [
         { label: 'Course', type: 'navigate', to: `/course/${learnMatch[1]}` },
         { label: 'Lectures', type: 'scroll', target: 'learn-module-quiz', offset: 84, settle: true },
+      ]
+    : playlistCourseMatch
+    ? [
+        { label: 'Progress', type: 'scroll', target: 'playlist-progress-overview', offset: 132 },
+        { label: 'Current Day', type: 'scroll', target: 'playlist-current-day', offset: 132 },
+      ]
+    : playlistLearnMatch
+    ? [
+        { label: 'Queue', type: 'scroll', target: 'playlist-day-queue', offset: 132 },
+        { label: 'Checkpoint', type: 'scroll', target: 'playlist-day-checkpoint', offset: 132 },
       ]
     : pathname === '/dashboard'
     ? [

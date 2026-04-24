@@ -1383,13 +1383,42 @@ export default function Dashboard() {
                       </p>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
-                        {/* Filler Optimization */}
+                        {/* Curriculum Actions */}
                         <div className="space-y-4">
                           <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 px-1">Curriculum Optimization</h4>
-                          
+
+                          <button
+                            onClick={handleRunOptimizer}
+                            disabled={analyzing}
+                            className={`w-full p-6 rounded-[24px] text-left transition-all relative overflow-hidden border disabled:opacity-60 ${
+                              optimizeApplied
+                                ? 'bg-green-50 border-green-100 text-green-700'
+                                : 'bg-slate-50/80 border-slate-200 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-4 mb-2">
+                              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${optimizeApplied ? 'bg-green-100' : 'bg-slate-200'}`}>
+                                <span className="material-symbols-outlined text-[20px]">
+                                  {analyzing ? 'hourglass_top' : optimizeApplied ? 'verified' : 'cleaning_services'}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold leading-none">Remove Outdated Topics</p>
+                                {optimizeApplied && <span className="text-[10px] font-bold uppercase mt-1 inline-block">Applied</span>}
+                              </div>
+                            </div>
+                            <p className="text-xs font-medium opacity-80 leading-relaxed">
+                              {analyzing
+                                ? 'Scanning your playlist and preparing a cleanup list...'
+                                : optimizeApplied
+                                  ? 'Outdated topics were reviewed and your selected cleanup was applied.'
+                                  : 'Scan the playlist for stale topics, then choose what to keep or remove.'}
+                            </p>
+                          </button>
+
                           {hasProFeatures ? (
                             <button
-                              onClick={() => setShowFillerModal(true)}
+                              onClick={handleOpenFillerModal}
                               className={`w-full p-6 rounded-[24px] text-left transition-all relative overflow-hidden border ${
                                 fillersApplied 
                                   ? 'bg-green-50 border-green-100 text-green-700' 

@@ -102,14 +102,14 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
   };
 
   return (
-    <div className="course-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6" onClick={(event) => {
+    <div className="course-modal-backdrop fixed inset-0 z-[1100] flex items-stretch justify-center p-0 md:items-center md:p-6" onClick={(event) => {
       if (event.target === event.currentTarget) onClose();
     }}>
       <motion.div
         initial={{ opacity: 0, y: 22, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.28, ease: 'easeOut' }}
-        className="course-modal-panel flex h-full w-full max-w-5xl flex-col overflow-hidden md:h-auto md:max-h-[90vh] md:rounded-[2rem]"
+        className="course-modal-panel flex h-screen w-full max-w-6xl flex-col overflow-hidden md:h-[min(92vh,960px)] md:rounded-[2rem]"
       >
         <div className="flex items-start justify-between gap-4 border-b border-black/5 px-5 py-5 md:px-7">
           <div>
@@ -164,9 +164,9 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-5 py-6 md:px-7">
+        <div className="custom-scroll flex-1 overflow-y-auto overscroll-contain px-4 py-5 md:px-8 md:py-6">
           {activeTab === 'theory' && (
-            <div className="mx-auto max-w-3xl space-y-5">
+            <div className="mx-auto w-full max-w-4xl space-y-5">
               {(checkpoint?.theoryQuestions || []).map((question, index) => {
                 const feedback = result?.theoryScores?.find((entry) => entry.questionIndex === index);
                 return (
@@ -219,7 +219,7 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
           )}
 
           {activeTab === 'coding' && checkpoint?.questionType === 'mixed' && (
-            <div className="mx-auto max-w-3xl space-y-5">
+            <div className="mx-auto w-full max-w-4xl space-y-5">
               <div className="course-surface rounded-[1.7rem] p-5">
                 <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: '#4338ca' }}>
                   Coding Challenge
@@ -312,7 +312,7 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/5 px-5 py-5 md:px-7">
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-t border-black/5 px-5 py-5 md:px-7">
           {result ? (
             <div className="course-stat-chip" style={{ color: result.passed ? '#15803d' : '#b91c1c' }}>
               {result.passed ? 'Checkpoint passed' : 'Keep refining your answers'}
@@ -358,6 +358,7 @@ function DayCard({ day, index, isCurrent, isLocked, courseId, onStartCheckpoint 
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.4, ease: 'easeOut' }}
+      id={isCurrent ? 'playlist-current-day' : undefined}
       className="course-surface relative overflow-hidden rounded-[2rem] p-6 md:p-7"
       style={{ opacity: isLocked ? 0.62 : 1 }}
     >
@@ -537,6 +538,18 @@ export default function PlaylistCourseMap() {
     fetchCourse();
   }, [fetchCourse]);
 
+  useEffect(() => {
+    const shouldLockBody = loadingCheckpoint || (checkpointData && checkpointDay !== null);
+    if (!shouldLockBody) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [checkpointData, checkpointDay, loadingCheckpoint]);
+
   const handleStartCheckpoint = async (dayIdx) => {
     setLoadingCheckpoint(true);
     setCheckpointDay(dayIdx);
@@ -602,7 +615,7 @@ export default function PlaylistCourseMap() {
       )}
 
       {loadingCheckpoint && (
-        <div className="course-modal-backdrop fixed inset-0 z-40 flex items-center justify-center">
+        <div className="course-modal-backdrop fixed inset-0 z-[1090] flex items-center justify-center">
           <div className="course-surface flex flex-col items-center gap-4 rounded-[2rem] px-8 py-8 text-center">
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#111827] border-t-transparent" />
             <p className="font-body text-sm" style={{ color: 'var(--theme-text-body)' }}>
@@ -614,6 +627,7 @@ export default function PlaylistCourseMap() {
 
       <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-4 pb-20 pt-28 md:px-6 lg:px-8">
         <motion.section
+          id="playlist-progress-overview"
           initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
