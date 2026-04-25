@@ -128,7 +128,7 @@ const HeroSection = () => {
                         <div className='bg-[#eef3f4] rounded-3xl p-6 relative w-full max-w-105'>
                             <div className='rounded-2xl overflow-hidden relative'>
                                 <div className='aspect-video w-full rounded-xl overflow-hidden bg-[#f3f6f7]'>
-                                    <img src={Img1} alt="Cluss Dashboard" className="w-full h-full object-cover" />
+                                    <img src="/ref/Video.gif" alt="Cluss Dashboard Video" className="w-full h-full object-cover" />
                                 </div>
                             </div>
                             <div className='mt-5 flex items-center justify-between'>
