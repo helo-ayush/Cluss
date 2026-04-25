@@ -17,7 +17,7 @@ const logActivity = async (userId, courseId, courseTitle, count = 1) => {
                 $setOnInsert: { userId, date: dateStr },
                 // Update course entry if exists, else push new
             },
-            { upsert: true, new: true }
+            { upsert: true, returnDocument: 'after' }
         );
         // Separately update the courses sub-array
         const existing = await Activity.findOne({ userId, date: dateStr });

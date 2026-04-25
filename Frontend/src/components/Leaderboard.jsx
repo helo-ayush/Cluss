@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { motion } from 'motion/react';
+import { getAvatarIcon } from '../utils/avatars';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -107,14 +108,22 @@ export default function Leaderboard() {
                     )}
                   </div>
 
-                  {/* Name */}
+                  {/* Name and Avatar */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      {(() => {
+                        const AvatarIcon = getAvatarIcon(entry.avatar);
+                        return (
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gray-100 border border-gray-200 shrink-0">
+                            <AvatarIcon className="w-3.5 h-3.5 text-gray-500" />
+                          </div>
+                        );
+                      })()}
                       <p className={`text-sm font-semibold truncate ${isSelf ? 'text-indigo-600' : 'text-gray-900'}`}>
                         {isSelf ? `${entry.name} (You)` : entry.name}
                       </p>
                       {entry.plan === 'pro' && (
-                        <span className="px-2 py-0.5 rounded text-[8px] font-bold uppercase bg-amber-100 text-amber-700">PRO</span>
+                        <span className="px-2 py-0.5 rounded text-[8px] font-bold uppercase bg-amber-100 text-amber-700 shrink-0">PRO</span>
                       )}
                     </div>
                     <p className="text-[10px] text-gray-500 font-medium">

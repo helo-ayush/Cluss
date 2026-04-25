@@ -63,7 +63,8 @@ router.get('/', async (req, res) => {
             userMap[u._id.toString()] = {
                 name: u.name || 'Learner',
                 clerkId: u.clerkId,
-                plan: u.plan || 'free'
+                plan: u.plan || 'free',
+                avatar: u.avatar || 'none'
             };
         });
 
@@ -73,6 +74,7 @@ router.get('/', async (req, res) => {
             name: userMap[entry._id.toString()]?.name || 'Learner',
             clerkId: userMap[entry._id.toString()]?.clerkId || '',
             plan: userMap[entry._id.toString()]?.plan || 'free',
+            avatar: userMap[entry._id.toString()]?.avatar || 'none',
             topicsCompleted: entry.topicsCompleted,
             activeDays: entry.activeDays.length
         }));

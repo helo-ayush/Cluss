@@ -101,7 +101,7 @@ router.post('/:clerkId/upgrade', async (req, res) => {
         const user = await User.findOneAndUpdate(
             { clerkId },
             { plan: 'pro' },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!user) {
@@ -111,6 +111,41 @@ router.post('/:clerkId/upgrade', async (req, res) => {
         return res.json({ success: true, plan: user.plan, message: 'Upgraded to Pro!' });
     } catch (err) {
         console.error('Error upgrading user:', err);
+        res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+    }
+});
+
+/**
+ * GET /api/user/:clerkId/avatar
+ * Fetch the user's selected avatar.
+ */
+router.get('/:clerkId/avatar', async (req, res) => {
+    try {
+        const { clerkId } = req.params;
+        const user = await User.findOne({ clerkId });
+        res.json({ success: true, avatar: user?.avatar || 'none' });
+    } catch (err) {
+        console.error('Error fetching user avatar:', err);
+        res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+    }
+});
+
+/**
+ * POST /api/user/:clerkId/avatar
+ * Update the user's selected avatar.
+ */
+router.post('/:clerkId/avatar', async (req, res) => {
+    try {
+        const { clerkId } = req.params;
+        const { avatar } = req.body;
+        const user = await User.findOneAndUpdate(
+            { clerkId },
+            { avatar },
+            { returnDocument: 'after', upsert: true }
+        );
+        res.json({ success: true, avatar: user.avatar });
+    } catch (err) {
+        console.error('Error updating user avatar:', err);
         res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
     }
 });

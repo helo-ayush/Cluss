@@ -13,6 +13,10 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Course'
     },
+    avatar: {
+        type: String,
+        default: 'none'
+    },
     trusted_creators: {
         type: [String],
         default: []

@@ -5,6 +5,7 @@ import CourseMap from './pages/CourseMap';
 import LearnHub from './pages/LearnHub';
 import PlaylistCourseMap from './pages/PlaylistCourseMap';
 import PlaylistLearnHub from './pages/PlaylistLearnHub';
+import Profile from './pages/Profile';
 import Navbar from './components/Navbar';
 
 function AppRoutes() {
@@ -21,6 +22,7 @@ function AppRoutes() {
         <Route path="/course/:courseId/learn/:moduleIndex" element={<LearnHub />} />
         <Route path="/playlist/:courseId" element={<PlaylistCourseMap />} />
         <Route path="/playlist/:courseId/day/:dayIndex" element={<PlaylistLearnHub />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </>
   );

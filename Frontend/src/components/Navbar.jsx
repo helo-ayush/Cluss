@@ -1,12 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'motion/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
+import { SignedIn, SignedOut, SignInButton, useUser } from '@clerk/clerk-react';
+import { getAvatarIcon } from '../utils/avatars';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const Navbar = () => {
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user } = useUser();
+  const [avatarId, setAvatarId] = useState('none');
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Instant load from cache
+    const cachedAvatar = localStorage.getItem(`cluss_avatar_${user.id}`);
+    if (cachedAvatar) setAvatarId(cachedAvatar);
+
+    const fetchAvatar = async () => {
+      try {
+        const timestamp = Date.now();
+        const res = await fetch(`${API_BASE}/api/user/${user.id}/avatar?t=${timestamp}`);
+        const data = await res.json();
+        if (data.success && data.avatar) {
+          setAvatarId(data.avatar);
+          localStorage.setItem(`cluss_avatar_${user.id}`, data.avatar);
+        }
+      } catch (e) { console.error(e); }
+    };
+    fetchAvatar();
+    
+    const handler = () => {
+      const cached = localStorage.getItem(`cluss_avatar_${user.id}`);
+      if (cached) setAvatarId(cached);
+      fetchAvatar();
+    };
+    window.addEventListener('avatarChanged', handler);
+    return () => window.removeEventListener('avatarChanged', handler);
+  }, [user]);
+
+  const AvatarIcon = getAvatarIcon(avatarId);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -128,6 +164,12 @@ const Navbar = () => {
         { label: 'Progress', type: 'scroll', target: 'dashboard-progress', offset: 132 },
         { label: 'Collection', type: 'scroll', target: 'dashboard-collection', offset: 132 },
       ]
+    : pathname === '/profile'
+    ? [
+        { label: 'Avatars', type: 'scroll', target: 'profile-avatars', offset: 132 },
+        { label: 'Badges', type: 'scroll', target: 'profile-badges', offset: 132 },
+        { label: 'Stats', type: 'scroll', target: 'profile-stats', offset: 132 },
+      ]
     : pathname === '/'
     ? [
         { label: 'Features', type: 'landing', target: 'about' },
@@ -148,7 +190,7 @@ const Navbar = () => {
         {/* Brand */}
         <div className='flex gap-2 items-center cursor-pointer'>
           <Link
-            className='text-2xl font-bold tracking-tighter text-gray-800'
+            className='text-3xl font-bold tracking-tighter text-gray-800'
             style={{ fontFamily: 'Outfit, sans-serif' }}
             to='/'
           >
@@ -178,13 +220,15 @@ const Navbar = () => {
                 transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
                 className="flex gap-8 lg:gap-13 items-center"
               >
-                {contextualActions.map((action) =>
-                  action.type === 'landing' ? (
+                {contextualActions.map((action) => {
+                  const animatedClass = "relative flex items-center gap-1.5 text-gray-900 font-medium cursor-pointer transition duration-300 after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-px after:bg-gray-300 after:scale-x-0 after:origin-right hover:after:scale-x-100 hover:after:origin-left after:transition-transform after:duration-300";
+                  
+                  return action.type === 'landing' ? (
                     <a
                       key={action.label}
                       href={`#${action.target}`}
                       onClick={(e) => handleScroll(e, action.target)}
-                      className='group cursor-pointer flex items-center gap-1.5 hover:text-gray-400 transition duration-300 font-medium text-gray-900'
+                      className={animatedClass}
                     >
                       {action.label}
                     </a>
@@ -192,7 +236,7 @@ const Navbar = () => {
                     <Link
                       key={action.label}
                       to={action.to}
-                      className='group cursor-pointer flex items-center gap-1.5 hover:text-gray-400 transition duration-300 font-medium text-gray-900'
+                      className={animatedClass}
                     >
                       {action.label}
                     </Link>
@@ -201,12 +245,12 @@ const Navbar = () => {
                       key={action.label}
                       type="button"
                       onClick={(e) => handleContextAction(e, action)}
-                      className='group flex cursor-pointer items-center gap-1.5 bg-transparent hover:text-gray-400 transition duration-300 font-medium text-gray-900'
+                      className={animatedClass}
                     >
                       {action.label}
                     </button>
-                  )
-                )}
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>
@@ -226,7 +270,13 @@ const Navbar = () => {
               <Link to="/dashboard" className='px-4 py-2 bg-[#e5e9eb] hover:bg-black hover:text-white transition-colors duration-300 rounded-full font-medium text-sm'>
                 Dashboard
               </Link>
-              <UserButton afterSignOutUrl="/" />
+              <Link to="/profile" className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 hover:opacity-80 transition flex items-center justify-center bg-gray-50">
+                {avatarId === 'none' ? (
+                  <img src={user?.imageUrl || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <AvatarIcon className="w-5 h-5 text-gray-600" />
+                )}
+              </Link>
             </div>
           </SignedIn>
 
@@ -267,7 +317,13 @@ const Navbar = () => {
                 </div>
               </div>
             </Link>
-            <UserButton afterSignOutUrl="/" />
+            <Link to="/profile" className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 hover:opacity-80 transition cursor-pointer flex items-center justify-center bg-gray-50">
+              {avatarId === 'none' ? (
+                <img src={user?.imageUrl || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <AvatarIcon className="w-6 h-6 text-gray-600" />
+              )}
+            </Link>
           </SignedIn>
         </div>
       </div>
