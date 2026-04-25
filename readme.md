@@ -1,101 +1,151 @@
 <div align="center">
-  # FocusForge
-  
-  **The ultimate AI-adaptive learning platform.** <br>
-  *Just-In-Time curriculum generation, deeply integrated learning profiles, and stunning metrics.*
+  <img src="Frontend/public/Logo.png" alt="Cluss Logo" width="120" />
 
-  [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-  [![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-  [![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)](https://mongodb.com/)
-  [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-  [![Framer Motion](https://img.shields.io/badge/Framer_Motion-black?style=for-the-badge&logo=framer&logoColor=blue)](https://www.framer.com/motion/)
+# 🪄 Cluss
+
+**Empowering Digital Education with AI, Gamification, and Seamless Design**
+
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge\&logo=react\&logoColor=61DAFB)](https://reactjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge\&logo=node.js\&logoColor=white)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge\&logo=mongodb\&logoColor=white)](https://www.mongodb.com/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge\&logo=tailwind-css\&logoColor=white)](https://tailwindcss.com/)
 
 </div>
 
----
+<br />
 
-## 🚀 Overview
+## 📖 Overview
 
-**FocusForge** is a premium, enterprise-grade AI learning engine designed to replace rigid online courses. Instead of a pre-recorded path, FocusForge dynamically generates a tailored curriculum using Large Language Models (LLMs) the moment you type in what you want to learn.
+Cluss is a highly interactive, AI-driven learning platform designed to transform traditional educational content into engaging, gamified experiences. Built with a modern, sleek, and minimalist UI, the platform dynamically generates courses, processes video transcripts, and provides real-time, context-aware assistance via an AI tutor.
 
-It doesn't stop there—our **Just-In-Time (JIT) Sourcing Engine** automatically crawls YouTube to find the best, most relevant educational videos for each subtopic, filtering by engagement, recency, and your personal "Trusted Creators" algorithmic profile. 
-
-It then watches the video, generates dynamic assessments, and grades you instantly. 
-
----
-
-## 🔥 Key Features
-
-- **Just-In-Time (JIT) Curriculum Generation:** Type any topic (e.g., "Quantum Computing") and an LLM instantly writes a 5-module, 25-subtopic syllabus perfectly tailored to your skill level.
-- **Smart Video Sourcing:** Automagically sources the best YouTube content for each granular subtopic. 
-- **The "Trusted Creators" Loop:** The platform learns which instructors you succeed with (by passing their quizzes) and forcefully prioritizes their content in your future courses.
-- **AI-Powered Assessments:** Automatically transcribes video lessons and generates multiple-choice quizzes to ensure you retained the material.
-- **Premium Dark-Mode Glassmorphism UI:** Built with Framer Motion and Magic UI, the platform features highly immersive glowing orbs, zig-zag roadmaps, and silky-smooth animations.
-- **Activity Streaks:** A gamified dashboard tracking your daily momentum, completed modules, and overall progress.
+Whether generating a learning map from a YouTube playlist or climbing the leaderboard through coding challenges, Cluss is built to make learning intuitive and highly rewarding.
 
 ---
 
 ## 🏗 System Architecture
 
-FocusForge operates entirely decoupled. The React frontend interacts with a specialized Express/Node engine that acts as an orchestration gateway to LLMs and the YouTube API.
+<div align="center">
 
-| Layer | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Frontend** | React, Vite, TailwindCSS | Blistering fast rendering, immersive Glassmorphism UI. |
-| **Auth** | Clerk | Instant, secure user authentication and management. |
-| **API Gateway** | Node.js, Express | Handles requests, background scraping, and LLM polling. |
-| **Data Layer** | MongoDB, Mongoose | Stores generated courses, user activity streaks, and trusted creator weights. |
-| **AI Inference** | Gemini / OpenAI APIs | Structures complex nested JSON syllabuses and quiz sets. |
+  <img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/3a4f46d8-6abe-4838-a399-d59a4756fdf9" />
+
+
+*High-level system architecture detailing the flow between the client, backend services, database, and AI evaluators.*
+
+
+</div>
 
 ---
 
-## 🛠 Quick Start
+## ✨ Key Features
 
-### 1. Clone & Install
-```bash
-git clone https://github.com/CodeVoyager3/FocusForge.git
-cd FocusForge
+* **Dynamic Course Mapping:** Automatically generates structured visual learning paths (`CourseMap` / `PlaylistCourseMap`) from raw topics or YouTube playlists.
+* **Intelligent AI Tutor:** Integrated `TutorAgent` powered by Gemini AI offers real-time, personalized debugging and conceptual explanations.
+* **Gamified Learning:** Features an interactive `Leaderboard` and reward system to keep learners motivated and engaged.
+* **Automated Transcript Processing:** Utilizes Python scripts (`get_transcript.py`) to extract and analyze YouTube video content for precise quiz and checkpoint generation.
+* **Immersive, Minimalist UI:** Built using Tailwind CSS and `magicui` components (BorderBeam, NeonGradientCard, MagicCard) for a sleek, dark-mode optimized aesthetic.
 
-# Install Backend
-cd backend
-npm install
+---
 
-# Install Frontend
-cd ../Frontend
-npm install
-```
+## 🛠️ Tech Stack
 
-### 2. Environment Variables
-You will need `.env` files in both directories.
+**Frontend:**
 
-**Backend (`backend/.env`):**
-```env
-PORT=3000
-MONGODB_URI=your_mongo_url
-GEMINI_API_KEY=your_gemini_key
-YOUTUBE_API_KEY=your_youtube_v3_key
-```
+* React.js (Vite)
+* Tailwind CSS
+* Magic UI (Framer Motion)
 
-**Frontend (`Frontend/.env`):**
-```env
-VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key
-VITE_API_BASE_URL=http://localhost:3000
-```
+**Backend:**
 
-### 3. Run the Platform
-Start both servers concurrently.
-```bash
-# Terminal 1 (Backend)
-cd backend
-nodemon server.js
+* Node.js & Express.js
+* MongoDB & Mongoose
+* Python (for video transcript extraction)
 
-# Terminal 2 (Frontend)
-cd Frontend
-npm run dev
-```
+**AI & APIs:**
+
+* Google Gemini AI (Evaluations, Quiz Generation, Tutor Agent)
+* YouTube Data API
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+* Node.js (v18+)
+* Python (v3.8+)
+* MongoDB Instance
+* Gemini API Key
+
+### Local Installation
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/CodeVoyager3/cluss.git
+   cd cluss
+   ```
+
+2. **Setup the Backend:**
+
+   ```bash
+   cd backend
+   npm install
+
+   # Install Python dependencies for transcript processing
+   bash scripts/install_python_deps.sh
+   ```
+
+   Create a `.env` file in the `backend` directory:
+
+   ```env
+   PORT=5000
+   MONGO_URI=your_mongodb_connection_string
+   GEMINI_API_KEY=your_google_gemini_api_key
+   JWT_SECRET=your_jwt_secret
+   ```
+
+3. **Setup the Frontend:**
+
+   ```bash
+   cd ../Frontend
+   npm install
+   ```
+
+   Create a `.env` file in the `Frontend` directory:
+
+   ```env
+   VITE_API_BASE_URL=http://localhost:5000/api
+   ```
+
+4. **Run the Application:**
+   Open two terminal tabs:
+
+   *Terminal 1 (Backend):*
+
+   ```bash
+   cd backend
+   npm start
+   ```
+
+   *Terminal 2 (Frontend):*
+
+   ```bash
+   cd Frontend
+   npm run dev
+   ```
+
+---
+
+## 🛡️ The Team
+
+Built with 💻 and ☕ by **Team Code Galacticos**:
+
+* **Amritesh Rai**
+* **Ayush Kumar**
+* **Kaustubh Sharma**
 
 ---
 
 <div align="center">
-  <i>Built with 💡 during hackathon mode.</i>
+  <i>Nation First. Innovate Always.</i>
 </div>
