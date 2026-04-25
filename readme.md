@@ -138,7 +138,7 @@ Whether generating a learning map from a YouTube playlist or climbing the leader
 
 ## 🛡️ The Team
 
-Built with 💻 and ☕ by **Team Code Galacticos**:
+Built with 💻 and ☕ by **Team Aether Minds**:
 
 * **Amritesh Rai**
 * **Ayush Kumar**
