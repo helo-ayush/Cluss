@@ -30,11 +30,23 @@ router.post('/create-order', async (req, res) => {
             return res.status(400).json({ success: false, message: 'clerkId and plan are required' });
         }
 
+        // ── Guard: check current plan before creating order ──
+        const PLAN_TIERS = { free: 0, pro: 1, ultra: 2 };
+        const existingUser = await User.findOne({ clerkId });
+        const currentTier = PLAN_TIERS[existingUser?.plan] ?? 0;
+        const newTier = PLAN_TIERS[plan] ?? -1;
+        if (newTier <= currentTier) {
+            return res.status(400).json({
+                success: false,
+                message: `You are already on the ${existingUser?.plan || 'free'} plan or higher. No payment needed.`
+            });
+        }
+
         let amount = 0;
         if (plan === 'pro') {
-            amount = 9900; // ₹99 in paise
+            amount = 4900; // ₹49 in paise
         } else if (plan === 'ultra') {
-            amount = 34900; // ₹349 in paise
+            amount = 9900; // ₹99 in paise
         } else {
             return res.status(400).json({ success: false, message: 'Invalid plan selected' });
         }
@@ -98,11 +110,26 @@ router.post('/verify', async (req, res) => {
         // Update user plan
         let user = await User.findOne({ clerkId });
         if (!user) {
-            // User might be new and hasn't created a course yet
             user = new User({ clerkId, name: 'Learner' });
         }
 
+        // Reject if trying to "downgrade" via payment (e.g., ultra user buying pro)
+        const PLAN_TIERS = { free: 0, pro: 1, ultra: 2 };
+        const currentTier = PLAN_TIERS[user.plan] ?? 0;
+        const newTier = PLAN_TIERS[plan] ?? 0;
+        if (newTier <= currentTier) {
+            return res.status(400).json({
+                success: false,
+                message: `You are already on a higher or equal plan (${user.plan}). No downgrade is allowed via payment.`
+            });
+        }
+
+        // Upgrade: preserve existing balance, set fresh 30-day billing cycle
         user.plan = plan;
+        user.credits.billingCycleEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        user.credits.lastRefillDate = new Date();
+        // Do NOT reset balance — let the user keep what they've earned
+        user.markModified('credits');
         await user.save();
 
         res.json({

@@ -3,12 +3,11 @@ import { useLocation } from 'react-router-dom';
 import Lenis from 'lenis';
 
 import Navbar from '../components/Navbar';
-import HeroSection from '../components/new-landing/HeroSection';
-import ServicesSection from '../components/new-landing/ServiceSection';
-import FallingBoxes from '../components/new-landing/FallingBoxes';
-import TestimonialSection from '../components/new-landing/TestimonialSection';
-import Pricing from '../components/new-landing/Pricing';
-import Footer from '../components/new-landing/Footer';
+import HeroSection from '../landing/sections/HeroSection';
+import ServicesSection from '../landing/sections/ServiceSection';
+import TestimonialSection from '../landing/sections/TestimonialSection';
+import Pricing from '../landing/sections/Pricing';
+import Footer from '../landing/sections/Footer';
 
 export default function NewHome() {
   const location = useLocation();
@@ -57,7 +56,6 @@ export default function NewHome() {
       <Navbar />
       <HeroSection />
       <ServicesSection />
-      <FallingBoxes />
       <TestimonialSection />
       <Pricing />
       <Footer />

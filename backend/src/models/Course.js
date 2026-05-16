@@ -1,46 +1,146 @@
 const mongoose = require('mongoose');
 
-// ══════════════════════════════════════════════════
-//  AI-Generated Course Schemas (existing)
-// ══════════════════════════════════════════════════
+const mcqSchema = new mongoose.Schema({
+    question: { type: String, default: '' },
+    options: { type: [String], default: [] },
+    correctAnswer: { type: String, default: '' },
+    explanation: { type: String, default: '' },
+    hint: { type: String, default: '' }
+}, { _id: false });
+
+const writtenQuestionSchema = new mongoose.Schema({
+    question: { type: String, default: '' },
+    rubric: { type: [String], default: [] }
+}, { _id: false });
+
+const codeTaskSchema = new mongoose.Schema({
+    prompt: { type: String, default: '' },
+    language: { type: String, default: '' },
+    starterCode: { type: String, default: '' },
+    rubric: { type: [String], default: [] }
+}, { _id: false });
+
+const lessonCitationSchema = new mongoose.Schema({
+    label: { type: String, default: '' },
+    url: { type: String, default: '' }
+}, { _id: false });
+
+const lessonBlockRevisionSchema = new mongoose.Schema({
+    title: { type: String, default: '' },
+    body: { type: String, default: '' },
+    code: { type: String, default: '' },
+    language: { type: String, default: '' },
+    callout: { type: String, default: '' },
+    blockSummary: { type: String, default: '' },
+    updatedAt: { type: Date, default: Date.now },
+    action: { type: String, default: '' }
+}, { _id: false });
+
+const lessonBlockSchema = new mongoose.Schema({
+    blockId: { type: String, default: '' },
+    type: {
+        type: String,
+        enum: ['intro', 'concept', 'diagram', 'example', 'code', 'callout', 'summary', 'project', 'practice'],
+        default: 'concept'
+    },
+    title: { type: String, default: '' },
+    body: { type: String, default: '' },
+    code: { type: String, default: '' },
+    language: { type: String, default: '' },
+    callout: { type: String, default: '' },
+    blockSummary: { type: String, default: '' },
+    inlineChallenge: {
+        type: new mongoose.Schema({
+            type: { type: String, enum: ['fill-in-the-blank', 'guess-output'], default: 'fill-in-the-blank' },
+            question: { type: String, default: '' },
+            codeTemplate: { type: String, default: '' },
+            expectedAnswer: { type: String, default: '' },
+            hint: { type: String, default: '' }
+        }, { _id: false }),
+        default: null
+    },
+    revisionHistory: { type: [lessonBlockRevisionSchema], default: [] }
+}, { _id: false });
+
+const lessonContentSchema = new mongoose.Schema({
+    overview: { type: String, default: '' },
+    explanation: { type: String, default: '' },
+    example: { type: String, default: '' },
+    summary: { type: String, default: '' },
+    practiceTip: { type: String, default: '' },
+    keyPoints: { type: [String], default: [] },
+    citations: { type: [lessonCitationSchema], default: [] },
+    blocks: { type: [lessonBlockSchema], default: [] },
+    notesVersion: { type: Number, default: 1 },
+    generatedForLevel: { type: String, default: '' },
+    pdfTitle: { type: String, default: '' },
+    generatedAt: { type: Date, default: null }
+}, { _id: false });
+
+const assessmentBundleSchema = new mongoose.Schema({
+    mcqs: { type: [mcqSchema], default: [] },
+    written: { type: [writtenQuestionSchema], default: [] },
+    code: { type: [codeTaskSchema], default: [] }
+}, { _id: false });
+
+const assessmentStateSchema = new mongoose.Schema({
+    attemptsUsed: { type: Number, default: 0 },
+    lastScore: { type: Number, default: 0 },
+    passed: { type: Boolean, default: false },
+    confidence: { type: String, default: '' },
+    feedback: { type: mongoose.Schema.Types.Mixed, default: null },
+    lastSubmission: { type: mongoose.Schema.Types.Mixed, default: null },
+    completedAt: { type: Date, default: null }
+}, { _id: false });
+
+const practiceSchema = new mongoose.Schema({
+    bundle: {
+        type: assessmentBundleSchema,
+        default: () => ({})
+    },
+    state: {
+        type: assessmentStateSchema,
+        default: () => ({})
+    },
+    generatedAt: { type: Date, default: Date.now }
+}, { _id: false });
 
 const subtopicSchema = new mongoose.Schema({
-    subtopic_id: {
-        type: mongoose.Schema.Types.Mixed
-    },
-    subtopic_title: {
-        type: String
-    },
-    Youtube_query: {
-        type: String
-    },
+    subtopic_id: { type: mongoose.Schema.Types.Mixed },
+    subtopic_title: { type: String, default: '' },
     status: {
         type: String,
         enum: ['locked', 'active', 'completed'],
         default: 'locked'
     },
-    // Video data (auto-populated by modulePreparer)
-    videoId: { type: String, default: '' },
-    videoTitle: { type: String, default: '' },
-    channelTitle: { type: String, default: '' },
-    transcript: { type: String, default: '' },
-    // Quiz questions
-    quiz: [{
-        question: String,
-        options: [String],
-        correctAnswer: String,
-        explanation: String,
-        hint: String
-    }]
-});
+    subtopic_type: {
+        type: String,
+        enum: ['lesson', 'mini-project'],
+        default: 'lesson'
+    },
+    generationStatus: {
+        type: String,
+        enum: ['pending', 'generating', 'ready', 'failed'],
+        default: 'pending'
+    },
+    appliedConfig: { type: mongoose.Schema.Types.Mixed, default: null },
+    subtopicOverrideConfig: { type: mongoose.Schema.Types.Mixed, default: null },
+    lessonContent: {
+        type: lessonContentSchema,
+        default: () => ({})
+    },
+    practices: {
+        type: [practiceSchema],
+        default: []
+    },
+    mistakeLog: { type: [String], default: [] },
+    studentNotes: { type: String, default: '' },
+    tutorContextSummary: { type: String, default: '' }
+}, { _id: false });
 
 const moduleSchema = new mongoose.Schema({
-    module_id: {
-        type: mongoose.Schema.Types.Mixed
-    },
-    module_title: {
-        type: String
-    },
+    module_id: { type: mongoose.Schema.Types.Mixed },
+    module_title: { type: String, default: '' },
     prepStatus: {
         type: String,
         enum: ['pending', 'preparing', 'ready', 'failed'],
@@ -50,74 +150,58 @@ const moduleSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.Mixed,
         default: null
     },
-    subtopics: [subtopicSchema]
-});
-
-// ══════════════════════════════════════════════════
-//  Playlist Import Schemas (new)
-// ══════════════════════════════════════════════════
+    subtopics: { type: [subtopicSchema], default: [] }
+}, { _id: false });
 
 const playlistVideoSchema = new mongoose.Schema({
-    videoId:    { type: String, required: true },
-    title:      { type: String, required: true },
-    duration:   { type: Number, default: 0 },       // seconds
-    channel:    { type: String, default: '' },
-    channelId:  { type: String, default: '' },
+    videoId: { type: String, required: true },
+    title: { type: String, required: true },
+    duration: { type: Number, default: 0 },
+    channel: { type: String, default: '' },
+    channelId: { type: String, default: '' },
     transcript: { type: String, default: '' },
-    quiz: [{
-        question: String,
-        options: [String],
-        correctAnswer: String,
-        explanation: String,
-        hint: String
-    }]
-});
+    quiz: { type: [mcqSchema], default: [] }
+}, { _id: false });
 
-// ── Checkpoint submission record ──
 const checkpointSubmissionSchema = new mongoose.Schema({
-    attemptNumber:  { type: Number, required: true },
-    theoryAnswers:  [String],
-    codeFiles:      [{ fileName: String, content: String }],
-    score:          { type: Number, default: 0 },
-    feedback:       { type: mongoose.Schema.Types.Mixed, default: null },
-    submittedAt:    { type: Date, default: Date.now }
-});
+    attemptNumber: { type: Number, required: true },
+    theoryAnswers: { type: [String], default: [] },
+    codeFiles: { type: [{ fileName: String, content: String }], default: [] },
+    score: { type: Number, default: 0 },
+    feedback: { type: mongoose.Schema.Types.Mixed, default: null },
+    submittedAt: { type: Date, default: Date.now }
+}, { _id: false });
 
-// ── Daily checkpoint (assessment gate) ──
 const checkpointSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ['locked', 'available', 'passed', 'failed_all'],
         default: 'locked'
     },
-    attemptsUsed:  { type: Number, default: 0 },
-    maxAttempts:   { type: Number, default: 3 },   // overridden to 8 for Pro at runtime
-    lastScore:     { type: Number, default: 0 },
+    attemptsUsed: { type: Number, default: 0 },
+    maxAttempts: { type: Number, default: 3 },
+    lastScore: { type: Number, default: 0 },
     questionType: {
         type: String,
         enum: ['theory', 'coding', 'mixed'],
         default: 'theory'
     },
-    // Theory questions (always present)
-    theoryQuestions: [{
-        question: String,
-    }],
-    // Coding question (only for coding/mixed types)
-    codingQuestion: {
-        prompt:           { type: String, default: '' },
-        language:         { type: String, default: '' },
-        expectedBehavior: { type: String, default: '' },
+    theoryQuestions: {
+        type: [{ question: String }],
+        default: []
     },
-    // Submission history
-    submissions: [checkpointSubmissionSchema]
-});
+    codingQuestion: {
+        prompt: { type: String, default: '' },
+        language: { type: String, default: '' },
+        expectedBehavior: { type: String, default: '' }
+    },
+    submissions: { type: [checkpointSubmissionSchema], default: [] }
+}, { _id: false });
 
 const daySchema = new mongoose.Schema({
-    dayNumber:     { type: Number, required: true },
-    videos:        [playlistVideoSchema],
-    totalDuration: { type: Number, default: 0 },    // sum of video durations (seconds)
-    isFiller:      { type: Boolean, default: false }, // true if injected by Topic Filler
-    fillerTopic:   { type: String, default: '' },     // e.g. "TypeScript Basics"
+    dayNumber: { type: Number, required: true },
+    videos: { type: [playlistVideoSchema], default: [] },
+    totalDuration: { type: Number, default: 0 },
     status: {
         type: String,
         enum: ['unprocessed', 'processing', 'ready', 'failed'],
@@ -127,11 +211,35 @@ const daySchema = new mongoose.Schema({
         type: checkpointSchema,
         default: () => ({ status: 'locked' })
     }
-});
+}, { _id: false });
 
-// ══════════════════════════════════════════════════
-//  Unified Course Schema
-// ══════════════════════════════════════════════════
+const studyConfigSchema = new mongoose.Schema({
+    goal: { type: String, default: '' },
+    level: {
+        type: String,
+        enum: ['beginner', 'intermediate', 'advanced'],
+        default: 'beginner'
+    },
+    explanationLength: {
+        type: String,
+        enum: ['short', 'standard', 'deep'],
+        default: 'standard'
+    },
+    mcqEnabled: { type: Boolean, default: true },
+    mcqCount: { type: Number, default: 3 },
+    writtenEnabled: { type: Boolean, default: true },
+    writtenCount: { type: Number, default: 1 },
+    codeEnabled: { type: Boolean, default: false },
+    codeCount: { type: Number, default: 0 },
+    miniProjectsEnabled: { type: Boolean, default: false },
+    miniProjectMode: {
+        type: String,
+        enum: ['auto', 'every-module'],
+        default: 'auto'
+    },
+    webGroundingEnabled: { type: Boolean, default: false },
+    interactiveWidgets: { type: Boolean, default: false }
+}, { _id: false });
 
 const courseSchema = new mongoose.Schema({
     userId: {
@@ -147,15 +255,11 @@ const courseSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-
-    // ── Source discriminator ──
     sourceType: {
         type: String,
-        enum: ['ai-generated', 'playlist'],
-        default: 'ai-generated'
+        enum: ['guided-topic', 'playlist', 'ai-generated'],
+        default: 'guided-topic'
     },
-
-    // ── AI-Generated course fields ──
     current_module_index: {
         type: Number,
         default: 0
@@ -164,17 +268,16 @@ const courseSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    modules: [moduleSchema],
-
-    // ── Playlist import fields ──
+    modules: { type: [moduleSchema], default: [] },
+    studyConfig: {
+        type: studyConfigSchema,
+        default: () => ({})
+    },
     sourcePlaylistId: { type: String, default: '' },
-    learningGoal:     { type: String, default: '' },
-    hoursPerDay:      { type: Number, default: 2 },
-    currentDayIndex:  { type: Number, default: 0 },
-    days:             [daySchema],
-
-    // ── AI Analysis cache ──
-    topicAnalysis: { type: mongoose.Schema.Types.Mixed, default: null }
+    learningGoal: { type: String, default: '' },
+    hoursPerDay: { type: Number, default: 2 },
+    currentDayIndex: { type: Number, default: 0 },
+    days: { type: [daySchema], default: [] }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Course', courseSchema);

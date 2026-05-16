@@ -1,66 +1,20 @@
-    const User = require('../models/User');
+const User = require('../models/User');
 const Course = require('../models/Course');
+const {
+    ACTION_LABELS,
+    CREATION_CATEGORIES,
+    PLAN_LIMITS,
+    getActionLimit,
+    getNormalizedPlan,
+    getPlanLimits
+} = require('../config/limitController');
 
-const PLAN_LIMITS = {
-    free: {
-        maxCourses: 3,
-        coursesPerWeek: 1,
-        topicUnlocksPerCoursePerDay: 1,
-        quizPassThreshold: 80,
-        maxAiChatPerDay: 10
-    },
-    pro: {
-        maxCourses: 10,
-        coursesPerWeek: 5,
-        topicUnlocksPerCoursePerDay: 3,
-        quizPassThreshold: 70,
-        maxAiChatPerDay: 50
-    },
-    ultra: {
-        maxCourses: 50,
-        coursesPerWeek: 15,
-        topicUnlocksPerCoursePerDay: 10,
-        quizPassThreshold: 60,
-        maxAiChatPerDay: Infinity
-    }
-};
+const getCategoryConfig = (category = 'guided') => CREATION_CATEGORIES[category] || CREATION_CATEGORIES.guided;
 
-const CREATION_CATEGORIES = {
-    forge: {
-        sourceType: 'ai-generated',
-        singularLabel: 'forge course',
-        pluralLabel: 'forge courses',
-        upgradeTarget: 'Pro'
-    },
-    playlist: {
-        sourceType: 'playlist',
-        singularLabel: 'playlist course',
-        pluralLabel: 'playlist courses',
-        upgradeTarget: 'Pro'
-    }
-};
-
-const getNormalizedPlan = (plan) => PLAN_LIMITS[plan] ? plan : 'free';
-
-const getCategoryConfig = (category = 'forge') => CREATION_CATEGORIES[category] || CREATION_CATEGORIES.forge;
-
-/**
- * Helper to get current date string
- */
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
-/**
- * Helper to check if a date is within the last 7 days
- */
-const isWithinLastWeek = (date) => {
-    if (!date) return false;
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    return new Date(date) > oneWeekAgo;
-};
-
 const getWeeklyResetDate = async (userId, sourceType, weeklyLimit) => {
-    if (!weeklyLimit || weeklyLimit === Infinity) return null;
+    if (!weeklyLimit) return null;
 
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -87,43 +41,28 @@ const buildLimitMessage = ({ plan, limits, category, activeCount, weeklyCount, n
     const planLabel = plan.toUpperCase();
 
     if (activeCount >= limits.maxCourses) {
-        if (plan === 'ultra') {
-            return {
-                limitType: 'maxCourses',
-                message: `You have reached the maximum of ${limits.maxCourses} ${categoryConfig.pluralLabel} on the ${planLabel} plan. Delete an existing ${categoryConfig.singularLabel} to add a new one.`
-            };
-        }
-
+        const upgradeText = plan === 'ultra' ? `Delete an existing ${categoryConfig.singularLabel} to add a new one.` : `Delete one or upgrade to ${categoryConfig.upgradeTarget} for more.`;
         return {
             limitType: 'maxCourses',
-            message: `You have reached the maximum of ${limits.maxCourses} ${categoryConfig.pluralLabel} on the ${planLabel} plan. Delete one or upgrade to ${categoryConfig.upgradeTarget} for more.`
+            message: `You have reached the maximum of ${limits.maxCourses} ${categoryConfig.pluralLabel} on the ${planLabel} plan. ${upgradeText}`
         };
     }
 
     if (weeklyCount >= limits.coursesPerWeek) {
         const resetSuffix = nextAvailable ? ` You can create another after ${nextAvailable}.` : '';
-        if (plan === 'ultra') {
-            return {
-                limitType: 'weeklyLimit',
-                message: `You have reached your weekly limit of ${limits.coursesPerWeek} ${categoryConfig.pluralLabel} on the ${planLabel} plan.${resetSuffix}`
-            };
-        }
-
+        const upgradeText = plan === 'ultra' ? '' : ` Upgrade to ${categoryConfig.upgradeTarget} for more.`;
         return {
             limitType: 'weeklyLimit',
-            message: `You have reached your weekly limit of ${limits.coursesPerWeek} ${categoryConfig.pluralLabel} on the ${planLabel} plan.${resetSuffix} Upgrade to ${categoryConfig.upgradeTarget} for more.`
+            message: `You have reached your weekly limit of ${limits.coursesPerWeek} ${categoryConfig.pluralLabel} on the ${planLabel} plan.${resetSuffix}${upgradeText}`
         };
     }
 
-    return {
-        limitType: null,
-        message: ''
-    };
+    return { limitType: null, message: '' };
 };
 
-const getCourseCreationStatus = async (user, category = 'forge') => {
+const getCourseCreationStatus = async (user, category = 'guided') => {
     const normalizedPlan = getNormalizedPlan(user?.plan);
-    const limits = PLAN_LIMITS[normalizedPlan];
+    const limits = getPlanLimits(normalizedPlan);
     const categoryConfig = getCategoryConfig(category);
 
     if (!user?._id) {
@@ -141,7 +80,7 @@ const getCourseCreationStatus = async (user, category = 'forge') => {
         };
     }
 
-    const oneWeekAgo = new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const [activeCount, weeklyCount] = await Promise.all([
         Course.countDocuments({ userId: user._id, sourceType: categoryConfig.sourceType }),
         Course.countDocuments({
@@ -179,20 +118,16 @@ const getCourseCreationStatus = async (user, category = 'forge') => {
     };
 };
 
-/**
- * Middleware: Checks if the user can create a new course.
- * Expects clerkId in req.body
- */
-const checkCourseCreation = (category = 'forge') => async (req, res, next) => {
+const checkCourseCreation = (category = 'guided') => async (req, res, next) => {
     try {
         const { clerkId } = req.body;
-        if (!clerkId) return next(); // Let the handler deal with missing clerkId
+        if (!clerkId) return next();
 
         const user = await User.findOne({ clerkId });
-        if (!user) return next(); // New user, will be created in handler
+        if (!user) return next();
 
         const normalizedPlan = getNormalizedPlan(user.plan);
-        const limits = PLAN_LIMITS[normalizedPlan];
+        const limits = getPlanLimits(normalizedPlan);
         const status = await getCourseCreationStatus(user, category);
 
         if (!status.canCreate) {
@@ -207,144 +142,130 @@ const checkCourseCreation = (category = 'forge') => async (req, res, next) => {
             });
         }
 
-        // Attach user and limits to request for downstream use
         req.dbUser = user;
         req.planLimits = limits;
         req.creationCategory = category;
         next();
     } catch (err) {
         console.error('usageLimiter error:', err.message);
-        next(); // Don't block on middleware errors
-    }
-};
-
-/**
- * Middleware: Checks daily topic unlock limit for free users.
- * Expects courseId in req.params and clerkId derived from the course's userId
- */
-const checkTopicUnlock = async (req, res, next) => {
-    try {
-        const { courseId } = req.params;
-
-        const course = await Course.findById(courseId);
-        if (!course) return next();
-
-        const user = await User.findById(course.userId);
-        if (!user) return next();
-
-        const limits = PLAN_LIMITS[user.plan || 'free'];
-        const today = todayStr();
-
-        // Find today's unlock record for this course
-        const unlockRecord = user.topicUnlocks.find(
-            u => u.courseId?.toString() === courseId && u.date === today
-        );
-
-        const currentCount = unlockRecord ? unlockRecord.count : 0;
-
-        if (currentCount >= limits.topicUnlocksPerCoursePerDay) {
-            return res.status(403).json({
-                success: false,
-                limitReached: true,
-                limitType: 'dailyTopicLimit',
-                message: `You've reached your limit of ${limits.topicUnlocksPerCoursePerDay} topic unlocks per day for this course.`,
-                currentPlan: user.plan
-            });
-        }
-
-        // Attach for downstream
-        req.dbUser = user;
-        req.planLimits = limits;
-        next();
-    } catch (err) {
-        console.error('checkTopicUnlock error:', err.message);
         next();
     }
 };
 
-/**
- * Increments the daily topic unlock counter for a user + course.
- */
-const recordTopicUnlock = async (userId, courseId) => {
-    try {
-        const user = await User.findById(userId);
-        if (!user) return;
+const getDailyAIUsage = (user) => {
+    const today = todayStr();
+    const usage = user?.aiActionUsage || {};
 
-        const today = todayStr();
-        const existing = user.topicUnlocks.find(
-            u => u.courseId?.toString() === courseId.toString() && u.date === today
-        );
-
-        if (existing) {
-            existing.count += 1;
-        } else {
-            // Clean up old entries (keep only last 7 days)
-            const weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            const weekAgoStr = weekAgo.toISOString().slice(0, 10);
-            user.topicUnlocks = user.topicUnlocks.filter(u => u.date >= weekAgoStr);
-
-            user.topicUnlocks.push({ courseId, date: today, count: 1 });
-        }
-
-        await user.save();
-    } catch (err) {
-        console.error('recordTopicUnlock error:', err.message);
+    if (usage.date === today) {
+        return { date: today, actions: { ...(usage.actions || {}) } };
     }
+
+    return { date: today, actions: {} };
 };
 
-/**
- * Middleware: Checks daily AI chat limits.
- */
-const checkAIChatLimit = async (req, res, next) => {
+const getAIActionStatus = (user, actionKey) => {
+    const plan = getNormalizedPlan(user?.plan);
+    const limit = getActionLimit(plan, actionKey);
+    const usage = getDailyAIUsage(user);
+    const used = Number(usage.actions[actionKey] || 0);
+    const remaining = Math.max(limit - used, 0);
+
+    return {
+        actionKey,
+        label: ACTION_LABELS[actionKey] || actionKey,
+        plan,
+        limit,
+        used,
+        remaining,
+        canUse: used < limit,
+        resetsOn: usage.date
+    };
+};
+
+const getAllAIActionStatuses = (user) => {
+    const plan = getNormalizedPlan(user?.plan);
+    const limits = getPlanLimits(plan).aiActionsPerDay;
+
+    return Object.keys(limits).reduce((acc, actionKey) => {
+        acc[actionKey] = getAIActionStatus(user, actionKey);
+        return acc;
+    }, {});
+};
+
+const recordAIActionForUser = async (user, actionKey, count = 1) => {
+    if (!user || !actionKey) return;
+
+    const usage = getDailyAIUsage(user);
+    usage.actions[actionKey] = Number(usage.actions[actionKey] || 0) + count;
+    user.aiActionUsage = usage;
+
+    if (actionKey === 'tutorChat') {
+        user.aiChatUsage = { date: usage.date, count: usage.actions[actionKey] };
+    }
+
+    user.markModified('aiActionUsage');
+    await user.save();
+};
+
+const assertAIActionForUser = (user, actionKey, count = 1) => {
+    const status = getAIActionStatus(user, actionKey);
+    if (status.remaining < count) {
+        const planLabel = status.plan.toUpperCase();
+        const message = `You have reached your daily limit of ${status.limit} ${status.label} on the ${planLabel} plan.`;
+        const error = new Error(message);
+        error.statusCode = 403;
+        error.limitReached = true;
+        error.usageStatus = status;
+        throw error;
+    }
+
+    return status;
+};
+
+const consumeAIActionForUser = async (user, actionKey, count = 1) => {
+    assertAIActionForUser(user, actionKey, count);
+    await recordAIActionForUser(user, actionKey, count);
+    return getAIActionStatus(user, actionKey);
+};
+
+const recordAIAction = async (clerkId, actionKey, count = 1) => {
+    const user = await User.findOne({ clerkId });
+    if (!user) return;
+    await recordAIActionForUser(user, actionKey, count);
+};
+
+const checkAIActionLimit = (actionKey = 'tutorChat') => async (req, res, next) => {
     try {
-        const clerkId = req.body.clerkId;
+        const clerkId = req.body.clerkId || req.query.clerkId;
         if (!clerkId) return next();
 
         const user = await User.findOne({ clerkId });
         if (!user) return next();
 
-        const limits = PLAN_LIMITS[user.plan || 'free'];
-        if (limits.maxAiChatPerDay === Infinity) return next();
-
-        const today = todayStr();
-        const chatUsage = user.aiChatUsage || {};
-
-        if (chatUsage.date === today && chatUsage.count >= limits.maxAiChatPerDay) {
+        const status = getAIActionStatus(user, actionKey);
+        if (!status.canUse) {
             return res.status(403).json({
                 success: false,
                 limitReached: true,
-                message: `You've reached your limit of ${limits.maxAiChatPerDay} AI chat messages for today. Upgrade to a higher plan for more!`,
-                currentPlan: user.plan
+                actionKey,
+                usage: status,
+                currentPlan: status.plan,
+                message: `You have reached your daily limit of ${status.limit} ${status.label} on the ${status.plan.toUpperCase()} plan.`
             });
         }
 
+        req.dbUser = user;
+        req.aiActionStatus = status;
         next();
     } catch (err) {
-        console.error('checkAIChatLimit error:', err.message);
+        console.error('checkAIActionLimit error:', err.message);
         next();
     }
 };
 
-/**
- * Increments AI Chat Usage
- */
-const recordAIChat = async (clerkId) => {
-    try {
-        const user = await User.findOne({ clerkId });
-        if (!user) return;
+const checkAIChatLimit = checkAIActionLimit('tutorChat');
 
-        const today = todayStr();
-        if (!user.aiChatUsage || user.aiChatUsage.date !== today) {
-            user.aiChatUsage = { date: today, count: 1 };
-        } else {
-            user.aiChatUsage.count += 1;
-        }
-        await user.save();
-    } catch (err) {
-        console.error('recordAIChat error:', err.message);
-    }
-};
+const recordAIChat = async (clerkId) => recordAIAction(clerkId, 'tutorChat');
 
 module.exports = {
     PLAN_LIMITS,
@@ -352,8 +273,13 @@ module.exports = {
     checkCourseCreation,
     getCourseCreationStatus,
     getNormalizedPlan,
-    checkTopicUnlock,
-    recordTopicUnlock,
+    assertAIActionForUser,
+    checkAIActionLimit,
     checkAIChatLimit,
+    consumeAIActionForUser,
+    getAIActionStatus,
+    getAllAIActionStatuses,
+    recordAIAction,
+    recordAIActionForUser,
     recordAIChat
 };

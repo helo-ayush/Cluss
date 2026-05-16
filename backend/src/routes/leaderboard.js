@@ -48,6 +48,11 @@ router.get('/', async (req, res) => {
                 }
             },
             {
+                $match: {
+                    topicsCompleted: { $gt: 0 }
+                }
+            },
+            {
                 $sort: { topicsCompleted: -1 }
             }
         ];

@@ -27,24 +27,12 @@ const userSchema = new mongoose.Schema({
         enum: ['free', 'pro', 'ultra'],
         default: 'free'
     },
-    aiChatUsage: {
-        date: { type: String }, // "YYYY-MM-DD"
-        count: { type: Number, default: 0 }
-    },
-    coursesCreated: {
-        type: Number,
-        default: 0
-    },
-    lastCourseCreatedAt: {
-        type: Date,
-        default: null
-    },
-    // Tracks daily topic unlocks per course for free tier limit
-    topicUnlocks: [{
-        courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
-        date: { type: String },      // "YYYY-MM-DD"
-        count: { type: Number, default: 0 }
-    }]
+    // ── Unified Credit System ──
+    credits: {
+        balance: { type: Number, default: 0 },
+        lastRefillDate: { type: Date, default: null },
+        billingCycleEnd: { type: Date, default: null }
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

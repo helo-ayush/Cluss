@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { motion } from 'motion/react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import LoadingScreen from '../components/LoadingScreen';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -19,8 +20,8 @@ function StatusPill({ status }) {
     ready: { label: 'Completed', color: '#15803d', background: 'rgba(21, 128, 61, 0.12)' },
     processing: { label: 'Preparing', color: '#4338ca', background: 'rgba(67, 56, 202, 0.12)' },
     failed: { label: 'Needs Retry', color: '#b91c1c', background: 'rgba(185, 28, 28, 0.12)' },
-    unprocessed: { label: 'Not Started', color: '#475569', background: 'rgba(71, 85, 105, 0.12)' },
-  }[status] || { label: 'Locked', color: '#64748b', background: 'rgba(100, 116, 139, 0.12)' };
+    unprocessed: { label: 'Upcoming', color: '#64748b', background: 'rgba(100, 116, 139, 0.12)' },
+  }[status] || { label: 'Upcoming', color: '#64748b', background: 'rgba(100, 116, 139, 0.12)' };
 
   return (
     <span
@@ -346,9 +347,10 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
   );
 }
 
-function DayCard({ day, index, isCurrent, isLocked, courseId, onStartCheckpoint }) {
+function DayCard({ day, index, isCurrent, courseId, onStartCheckpoint }) {
   const navigate = useNavigate();
   const checkpointStatus = day.checkpoint?.status || 'locked';
+  const locked = checkpointStatus === 'locked';
   const showCheckpointButton =
     (isCurrent || checkpointStatus === 'available' || checkpointStatus === 'passed' || checkpointStatus === 'failed_all') &&
     day.status !== 'ready';
@@ -356,11 +358,10 @@ function DayCard({ day, index, isCurrent, isLocked, courseId, onStartCheckpoint 
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ opacity: locked ? 0.6 : 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.4, ease: 'easeOut' }}
       id={isCurrent ? 'playlist-current-day' : undefined}
-      className="course-surface relative overflow-hidden rounded-[2rem] p-6 md:p-7"
-      style={{ opacity: isLocked ? 0.62 : 1 }}
+      className={`course-surface relative overflow-hidden rounded-[2rem] p-6 md:p-7 ${locked ? 'grayscale-[0.5]' : ''}`}
     >
       <div className="pointer-events-none absolute inset-0">
         <div
@@ -465,12 +466,14 @@ function DayCard({ day, index, isCurrent, isLocked, courseId, onStartCheckpoint 
         <div className="mt-7 flex flex-col gap-3 md:flex-row">
           <button
             type="button"
-            onClick={() => !isLocked && navigate(`/playlist/${courseId}/day/${index}`)}
-            disabled={isLocked}
-            className="course-primary-button justify-center disabled:opacity-50"
+            disabled={locked}
+            onClick={() => !locked && navigate(`/playlist/${courseId}/day/${index}`)}
+            className="course-primary-button justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span className="material-symbols-outlined text-[18px]">play_circle</span>
-            {day.status === 'ready' ? `Review Day ${day.dayNumber}` : `Start Day ${day.dayNumber}`}
+            <span className="material-symbols-outlined text-[18px]">
+              {locked ? 'lock' : 'play_circle'}
+            </span>
+            {locked ? 'Locked' : day.status === 'ready' ? `Review Day ${day.dayNumber}` : `Start Day ${day.dayNumber}`}
           </button>
 
           {showCheckpointButton && (
@@ -501,16 +504,7 @@ function DayCard({ day, index, isCurrent, isLocked, courseId, onStartCheckpoint 
 }
 
 function LoadingState() {
-  return (
-    <div className="course-shell flex min-h-screen items-center justify-center px-6">
-      <div className="course-surface flex flex-col items-center gap-4 rounded-[2rem] px-8 py-10 text-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#111827] border-t-transparent" />
-        <p className="font-body text-sm" style={{ color: 'var(--theme-text-body)' }}>
-          Building your playlist plan...
-        </p>
-      </div>
-    </div>
-  );
+  return <LoadingScreen message="Building your playlist plan..." />;
 }
 
 export default function PlaylistCourseMap() {
@@ -714,7 +708,6 @@ export default function PlaylistCourseMap() {
               day={day}
               index={index}
               isCurrent={index === currentDayIndex}
-              isLocked={index > currentDayIndex && day.status !== 'ready'}
               courseId={courseId}
               onStartCheckpoint={handleStartCheckpoint}
             />

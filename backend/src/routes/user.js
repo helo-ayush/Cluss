@@ -1,89 +1,43 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const { PLAN_LIMITS, getCourseCreationStatus, getNormalizedPlan } = require('../middleware/usageLimiter');
+const CreditTransaction = require('../models/CreditTransaction');
+const { getCreditStatus, maybeRefillCredits } = require('../middleware/creditManager');
+const { ACTION_COSTS, getNormalizedPlan, getStudyControlLimits } = require('../config/creditConfig');
 
 /**
  * GET /api/user/:clerkId/usage
- * Returns current plan, usage stats, and remaining limits for the frontend.
+ * Returns current plan, credit balance, and allowance info.
  */
 router.get('/:clerkId/usage', async (req, res) => {
     try {
         const { clerkId } = req.params;
+        const { name } = req.query;
         const user = await User.findOne({ clerkId });
-        const plan = getNormalizedPlan(user?.plan);
-        const limits = PLAN_LIMITS[plan];
-        const today = new Date().toISOString().slice(0, 10);
+        
+        if (user && name && user.name !== name) {
+            user.name = name;
+            await user.save();
+        }
 
         if (!user) {
-            const emptyPermission = {
-                canCreate: true,
-                limitType: null,
-                message: '',
-                nextAvailable: null,
-                activeCount: 0,
-                weeklyCount: 0,
-                maxCourses: limits.maxCourses,
-                weeklyLimit: limits.coursesPerWeek
-            };
-
+            const status = getCreditStatus(null);
             return res.json({
                 success: true,
-                plan,
-                limits,
-                usage: {
-                    totalCoursesCreated: 0,
-                    forge: { activeCourses: 0, weeklyCreated: 0 },
-                    playlist: { activeCourses: 0, weeklyCreated: 0 },
-                    todayTopicUnlocks: {}
-                },
-                permissions: {
-                    forge: emptyPermission,
-                    playlist: emptyPermission
-                },
-                canCreateCourse: true,
-                canImportPlaylist: true,
-                nextCourseAvailable: null,
-                nextPlaylistAvailable: null
+                ...status,
+                studyControls: getStudyControlLimits('free'),
+                actionCosts: buildActionCostsForPlan('free'),
             });
         }
 
-        const [forgeStatus, playlistStatus] = await Promise.all([
-            getCourseCreationStatus(user, 'forge'),
-            getCourseCreationStatus(user, 'playlist')
-        ]);
-
-        const todayUnlocks = {};
-        (user.topicUnlocks || []).forEach(u => {
-            if (u.date === today) {
-                todayUnlocks[u.courseId.toString()] = u.count;
-            }
-        });
+        await maybeRefillCredits(user);
+        const status = getCreditStatus(user);
 
         return res.json({
             success: true,
-            plan,
-            limits,
-            usage: {
-                totalCoursesCreated: user.coursesCreated || 0,
-                forge: {
-                    activeCourses: forgeStatus.activeCount,
-                    weeklyCreated: forgeStatus.weeklyCount
-                },
-                playlist: {
-                    activeCourses: playlistStatus.activeCount,
-                    weeklyCreated: playlistStatus.weeklyCount
-                },
-                todayTopicUnlocks: todayUnlocks
-            },
-            permissions: {
-                forge: forgeStatus,
-                playlist: playlistStatus
-            },
-            canCreateCourse: forgeStatus.canCreate,
-            canImportPlaylist: playlistStatus.canCreate,
-            nextCourseAvailable: forgeStatus.nextAvailable,
-            nextPlaylistAvailable: playlistStatus.nextAvailable
+            ...status,
+            studyControls: getStudyControlLimits(user.plan),
+            actionCosts: buildActionCostsForPlan(user.plan),
         });
     } catch (err) {
         console.error('Error fetching user usage:', err);
@@ -92,23 +46,76 @@ router.get('/:clerkId/usage', async (req, res) => {
 });
 
 /**
+ * GET /api/user/:clerkId/transactions
+ * Returns paginated credit transaction ledger.
+ * Query: ?page=1&limit=30
+ */
+router.get('/:clerkId/transactions', async (req, res) => {
+    try {
+        const { clerkId } = req.params;
+        const user = await User.findOne({ clerkId });
+        if (!user) {
+            return res.json({ success: true, transactions: [], total: 0, page: 1 });
+        }
+
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 30));
+        const skip = (page - 1) * limit;
+
+        const [transactions, total] = await Promise.all([
+            CreditTransaction.find({ userId: user._id })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            CreditTransaction.countDocuments({ userId: user._id })
+        ]);
+
+        return res.json({
+            success: true,
+            transactions,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.error('Error fetching transactions:', err);
+        res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
+    }
+});
+
+/**
  * POST /api/user/:clerkId/upgrade
- * Manually upgrade a user to Pro (placeholder until payment is wired up).
+ * Admin-only: Manually set a user's plan. Requires ADMIN_SECRET header.
  */
 router.post('/:clerkId/upgrade', async (req, res) => {
     try {
-        const { clerkId } = req.params;
-        const user = await User.findOneAndUpdate(
-            { clerkId },
-            { plan: 'pro' },
-            { returnDocument: 'after' }
-        );
+        // ── Admin secret guard ──
+        const adminSecret = process.env.ADMIN_SECRET;
+        const providedSecret = req.headers['x-admin-secret'];
+        if (!adminSecret || providedSecret !== adminSecret) {
+            return res.status(403).json({ success: false, message: 'Forbidden' });
+        }
 
+        const { clerkId } = req.params;
+        const { plan = 'pro' } = req.body;
+        const validPlan = ['pro', 'ultra'].includes(plan) ? plan : 'pro';
+
+        const user = await User.findOne({ clerkId });
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        return res.json({ success: true, plan: user.plan, message: 'Upgraded to Pro!' });
+        user.plan = validPlan;
+        // Set billing cycle end to 30 days from now
+        user.credits.billingCycleEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        // Reset balance and refill date for clean start
+        user.credits.balance = validPlan === 'ultra' ? 300 : 150;
+        user.credits.lastRefillDate = new Date();
+        user.markModified('credits');
+        await user.save();
+
+        return res.json({ success: true, plan: user.plan, message: `Upgraded to ${validPlan.charAt(0).toUpperCase() + validPlan.slice(1)}!` });
     } catch (err) {
         console.error('Error upgrading user:', err);
         res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
@@ -149,5 +156,16 @@ router.post('/:clerkId/avatar', async (req, res) => {
         res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
     }
 });
+
+// ── Helper: Build action costs object for frontend ──
+function buildActionCostsForPlan(plan) {
+    const p = getNormalizedPlan(plan);
+    const tier = p === 'free' ? 'standard' : 'advanced';
+    const result = {};
+    for (const [key, costs] of Object.entries(ACTION_COSTS)) {
+        result[key] = costs[tier];
+    }
+    return result;
+}
 
 module.exports = router;

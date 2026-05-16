@@ -4,6 +4,7 @@ import { useUser } from '@clerk/clerk-react';
 import { motion } from 'motion/react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import TutorChatPanel from '../components/TutorChatPanel';
+import LoadingScreen from '../components/LoadingScreen';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -15,7 +16,7 @@ const formatDuration = (seconds) => {
   return `${minutes}m`;
 };
 
-function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onSubmitted }) {
+function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onSubmitted, plan }) {
   const [activeTab, setActiveTab] = useState('theory');
   const [theoryAnswers, setTheoryAnswers] = useState(Array(checkpoint?.theoryQuestions?.length || 0).fill(''));
   const [codeFiles, setCodeFiles] = useState([{ fileName: 'filename', content: '' }]);
@@ -311,6 +312,7 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
                 <>
                   <span className="material-symbols-outlined text-[18px]">send</span>
                   Submit ({maxAttempts - attemptsUsed} left)
+                  <CreditCost cost={getCostForAction(plan, 'playlistCheckpointGrading')} className="text-white ml-2" />
                 </>
               )}
             </button>
@@ -363,16 +365,7 @@ function VideoListItem({ video, index, isActive, isWatched, onClick }) {
 }
 
 function LoadingState() {
-  return (
-    <div className="course-shell flex min-h-screen items-center justify-center px-6">
-      <div className="course-surface flex flex-col items-center gap-4 rounded-[2rem] px-8 py-10 text-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#111827] border-t-transparent" />
-        <p className="font-body text-sm" style={{ color: 'var(--theme-text-body)' }}>
-          Opening your study day...
-        </p>
-      </div>
-    </div>
-  );
+  return <LoadingScreen message="Opening your study day..." />;
 }
 
 export default function PlaylistLearnHub() {
@@ -451,6 +444,14 @@ export default function PlaylistLearnHub() {
     finally { setLoadingCheckpoint(false); }
   };
 
+  const handleMarkDayComplete = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/course/${courseId}/day/${dayIndex}/ready`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) fetchCourse();
+    } catch (err) { console.error(err); }
+  };
+
   // ── ALL hooks called. Now derive values. ──
   const day = course?.days?.[dayIndex];
   const videos = day?.videos || [];
@@ -488,7 +489,7 @@ export default function PlaylistLearnHub() {
         {showCheckpoint && checkpointData && (
           <CheckpointModal checkpoint={checkpointData} courseId={courseId} dayIndex={dayIndex} clerkId={user?.id}
             onClose={() => { setShowCheckpoint(false); setCheckpointData(null); }}
-            onSubmitted={() => fetchCourse()} />
+            onSubmitted={() => fetchCourse()} plan={usageData?.plan} />
         )}
 
         {loadingCheckpoint && (
@@ -646,26 +647,31 @@ export default function PlaylistLearnHub() {
 
                 <div id="playlist-day-checkpoint" className="course-surface min-w-0 rounded-[1.75rem] p-5 md:rounded-[2.2rem] md:p-6">
                   <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>Day Checkpoint</p>
-                  <h2 className="mt-2 font-serif text-[1.8rem] font-semibold leading-tight md:text-2xl" style={{ color: 'var(--theme-text-heading)' }}>Validate the day</h2>
+                  <h2 className="mt-2 font-serif text-[1.8rem] font-semibold leading-tight md:text-2xl" style={{ color: 'var(--theme-text-heading)' }}>Finish the day</h2>
                   <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
-                    After you finish the planned videos, take the checkpoint to complete the day and unlock the next step.
+                    After you finish the planned videos, mark the day as complete. You can also generate an optional AI checkpoint to test your knowledge.
                   </p>
                   <div className="mt-5 course-progress-track"><div className="course-progress-fill" style={{ width: `${dayProgress}%` }} /></div>
                   <p className="mt-3 font-label text-xs font-bold" style={{ color: '#4338ca' }}>{watchedSet.size}/{videos.length} videos complete</p>
-                  <div className="mt-6">
+                  <div className="mt-6 flex flex-col gap-3">
                     {dayCompleted ? (
                       <div className="course-surface-soft flex items-center gap-3 rounded-[1.4rem] px-4 py-4">
                         <span className="material-symbols-outlined text-[22px]" style={{ color: '#15803d' }}>verified</span>
                         <div>
                           <p className="font-body text-sm font-semibold" style={{ color: '#15803d' }}>Day complete</p>
-                          <p className="font-body text-xs" style={{ color: 'var(--theme-text-body)' }}>Checkpoint has already been passed.</p>
+                          <p className="font-body text-xs" style={{ color: 'var(--theme-text-body)' }}>Progress saved.</p>
                         </div>
                       </div>
                     ) : allWatched ? (
-                      <button type="button" onClick={handleStartCheckpoint} disabled={loadingCheckpoint} className="course-primary-button w-full justify-center">
-                        {loadingCheckpoint ? (<><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />Preparing</>) :
-                         (<><span className="material-symbols-outlined text-[18px]">psychology</span>Take Day Checkpoint</>)}
-                      </button>
+                      <>
+                        <button type="button" onClick={handleMarkDayComplete} className="course-primary-button w-full justify-center">
+                          <span className="material-symbols-outlined text-[18px]">check_circle</span>Mark Day Complete
+                        </button>
+                        <button type="button" onClick={handleStartCheckpoint} disabled={loadingCheckpoint} className="course-outline-button w-full justify-center">
+                          {loadingCheckpoint ? (<><span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />Preparing</>) :
+                           (<><span className="material-symbols-outlined text-[18px]">psychology</span>Optional Checkpoint <CreditCost cost={getCostForAction(usageData?.plan, 'playlistCheckpointGeneration')} className="ml-1" /></>)}
+                        </button>
+                      </>
                     ) : (
                       <button type="button" disabled className="course-outline-button w-full justify-center opacity-50">
                         <span className="material-symbols-outlined text-[18px]">lock</span>Watch All Videos First
@@ -692,7 +698,7 @@ export default function PlaylistLearnHub() {
       {course && (
         <TutorChatPanel isOpen={isTutorOpen} onClose={() => setIsTutorOpen(false)}
           courseId={courseId} moduleIndex={dayIndex} subtopicIndex={activeVideoIdx}
-          topicTitle={activeVideo?.title} hasTutorAccess={hasTutorAccess} />
+          topicTitle={activeVideo?.title} hasTutorAccess={hasTutorAccess} plan={usageData?.plan} />
       )}
     </>
   );

@@ -3,10 +3,12 @@ import { useUser } from '@clerk/clerk-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import MarkdownRenderer from './MarkdownRenderer';
+import CreditCost from './CreditCost';
+import { getCostForAction } from '../config/creditCosts';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
-export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex, subtopicIndex, topicTitle, hasTutorAccess }) {
+export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex, subtopicIndex, topicTitle, hasTutorAccess, plan }) {
   const { user } = useUser();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -200,7 +202,7 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
                       )}
                       
                       <div className={`mt-2 font-label text-[9px] uppercase tracking-widest opacity-50 font-bold ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                        {msg.role === 'user' ? 'User Presence' : 'Lumina AI Tutor'}
+                        {msg.role === 'user' ? 'User Presence' : 'Cluss AI Tutor'}
                       </div>
                     </div>
                   </motion.div>
@@ -261,10 +263,11 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
                   <button
                     onClick={sendMessage}
                     disabled={!input.trim() || loading || !hasTutorAccess}
-                    className="shrink-0 w-10 min-h-10 rounded-xl flex items-center justify-center transition-all disabled:opacity-30 group shadow-sm"
+                    className="shrink-0 min-w-10 px-3 min-h-10 rounded-xl flex items-center justify-center gap-1 transition-all disabled:opacity-30 group shadow-sm"
                     style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
                   >
                     <span className="material-symbols-outlined text-white" style={{ fontSize: '20px' }}>send</span>
+                    <CreditCost cost={getCostForAction(plan, 'tutorChat')} className="text-white ml-0.5" />
                   </button>
                 </div>
               </div>

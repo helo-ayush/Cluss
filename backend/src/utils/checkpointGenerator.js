@@ -1,4 +1,5 @@
 const { GoogleGenAI } = require('@google/genai');
+const { getModelForPlan } = require('../config/creditConfig');
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -58,7 +59,7 @@ NOTE: If questionType is "theory", set codingQuestion to { "prompt": "", "langua
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: getModelForPlan(userPlan),
             contents: prompt,
             config: { responseMimeType: 'application/json' }
         });
@@ -149,7 +150,7 @@ Output ONLY valid JSON:
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: getModelForPlan('free'),
             contents: prompt,
             config: { responseMimeType: 'application/json' }
         });
