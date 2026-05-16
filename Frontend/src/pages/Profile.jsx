@@ -249,7 +249,7 @@ const Profile = () => {
 
   return (
     <DashboardShell title="Profile" eyebrow="Settings & Identity">
-      <div className="max-w-5xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-auto space-y-8">
         
         {/* ══ PREMIUM HEADER ══ */}
         <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#111111] shadow-[0_30px_100px_rgba(0,0,0,0.35)] p-8 md:p-12">
@@ -505,23 +505,25 @@ const Profile = () => {
                 No transactions yet. Start learning to see history!
               </div>
             ) : (
-              <div className="custom-scroll max-h-[350px] flex-1 overflow-y-auto pr-2 space-y-3">
-                {transactions.map((tx, i) => (
-                  <div key={tx._id || i} className="flex items-center justify-between p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[1rem] ${tx.type === 'spend' ? 'bg-zinc-800 text-zinc-400' : 'bg-white text-black'}`}>
-                        {tx.type === 'spend' ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
+              <div className="relative flex-1">
+                <div className="absolute inset-0 custom-scroll overflow-y-auto pr-2 space-y-3">
+                  {transactions.map((tx, i) => (
+                    <div key={tx._id || i} className="flex items-center justify-between p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[1rem] ${tx.type === 'spend' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                          {tx.type === 'spend' ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white tracking-wide">{tx.description}</p>
+                          <p className="text-[10px] font-semibold text-zinc-500 mt-1">{new Date(tx.createdAt).toLocaleString()}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-white tracking-wide">{tx.description}</p>
-                        <p className="text-[10px] font-semibold text-zinc-500 mt-1">{new Date(tx.createdAt).toLocaleString()}</p>
-                      </div>
+                      <span className={`text-base font-black ${tx.type === 'spend' ? 'text-red-500' : 'text-emerald-500'}`}>
+                        {tx.type === 'spend' ? '' : '+'}{tx.amount}
+                      </span>
                     </div>
-                    <span className={`text-base font-black ${tx.type === 'spend' ? 'text-zinc-400' : 'text-white'}`}>
-                      {tx.type === 'spend' ? '' : '+'}{tx.amount}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
             

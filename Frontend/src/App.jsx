@@ -20,6 +20,7 @@ function AppRoutes() {
   const isDashboardWorkspace = location.pathname === '/dashboard'
     || location.pathname.startsWith('/dashboard/')
     || location.pathname.startsWith('/create/')
+    || location.pathname.startsWith('/study-plan/')
     || location.pathname === '/profile';
 
   return (

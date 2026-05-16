@@ -5,21 +5,21 @@ import { DEFAULT_STUDY_CONFIG, getPlanConfig, normalizeStudyConfig } from '../ut
 
 function Stepper({ value, min = 0, max = 5, disabled, onChange }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-full bg-slate-100/80 p-1 shadow-inner border border-slate-200/60">
+    <div className="flex items-center gap-1.5 rounded-full bg-white/5 p-1 shadow-inner border border-white/10">
       <button 
         type="button" 
         disabled={disabled || value <= min} 
         onClick={() => onChange(Math.max(min, value - 1))}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] text-slate-600 transition-all hover:text-slate-900 hover:shadow-[0_4px_12px_rgba(15,23,42,0.12)] disabled:opacity-40 disabled:hover:text-slate-600 disabled:hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.2)] text-zinc-300 transition-all hover:text-white hover:bg-white/20 disabled:opacity-40 disabled:hover:text-zinc-300 disabled:hover:bg-white/10"
       >
         <Minus className="h-4 w-4" />
       </button>
-      <span className="w-8 text-center text-[15px] font-bold text-slate-800">{value}</span>
+      <span className="w-8 text-center text-[15px] font-bold text-white">{value}</span>
       <button 
         type="button" 
         disabled={disabled || value >= max} 
         onClick={() => onChange(Math.min(max, value + 1))}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] text-slate-600 transition-all hover:text-indigo-600 hover:shadow-[0_4px_12px_rgba(79,70,229,0.12)] disabled:opacity-40 disabled:hover:text-slate-600 disabled:hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.2)] text-zinc-300 transition-all hover:text-white hover:bg-white/20 disabled:opacity-40 disabled:hover:text-zinc-300 disabled:hover:bg-white/10"
       >
         <Plus className="h-4 w-4" />
       </button>
@@ -33,41 +33,41 @@ function ToggleRow({ icon: Icon, title, description, enabled, onToggle, children
       layout
       className={`group relative overflow-hidden rounded-[1.8rem] border transition-all duration-300 ${
         locked 
-          ? 'border-amber-200/60 bg-amber-50/40' 
+          ? 'border-amber-500/20 bg-amber-500/5' 
           : enabled 
-            ? 'border-slate-200 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.06)]' 
-            : 'border-slate-200/50 bg-white/60 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(15,23,42,0.03)]'
+            ? 'border-white/20 bg-[#111111] shadow-[0_8px_30px_rgba(0,0,0,0.4)]' 
+            : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:shadow-[0_8px_30px_rgba(0,0,0,0.2)]'
       } px-5 py-5`}
     >
       <div className="flex items-start justify-between gap-5 relative z-10">
         <div className="flex items-start gap-4">
           <div className={`mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-all duration-300 ${
             locked 
-              ? 'bg-gradient-to-br from-amber-100 to-amber-200/60 text-amber-700 shadow-inner' 
+              ? 'bg-amber-500/10 text-amber-400' 
               : enabled 
-                ? 'bg-slate-800 text-white shadow-[0_4px_12px_rgba(15,23,42,0.2)]' 
-                : 'bg-slate-100/80 text-slate-500 shadow-inner group-hover:bg-slate-200 group-hover:text-slate-800'
+                ? 'bg-white text-black shadow-[0_4px_12px_rgba(255,255,255,0.2)]' 
+                : 'bg-white/5 text-zinc-500 shadow-inner group-hover:bg-white/10 group-hover:text-white'
           }`}>
             {locked ? <Lock className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
           </div>
           <div className="min-w-0">
-            <p className={`font-semibold text-[15px] transition-colors ${enabled ? 'text-slate-900' : 'text-slate-800'}`}>{title}</p>
-            <p className="mt-1 text-sm leading-[1.6] text-slate-500">{description}</p>
+            <p className={`font-semibold text-[15px] transition-colors ${enabled ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-200'}`}>{title}</p>
+            <p className="mt-1 text-sm leading-[1.6] text-zinc-500">{description}</p>
           </div>
         </div>
         <button
           type="button"
           disabled={locked}
           onClick={() => onToggle(!enabled)}
-          className={`relative flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2 ${
+          className={`relative flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black ${
             enabled 
-              ? 'bg-slate-800 shadow-inner' 
-              : 'bg-slate-200 hover:bg-slate-300'
-          } ${locked ? 'opacity-60 cursor-not-allowed' : ''}`}
+              ? 'bg-white shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
+              : 'bg-zinc-700 hover:bg-zinc-600'
+          } ${locked ? 'opacity-40 cursor-not-allowed' : ''}`}
         >
           <span 
-            className={`absolute inline-block h-[20px] w-[20px] transform rounded-full bg-white shadow-sm transition-transform duration-300 cubic-bezier(0.4, 0, 0.2, 1) ${
-              enabled ? 'translate-x-[24px]' : 'translate-x-[4px]'
+            className={`absolute inline-block h-[20px] w-[20px] transform rounded-full transition-transform duration-300 cubic-bezier(0.4, 0, 0.2, 1) ${
+              enabled ? 'translate-x-[24px] bg-black shadow-sm' : 'translate-x-[4px] bg-white'
             }`} 
           />
         </button>
@@ -82,7 +82,7 @@ function ToggleRow({ icon: Icon, title, description, enabled, onToggle, children
             transition={{ duration: 0.3, ease: "easeOut" }}
             className="relative z-10"
           >
-            <div className="pt-5 mt-5 border-t border-slate-100/80">
+            <div className="pt-5 mt-5 border-t border-white/10">
               {children}
             </div>
           </motion.div>
@@ -90,8 +90,8 @@ function ToggleRow({ icon: Icon, title, description, enabled, onToggle, children
       </AnimatePresence>
 
       {locked && (
-        <div className="mt-4 inline-flex items-center rounded-full bg-amber-100/50 px-3 py-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-700">Locked for paid plans</p>
+        <div className="mt-4 inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400">Locked for paid plans</p>
         </div>
       )}
     </motion.div>
@@ -111,14 +111,14 @@ export default function StudyConfigPanel({ value, onChange, plan = 'free', compa
 
   return (
     <div className={`grid ${tone}`}>
-      <motion.div layout className="relative overflow-hidden rounded-[1.8rem] border border-slate-200/50 bg-white/60 px-5 py-5 shadow-[0_2px_10px_rgba(0,0,0,0.01)] transition-all hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(15,23,42,0.03)]">
+      <motion.div layout className="relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-white/[0.03] px-5 py-5 shadow-lg transition-all hover:bg-white/[0.05]">
         <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-800 text-white shadow-[0_4px_12px_rgba(15,23,42,0.2)]">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-black shadow-[0_4px_12px_rgba(255,255,255,0.2)]">
             <Sparkles className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-[15px] text-slate-900">Explanation style</p>
-            <p className="mt-1 text-sm leading-[1.6] text-slate-500">Choose how dense each lesson should feel by default.</p>
+            <p className="font-semibold text-[15px] text-white">Explanation style</p>
+            <p className="mt-1 text-sm leading-[1.6] text-zinc-500">Choose how dense each lesson should feel by default.</p>
             <div className="mt-5 flex flex-wrap gap-2.5">
               {[
                 { key: 'short', label: 'Short' },
@@ -132,12 +132,12 @@ export default function StudyConfigPanel({ value, onChange, plan = 'free', compa
                     type="button"
                     disabled={readOnly || option.locked}
                     onClick={() => patch({ explanationLength: option.key })}
-                    className={`relative overflow-hidden rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
+                    className={`relative overflow-hidden rounded-full px-5 py-2.5 text-sm font-black transition-all duration-300 ${
                       active
-                        ? 'bg-slate-900 text-white shadow-[0_4px_14px_rgba(15,23,42,0.2)] hover:bg-slate-800'
+                        ? 'bg-white text-black shadow-[0_4px_14px_rgba(255,255,255,0.2)] hover:bg-zinc-200'
                         : option.locked
-                        ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/50'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                        ? 'bg-amber-500/5 text-amber-400 ring-1 ring-amber-500/20'
+                        : 'bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'
                     } disabled:cursor-not-allowed`}
                   >
                     {option.locked ? `${option.label} · Pro` : option.label}
@@ -157,7 +157,7 @@ export default function StudyConfigPanel({ value, onChange, plan = 'free', compa
         onToggle={(enabled) => patch({ mcqEnabled: enabled, mcqCount: enabled ? Math.max(config.mcqCount || 1, 1) : 0 })}
       >
         <div className="flex items-center justify-between gap-4">
-          <p className="text-sm font-semibold text-slate-700">Question count</p>
+          <p className="text-sm font-semibold text-white">Question count</p>
           <Stepper value={config.mcqCount} min={1} max={limits.mcqMax} disabled={readOnly} onChange={(mcqCount) => patch({ mcqCount })} />
         </div>
       </ToggleRow>
@@ -170,7 +170,7 @@ export default function StudyConfigPanel({ value, onChange, plan = 'free', compa
         onToggle={(enabled) => patch({ writtenEnabled: enabled, writtenCount: enabled ? Math.max(config.writtenCount || 1, 1) : 0 })}
       >
         <div className="flex items-center justify-between gap-4">
-          <p className="text-sm font-semibold text-slate-700">Prompt count</p>
+          <p className="text-sm font-semibold text-white">Prompt count</p>
           <Stepper value={config.writtenCount} min={1} max={limits.writtenMax} disabled={readOnly} onChange={(writtenCount) => patch({ writtenCount })} />
         </div>
       </ToggleRow>
@@ -185,7 +185,7 @@ export default function StudyConfigPanel({ value, onChange, plan = 'free', compa
       >
         {limits.canUseCode && (
           <div className="flex items-center justify-between gap-4">
-            <p className="text-sm font-semibold text-slate-700">Task count</p>
+            <p className="text-sm font-semibold text-white">Task count</p>
             <Stepper value={config.codeCount} min={1} max={limits.codeMax} disabled={readOnly} onChange={(codeCount) => patch({ codeCount })} />
           </div>
         )}
@@ -212,10 +212,10 @@ export default function StudyConfigPanel({ value, onChange, plan = 'free', compa
                   type="button"
                   disabled={readOnly}
                   onClick={() => patch({ miniProjectMode: option.key })}
-                  className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
+                  className={`rounded-full px-5 py-2.5 text-sm font-black transition-all duration-300 ${
                     active 
-                      ? 'bg-slate-800 text-white shadow-[0_4px_14px_rgba(15,23,42,0.2)] hover:bg-slate-700' 
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                      ? 'bg-white text-black shadow-[0_4px_14px_rgba(255,255,255,0.2)] hover:bg-zinc-200' 
+                      : 'bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   {option.label}

@@ -65,11 +65,11 @@ export default function PlanLibraryPage({ type = 'guided' }) {
   const title = isPlaylist ? 'Playlist Plans' : 'Guided Plans';
   const Icon = isPlaylist ? Youtube : Compass;
   const accentColor = '#e2e8f0'; // Slate 200
-  const emptyMessage = isPlaylist 
+  const emptyMessage = isPlaylist
     ? 'Convert your favorite YouTube playlists into structured daily learning plans.'
     : 'Let AI craft the perfect curriculum for whatever you want to learn next.';
-  
-  const createLink = isPlaylist ? '//create/playlist' : '/dashboard/create/guided';
+
+  const createLink = isPlaylist ? '/create/playlist' : '/create/guided';
 
   return (
     <DashboardShell title={title} eyebrow="Study library" usageData={usageData}>
@@ -82,7 +82,7 @@ export default function PlanLibraryPage({ type = 'guided' }) {
 
           <div className="relative z-10 p-8 md:p-12">
             <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-              
+
               {/* Left Content */}
               <div className="flex-1">
                 <div className="inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 mb-6 backdrop-blur-md">
@@ -91,7 +91,7 @@ export default function PlanLibraryPage({ type = 'guided' }) {
                     {isPlaylist ? 'Video Learning' : 'AI Curriculum'}
                   </span>
                 </div>
-                
+
                 <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white mb-4">
                   {title}
                 </h2>
@@ -121,7 +121,7 @@ export default function PlanLibraryPage({ type = 'guided' }) {
             ))}
           </div>
         ) : plans.length === 0 ? (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center justify-center rounded-[2.8rem] border border-white/10 bg-[#0a0a0a] py-24 px-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.2)]"
           >
@@ -132,7 +132,7 @@ export default function PlanLibraryPage({ type = 'guided' }) {
             <p className="max-w-md text-sm leading-7 text-zinc-400 mb-8">
               {emptyMessage}
             </p>
-            <button 
+            <button
               onClick={() => navigate(createLink)}
               className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white px-6 py-3.5 text-sm font-black text-black transition hover:bg-zinc-200"
             >

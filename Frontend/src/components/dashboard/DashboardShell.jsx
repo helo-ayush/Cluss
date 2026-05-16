@@ -8,7 +8,7 @@ export default function DashboardShell({ title, eyebrow, showCreate = true, cont
   const { usageData } = useUsage();
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#050505] text-white">
+    <div className="min-h-screen overflow-x-clip bg-[#050505] text-white">
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -left-32 top-10 h-96 w-96 rounded-full bg-white/[0.055] blur-[120px]" />
         <div className="absolute right-0 top-24 h-[30rem] w-[30rem] rounded-full bg-zinc-500/[0.08] blur-[150px]" />

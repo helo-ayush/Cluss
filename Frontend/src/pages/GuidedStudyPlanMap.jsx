@@ -1,138 +1,372 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { SignInButton, useUser } from '@clerk/clerk-react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
-  ArrowRight, BookOpen, ChevronRight, Crown, Layers3,
-  Lock, Settings2, Sparkles, WandSparkles, Plus, Trash2,
-  CheckCircle, XCircle, Loader2, Navigation, MapPin,
+  ArrowRight,
+  BookOpen,
+  CheckCircle,
+  ChevronRight,
+  CirclePlay,
+  Crown,
+  FileSearch,
+  Gauge,
+  Layers3,
+  LayoutDashboard,
+  Loader2,
+  Lock,
+  Map,
+  Plus,
+  Search,
+  Settings2,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  Target,
+  Trash2,
+  Trophy,
+  WandSparkles,
+  XCircle,
+  Zap,
 } from 'lucide-react';
 import StudyConfigPanel from '../components/StudyConfigPanel';
 import { normalizeStudyConfig } from '../utils/studyConfig';
 import CreditCost from '../components/CreditCost';
 import { getCostForAction } from '../config/creditCosts';
-import { SignInButton } from '@clerk/clerk-react';
 import LoadingScreen from '../components/LoadingScreen';
+import DashboardShell from '../components/dashboard/DashboardShell';
+import { useUsage } from '../contexts/UsageContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
-function QuickJumpNavigator({ modules, currentRef }) {
-  const scrollToModule = (mi) => {
-    const el = document.getElementById(`module-section-${mi}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-  const scrollToCurrent = () => {
-    const el = document.getElementById('study-plan-current-topic');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
+const statusCopy = {
+  active: 'Active',
+  completed: 'Done',
+  locked: 'Locked',
+};
 
-  const activeIdx = currentRef?.moduleIndex ?? 0;
-  const total = (modules || []).length;
-  let start = Math.max(0, activeIdx - 1);
-  let end = Math.min(total, start + 4);
-  if (end - start < 4) start = Math.max(0, end - 4);
-  const visible = (modules || []).slice(start, end);
+function clampProgress(value) {
+  const number = Number(value) || 0;
+  return Math.max(0, Math.min(100, number));
+}
+
+function moduleCompletion(module) {
+  const subtopics = module?.subtopics || [];
+  if (!subtopics.length) return 0;
+  const completed = subtopics.filter((item) => item.status === 'completed').length;
+  return Math.round((completed / subtopics.length) * 100);
+}
+
+function getCurrentTopic(course, currentRef) {
+  if (!course?.modules || !currentRef) return { module: null, subtopic: null };
+  const module = course.modules[currentRef.moduleIndex];
+  const subtopic = module?.subtopics?.[currentRef.subtopicIndex] || null;
+  return { module, subtopic };
+}
+
+function scrollToElement(id, block = 'start') {
+  const element = document.getElementById(id);
+  if (element) element.scrollIntoView({ behavior: 'smooth', block });
+}
+
+function StudyPulsePanel({ progress, currentModule, currentSubtopic }) {
+  const safeProgress = clampProgress(progress);
 
   return (
-    <div className="course-surface rounded-[2rem] px-5 py-5">
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Quick Jump</p>
-        <button
-          type="button"
-          onClick={scrollToCurrent}
-          className="group flex items-center gap-1.5 text-[11px] font-bold text-[#4338ca] transition hover:text-[#312e81]"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4338ca] opacity-60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#4338ca]" />
-          </span>
-          Go to current
-        </button>
+    <div className="relative overflow-hidden rounded-[1.65rem] border border-white/10 bg-[#181a21] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:col-span-2 lg:col-span-2 xl:col-span-2">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/40 to-transparent" />
+      <div className="flex items-start justify-between gap-5">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-100/70">Study pulse</p>
+          <h2 className="mt-3 text-4xl font-black leading-none text-white">{safeProgress}%</h2>
+          <p className="mt-3 line-clamp-2 text-sm font-semibold leading-6 text-zinc-500">
+            {currentSubtopic?.subtopic_title || currentModule?.module_title || 'Plan is ready when you are.'}
+          </p>
+        </div>
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-200/20 bg-cyan-200/10 text-cyan-100">
+          <Gauge className="h-6 w-6" />
+        </div>
       </div>
-
-      {/* Timeline */}
-      <div className="relative pl-4">
-        {/* Vertical line */}
-        <div className="absolute left-[7px] top-1 bottom-1 w-[2px] rounded-full bg-gradient-to-b from-slate-200 via-[#4338ca]/20 to-slate-200" />
-
-        <div className="space-y-0.5">
-          {visible.map((mod, i) => {
-            const mi = start + i;
-            const subtopics = mod.subtopics || [];
-            const done = subtopics.filter(s => s.status === 'completed').length;
-            const isActive = currentRef?.moduleIndex === mi;
-            const isComplete = done === subtopics.length && subtopics.length > 0;
-            const pct = subtopics.length ? Math.round((done / subtopics.length) * 100) : 0;
-
-            return (
-              <button
-                key={mi}
-                type="button"
-                onClick={() => scrollToModule(mi)}
-                className={`group relative w-full rounded-xl py-2.5 pr-3 pl-5 text-left transition hover:-translate-y-0.5 ${
-                  isActive ? 'bg-[#eef2ff]/80' : 'hover:bg-slate-50/60'
-                }`}
-              >
-                {/* Dot */}
-                <div className="absolute left-[-11px] top-1/2 -translate-y-1/2">
-                  {isActive ? (
-                    <span className="relative flex h-4 w-4">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4338ca] opacity-30" />
-                      <span className="relative flex h-4 w-4 items-center justify-center rounded-full bg-[#4338ca] shadow-[0_0_8px_rgba(67,56,202,0.4)]">
-                        <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                      </span>
-                    </span>
-                  ) : isComplete ? (
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 shadow-sm">
-                      <CheckCircle className="h-2.5 w-2.5 text-white" />
-                    </span>
-                  ) : (
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-slate-300 bg-white transition group-hover:border-[#4338ca]/40" />
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className={`text-[13px] font-semibold truncate leading-tight ${
-                      isActive ? 'text-[#4338ca]' : isComplete ? 'text-emerald-700' : 'text-slate-600 group-hover:text-slate-800'
-                    }`}>
-                      {mod.module_title}
-                    </p>
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <div className="h-[3px] flex-1 max-w-[100px] rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${pct}%`,
-                            background: isComplete ? '#059669' : isActive ? '#4338ca' : '#cbd5e1'
-                          }}
-                        />
-                      </div>
-                      <span className={`text-[10px] font-bold ${isComplete ? 'text-emerald-500' : isActive ? 'text-[#4338ca]' : 'text-slate-400'}`}>
-                        {done}/{subtopics.length}
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight className={`h-3.5 w-3.5 shrink-0 transition ${isActive ? 'text-[#4338ca]' : 'text-slate-300 group-hover:text-slate-500'}`} />
-                </div>
-              </button>
-            );
-          })}
+      <div className="mt-6">
+        <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-zinc-600">
+          <span>Overall</span>
+          <span>{safeProgress}/100</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-cyan-200 via-white to-amber-200 transition-all duration-700"
+            style={{ width: `${safeProgress}%` }}
+          />
         </div>
       </div>
     </div>
   );
 }
 
-function SummaryCard({ label, value, detail, accent = '#4338ca' }) {
+function MetricTile({ label, value, detail, accent = '#f5f5f5', delay = 0 }) {
   return (
-    <div className="rounded-[1.7rem] border border-black/5 bg-white/80 p-4">
-      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className="mt-3 text-3xl font-black text-slate-900">{value}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-500">{detail}</p>
-      <div className="mt-4 h-1.5 w-14 rounded-full" style={{ background: `${accent}33` }} />
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-80px' }}
+      transition={{ delay, duration: 0.45 }}
+      whileHover={{ y: -6, scale: 1.015 }}
+      className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#171717] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.25)]"
+    >
+      <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full opacity-12 blur-2xl transition group-hover:opacity-25" style={{ backgroundColor: accent }} />
+      <div className="relative">
+        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-500">{label}</p>
+        <p className="mt-4 text-4xl font-black text-white">{value}</p>
+      </div>
+      <p className="relative mt-4 text-sm leading-6 text-zinc-400">{detail}</p>
+    </motion.div>
+  );
+}
+
+function CommandDeck({ course, currentRef, currentModule, currentSubtopic, onOpenSettings, onOpenTuner }) {
+  const continueUrl = currentRef
+    ? `/study-plan/${course._id}/learn/${currentRef.moduleIndex}/${currentRef.subtopicIndex}`
+    : `/study-plan/${course._id}`;
+  const moduleProgress = moduleCompletion(currentModule);
+
+  return (
+    <section className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-[#12141c] shadow-[0_24px_90px_rgba(0,0,0,0.38)]">
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.085),transparent_38%),linear-gradient(180deg,rgba(20,184,166,0.08),transparent_45%),linear-gradient(115deg,transparent_0%,rgba(245,158,11,0.08)_68%,transparent_100%)]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+
+      <div className="relative grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_24rem] lg:p-8 xl:grid-cols-[minmax(0,1fr)_31rem]">
+
+        {/* ── Left: Title + Up Next + Buttons ── */}
+        <div className="flex min-w-0 flex-col gap-7">
+          {/* Badges + Title */}
+          <div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100">
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Guided command center
+              </span>
+              {course.studyConfig?.miniProjectsEnabled && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-amber-200">
+                  <Trophy className="h-3.5 w-3.5" />
+                  Checkpoints on
+                </span>
+              )}
+            </div>
+            <h1 className="mt-6 break-words text-[2.2rem] font-black leading-[1.02] tracking-[-0.03em] text-white sm:text-[3rem] lg:text-[3.8rem]">
+              {course.course_title}
+            </h1>
+            {course.learningGoal && course.learningGoal !== course.course_query && (
+              <p className="mt-4 text-[15px] leading-8 text-zinc-400 line-clamp-2" title={course.learningGoal}>
+                {course.learningGoal}
+              </p>
+            )}
+          </div>
+
+          {/* Up Next card */}
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Up next</p>
+            <div className="mt-3 min-w-0">
+              <p className="truncate text-sm font-bold text-zinc-400">
+                {currentModule ? `Module ${currentRef.moduleIndex + 1}: ${currentModule.module_title}` : 'No active module'}
+              </p>
+              <h2 className="mt-1 text-xl font-black leading-snug text-white">
+                {currentSubtopic?.subtopic_title || 'Your plan is ready'}
+              </h2>
+              <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-200 via-white to-amber-200 transition-all duration-700"
+                  style={{ width: `${moduleProgress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Buttons — always below Up Next */}
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to={continueUrl}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-zinc-200"
+            >
+              Continue <ArrowRight className="h-4 w-4" />
+            </Link>
+            <button
+              type="button"
+              onClick={onOpenTuner}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/10 px-5 py-3 text-sm font-black text-teal-100 transition hover:-translate-y-0.5 hover:bg-teal-300/15"
+            >
+              <WandSparkles className="h-4 w-4" />
+              Tune
+            </button>
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-black text-zinc-200 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Defaults
+            </button>
+          </div>
+        </div>
+
+        {/* ── Right: Study Pulse ── */}
+        <div className="flex flex-col gap-4">
+          <StudyPulsePanel progress={course.progress || 0} currentModule={currentModule} currentSubtopic={currentSubtopic} />
+        </div>
+
+      </div>
+    </section>
+  );
+}
+
+function SettingsPanel({ open, configDraft, setConfigDraft, plan, saving, onSave, onClose }) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.section
+          key="study-controls"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.22 }}
+          className="rounded-[2rem] border border-white/10 bg-[#12141c] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.3)] sm:p-6 lg:p-7"
+        >
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
+                <Settings2 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">Lesson defaults</p>
+                <h2 className="mt-1 text-2xl font-black text-white">Study controls</h2>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={saving}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-black text-black transition hover:bg-zinc-200 disabled:opacity-40"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                {saving ? 'Saving' : 'Save'}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] px-5 py-2.5 text-sm font-bold text-zinc-300 transition hover:bg-white/[0.09] hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <StudyConfigPanel value={configDraft} onChange={setConfigDraft} plan={plan} />
+        </motion.section>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function ModuleHealthPanel({ modules, currentRef }) {
+  return (
+    <section className="flex min-h-0 flex-1 flex-col rounded-[2rem] border border-white/10 bg-[#0d0e10] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+      <div className="mb-5 flex shrink-0 items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">Module stack</p>
+          <h2 className="mt-1 text-xl font-black text-white">Plan health</h2>
+        </div>
+        <Gauge className="h-5 w-5 text-zinc-500" />
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 custom-scroll">
+        {(modules || []).map((module, index) => {
+          const progress = moduleCompletion(module);
+          const active = currentRef?.moduleIndex === index;
+
+          return (
+            <button
+              key={module.module_id || index}
+              type="button"
+              onClick={() => scrollToElement(`module-section-${index}`)}
+              className={`group w-full rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5 ${
+                active
+                  ? 'border-cyan-200/30 bg-cyan-200/10'
+                  : 'border-white/[0.08] bg-white/[0.03] hover:border-white/[0.16] hover:bg-white/[0.055]'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-black ${active ? 'bg-cyan-100 text-black' : 'bg-black/35 text-zinc-300'}`}>
+                  {index + 1}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className={`truncate text-sm font-black ${active ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{module.module_title}</p>
+                    <span className="text-xs font-black text-zinc-500">{progress}%</span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${active ? 'bg-cyan-100' : progress === 100 ? 'bg-emerald-300' : 'bg-white/40'}`}
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function PathToolbar({ query, setQuery, filter, setFilter, visibleCount, totalCount }) {
+  const filters = [
+    { key: 'all', label: 'All' },
+    { key: 'active', label: 'Active' },
+    { key: 'completed', label: 'Done' },
+    { key: 'locked', label: 'Locked' },
+    { key: 'projects', label: 'Projects' },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4 border-b border-white/10 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex items-center gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
+          <Map className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">Learning path</p>
+          <h2 className="mt-1 text-2xl font-black text-white">Syllabus board</h2>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+        <div className="flex min-h-12 items-center gap-3 rounded-full border border-white/10 bg-black/30 px-4 focus-within:border-cyan-200/30">
+          <Search className="h-4 w-4 text-zinc-500" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search lessons"
+            className="w-full min-w-0 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-zinc-600 sm:w-60"
+          />
+        </div>
+
+        <div className="flex gap-1 overflow-x-auto rounded-full border border-white/10 bg-black/25 p-1 custom-scroll-x">
+          {filters.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setFilter(item.key)}
+              className={`shrink-0 rounded-full px-4 py-2 text-xs font-black transition ${
+                filter === item.key ? 'bg-white text-black' : 'text-zinc-400 hover:bg-white/[0.06] hover:text-white'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <span className="text-xs font-bold text-zinc-600">{visibleCount}/{totalCount}</span>
+      </div>
     </div>
   );
 }
@@ -142,55 +376,142 @@ function SubtopicRow({ courseId, moduleIndex, subtopicIndex, subtopic, isCurrent
   const completed = subtopic.status === 'completed';
   const locked = subtopic.status === 'locked';
   const miniProject = subtopic.subtopic_type === 'mini-project';
-  const accent = locked ? '#94a3b8' : miniProject ? '#8b6f1b' : completed ? '#059669' : '#4338ca';
+  const ready = subtopic.generationStatus === 'ready';
+  const Icon = locked ? Lock : completed ? CheckCircle : miniProject ? Crown : CirclePlay;
 
   return (
-    <button
+    <motion.button
       type="button"
       id={isCurrent ? 'study-plan-current-topic' : undefined}
       onClick={() => !locked && navigate(`/study-plan/${courseId}/learn/${moduleIndex}/${subtopicIndex}`)}
       disabled={locked}
-      className={`group w-full rounded-[1.5rem] border px-4 py-4 text-left transition ${
+      whileHover={locked ? {} : { y: -2 }}
+      transition={{ duration: 0.18 }}
+      className={`group w-full overflow-hidden rounded-[1.35rem] border px-4 py-4 text-left transition sm:px-5 ${
         locked
-          ? 'cursor-not-allowed border-black/5 bg-slate-50/50 opacity-60 grayscale-[0.5]'
-          : 'border-black/5 bg-white/90 hover:-translate-y-0.5 hover:shadow-[0_18px_30px_rgba(15,23,42,0.05)]'
+          ? 'cursor-not-allowed border-white/10 bg-white/[0.04]'
+          : isCurrent
+            ? 'border-cyan-200/40 bg-cyan-200/10 shadow-[0_0_28px_rgba(103,232,249,0.08)]'
+            : completed
+              ? 'border-emerald-300/20 bg-emerald-300/[0.055] hover:border-emerald-300/35'
+              : 'border-white/10 bg-white/[0.055] hover:border-white/20 hover:bg-white/[0.08]'
       }`}
     >
-      <div className="flex items-start gap-4">
-        <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-black"
-          style={{
-            background: miniProject ? 'rgba(253,245,216,0.92)' : completed ? 'rgba(209,250,229,0.92)' : 'rgba(238,242,255,0.95)',
-            color: accent,
-          }}
-        >
-          {locked ? <Lock className="h-4 w-4" /> : miniProject ? <Crown className="h-4 w-4" /> : String(subtopicIndex + 1).padStart(2, '0')}
+      <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${
+          locked
+            ? 'border-white/5 bg-white/[0.03] text-zinc-600'
+            : isCurrent
+              ? 'border-cyan-100/40 bg-cyan-100 text-black'
+              : completed
+                ? 'border-emerald-300/30 bg-emerald-300/12 text-emerald-200'
+                : miniProject
+                  ? 'border-amber-300/25 bg-amber-300/10 text-amber-200'
+                  : 'border-white/10 bg-black/30 text-white'
+        }`}>
+          <Icon className="h-5 w-5" />
         </div>
-        <div className="min-w-0 flex-1">
+
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
+            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
+              locked
+                ? 'border-white/5 text-zinc-600'
+                : isCurrent
+                  ? 'border-cyan-100/30 bg-cyan-100/10 text-cyan-100'
+                  : completed
+                    ? 'border-emerald-300/25 bg-emerald-300/10 text-emerald-200'
+                    : 'border-white/10 bg-white/[0.04] text-zinc-300'
+            }`}>
+              {statusCopy[subtopic.status] || 'Ready'}
+            </span>
             {miniProject && (
-              <span className="rounded-full bg-[#fdf5d8] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#8b6f1b]">
-                Golden checkpoint
+              <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-amber-200">
+                Gate
               </span>
             )}
-            <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${
-              locked ? 'bg-slate-100 text-slate-500' : completed ? 'bg-emerald-50 text-emerald-700' : 'bg-[#eef2ff] text-[#4338ca]'
-            }`}>
-              {locked ? 'Locked' : completed ? 'Completed' : 'Active'}
-            </span>
+            {!locked && (
+              <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                {ready ? 'Ready' : 'Generate'}
+              </span>
+            )}
           </div>
-          <h4 className="mt-3 text-lg font-semibold leading-snug text-slate-900">{subtopic.subtopic_title}</h4>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            {miniProject
-              ? 'A larger milestone that checks whether the previous ideas actually stuck.'
-              : subtopic.generationStatus === 'ready'
-              ? 'Lesson generated and ready to continue from.'
-              : 'Open this step to generate the lesson, questions, and feedback flow.'}
-          </p>
+
+          <h3 className={`mt-3 text-lg font-black leading-snug ${locked ? 'text-zinc-500' : 'text-white'}`}>
+            {String(subtopicIndex + 1).padStart(2, '0')} - {subtopic.subtopic_title}
+          </h3>
         </div>
-        <ChevronRight className="mt-2 h-5 w-5 shrink-0 text-slate-300 transition group-hover:text-slate-500" />
+
+        <div className="flex items-center justify-between gap-3 sm:justify-end">
+          <span className={`text-xs font-black uppercase tracking-[0.18em] ${locked ? 'text-zinc-700' : 'text-zinc-500 group-hover:text-white'}`}>
+            {locked ? 'Locked' : 'Open'}
+          </span>
+          <ChevronRight className={`h-5 w-5 ${locked ? 'text-zinc-700' : 'text-zinc-500 group-hover:text-white'}`} />
+        </div>
       </div>
-    </button>
+    </motion.button>
+  );
+}
+
+function LearningPath({ course, currentRef, query, setQuery, filter, setFilter, filteredModules, visibleCount, totalCount }) {
+  return (
+    <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#12141c] shadow-[0_24px_80px_rgba(0,0,0,0.34)]">
+      <PathToolbar
+        query={query}
+        setQuery={setQuery}
+        filter={filter}
+        setFilter={setFilter}
+        visibleCount={visibleCount}
+        totalCount={totalCount}
+      />
+
+      <div className="p-5 sm:p-6 lg:p-7">
+        {visibleCount === 0 ? (
+          <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.025] text-center">
+            <FileSearch className="h-8 w-8 text-zinc-600" />
+            <h3 className="mt-4 text-xl font-black text-white">No lessons found</h3>
+            <p className="mt-2 text-sm text-zinc-500">Adjust the search or filter.</p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {filteredModules.map(({ module, moduleIndex, subtopics }) => (
+              <div key={module.module_id || moduleIndex} id={`module-section-${moduleIndex}`} className="relative">
+                <div className="mb-4 flex flex-col gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-lg font-black text-black">
+                      {moduleIndex + 1}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">Module {moduleIndex + 1}</p>
+                      <h3 className="mt-1 truncate text-2xl font-black text-white">{module.module_title}</h3>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 w-32 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full bg-gradient-to-r from-cyan-200 via-white to-emerald-200" style={{ width: `${moduleCompletion(module)}%` }} />
+                    </div>
+                    <span className="text-sm font-black text-zinc-500">{moduleCompletion(module)}%</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {subtopics.map(({ subtopic, subtopicIndex }) => (
+                    <SubtopicRow
+                      key={`${moduleIndex}-${subtopicIndex}`}
+                      courseId={course._id}
+                      moduleIndex={moduleIndex}
+                      subtopicIndex={subtopicIndex}
+                      subtopic={subtopic}
+                      isCurrent={currentRef?.moduleIndex === moduleIndex && currentRef?.subtopicIndex === subtopicIndex}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -243,136 +564,136 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate }) {
     }
   };
 
-  // Build a flat list of all modules/subtopics for diff display
   const flatList = useMemo(() => {
     if (!diff || !modules) return [];
-    const removedKeys = new Set(
-      (diff.removes || []).map(r => `${r.moduleIndex}-${r.subtopicIndex}`)
-    );
+    const removedKeys = new Set((diff.removes || []).map((item) => `${item.moduleIndex}-${item.subtopicIndex}`));
     const rows = [];
-    modules.forEach((mod, mi) => {
-      rows.push({ type: 'module', title: mod.module_title, moduleIndex: mi });
-      (mod.subtopics || []).forEach((sub, si) => {
-        const key = `${mi}-${si}`;
+    modules.forEach((module, moduleIndex) => {
+      rows.push({ type: 'module', title: module.module_title, moduleIndex });
+      (module.subtopics || []).forEach((subtopic, subtopicIndex) => {
+        const key = `${moduleIndex}-${subtopicIndex}`;
         rows.push({
           type: 'subtopic',
-          title: sub.subtopic_title,
-          moduleIndex: mi,
-          subtopicIndex: si,
+          title: subtopic.subtopic_title,
+          moduleIndex,
+          subtopicIndex,
           status: removedKeys.has(key) ? 'removed' : 'existing',
         });
       });
-      // Insert adds for this module
-      (diff.adds || []).filter(a => a.moduleIndex === mi).forEach(add => {
-        rows.push({
-          type: 'subtopic',
-          title: add.subtopic_title,
-          moduleIndex: mi,
-          status: 'added',
+      (diff.adds || [])
+        .filter((item) => item.moduleIndex === moduleIndex)
+        .forEach((add) => {
+          rows.push({
+            type: 'subtopic',
+            title: add.subtopic_title,
+            moduleIndex,
+            status: 'added',
+          });
         });
-      });
     });
     return rows;
   }, [diff, modules]);
 
   return (
-    <div className="course-surface rounded-[2.6rem] p-6 md:p-7">
-      <div className="flex items-start gap-4 mb-6">
-        <div className="flex h-14 w-14 items-center justify-center rounded-[1.6rem] border border-black/5 bg-white/80 text-[#4338ca]">
+    <section id="study-plan-tuner" className="shrink-0 rounded-[2rem] border border-white/10 bg-[#12141c] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+      <div className="mb-5 flex items-start gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-teal-300/20 bg-teal-300/10 text-teal-100">
           <WandSparkles className="h-5 w-5" />
         </div>
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">AI Tuner</p>
-          <h2 className="mt-1 font-serif text-[1.8rem] font-semibold text-slate-900">Tune Syllabus</h2>
-          <p className="mt-1 text-sm text-slate-500">Add or remove topics using plain language.</p>
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">AI tuner</p>
+          <h2 className="mt-1 text-xl font-black text-white">Tune syllabus</h2>
         </div>
       </div>
 
       <AnimatePresence mode="wait">
         {!diff ? (
           <motion.div key="input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="rounded-[1.6rem] border border-black/10 bg-white p-1.5 focus-within:border-slate-300 focus-within:ring-4 focus-within:ring-slate-100 transition-all">
+            <div className="rounded-[1.25rem] border border-white/10 bg-black/35 p-1.5 transition focus-within:border-teal-200/35">
               <textarea
                 value={instruction}
-                onChange={e => setInstruction(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTune(); } }}
-                placeholder={`e.g. "Add Indexing after Module 2" or "Remove the NULL Values topic"`}
-                className="w-full resize-none bg-transparent px-4 py-3 text-sm outline-none text-slate-800 placeholder:text-slate-400 min-h-[80px]"
+                onChange={(event) => setInstruction(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    handleTune();
+                  }
+                }}
+                placeholder='Add indexing after module 2, remove null values, make probability deeper...'
+                className="min-h-[7rem] w-full resize-none bg-transparent px-3 py-3 text-sm font-semibold leading-6 text-white outline-none placeholder:text-zinc-600"
               />
             </div>
-            {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+            {error && <p className="mt-2 text-xs font-semibold text-red-300">{error}</p>}
             <button
               type="button"
               disabled={loading || !instruction.trim()}
               onClick={handleTune}
-              className="mt-3 w-full flex items-center justify-center gap-2 rounded-2xl bg-[#111827] py-3 px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
+              className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-zinc-200 disabled:opacity-40"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {loading ? 'Thinking...' : 'Generate Changes'}
-              <CreditCost cost={creditCost} className="text-white/70 ml-1" />
+              {loading ? 'Thinking' : 'Generate changes'}
+              <CreditCost cost={creditCost} className="ml-1 text-black/50" />
             </button>
-            <p className="mt-2 text-center text-[11px] text-slate-400">Credits charged on generation regardless of confirm/reject.</p>
           </motion.div>
         ) : (
           <motion.div key="diff" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <div className="mb-3 rounded-2xl border border-black/5 bg-slate-50 px-4 py-3">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">AI Summary</p>
-              <p className="text-sm text-slate-700">{diff.summary}</p>
+            <div className="mb-3 rounded-[1.25rem] border border-white/10 bg-white/[0.035] px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Summary</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-zinc-300">{diff.summary}</p>
             </div>
 
-            <div className="max-h-[340px] overflow-y-auto space-y-1 pr-1 custom-scroll">
-              {flatList.map((row, i) => {
+            <div className="max-h-[22rem] space-y-1 overflow-y-auto pr-1 custom-scroll">
+              {flatList.map((row, index) => {
                 if (row.type === 'module') {
                   return (
-                    <div key={i} className="pt-3 pb-1 px-2">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                        Module {row.moduleIndex + 1} · {row.title}
+                    <div key={index} className="px-2 pb-1 pt-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                        Module {row.moduleIndex + 1}: {row.title}
                       </p>
                     </div>
                   );
                 }
                 if (row.status === 'removed') {
                   return (
-                    <div key={i} className="flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-3 py-2.5">
-                      <Trash2 className="h-3.5 w-3.5 shrink-0 text-red-500" />
-                      <span className="text-sm font-medium text-red-700 line-through">{row.title}</span>
-                      <span className="ml-auto text-[10px] font-bold text-red-500 uppercase">Remove</span>
+                    <div key={index} className="flex items-center gap-3 rounded-xl border border-red-300/20 bg-red-400/10 px-3 py-2.5">
+                      <Trash2 className="h-3.5 w-3.5 shrink-0 text-red-300" />
+                      <span className="text-sm font-semibold text-red-200 line-through">{row.title}</span>
                     </div>
                   );
                 }
                 if (row.status === 'added') {
                   return (
-                    <div key={i} className="flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5">
-                      <Plus className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                      <span className="text-sm font-medium text-emerald-700">{row.title}</span>
-                      <span className="ml-auto text-[10px] font-bold text-emerald-600 uppercase">Add</span>
+                    <div key={index} className="flex items-center gap-3 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2.5">
+                      <Plus className="h-3.5 w-3.5 shrink-0 text-emerald-200" />
+                      <span className="text-sm font-semibold text-emerald-100">{row.title}</span>
                     </div>
                   );
                 }
                 return (
-                  <div key={i} className="flex items-center gap-3 rounded-xl border border-black/5 bg-white/70 px-3 py-2.5">
-                    <span className="text-sm text-slate-600">{row.title}</span>
+                  <div key={index} className="rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2.5">
+                    <span className="text-sm font-semibold text-zinc-400">{row.title}</span>
                   </div>
                 );
               })}
             </div>
 
-            {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+            {error && <p className="mt-2 text-xs font-semibold text-red-300">{error}</p>}
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 disabled={confirming}
                 onClick={() => handleConfirm(false)}
-                className="flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.05] text-sm font-black text-zinc-300 transition hover:bg-white/[0.09] disabled:opacity-40"
               >
-                <XCircle className="h-4 w-4" /> Reject
+                <XCircle className="h-4 w-4" />
+                Reject
               </button>
               <button
                 type="button"
                 disabled={confirming}
                 onClick={() => handleConfirm(true)}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-[#111827] py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-40"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white text-sm font-black text-black transition hover:bg-zinc-200 disabled:opacity-40"
               >
                 {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                 Apply
@@ -381,59 +702,108 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate }) {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </section>
   );
 }
 
 export default function GuidedStudyPlanMap() {
   const { courseId } = useParams();
   const { user, isLoaded, isSignedIn } = useUser();
+  const { usageData } = useUsage();
+  const navigate = useNavigate();
   const [course, setCourse] = useState(null);
-  const [usageData, setUsageData] = useState(null);
   const [configDraft, setConfigDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showStudyControls, setShowStudyControls] = useState(false);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [toast, setToast] = useState(null); // { message, type }
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const fetchCourse = useCallback(async () => {
     if (!user?.id) return;
     try {
       const res = await fetch(`${API_BASE}/api/study-plans/${courseId}?clerkId=${user.id}`);
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.course?.sourceType === 'guided-topic') {
         setCourse(data.course);
         setConfigDraft(data.course.studyConfig);
+      } else {
+        // Ownership / not-found — redirect with toast
+        showToast('You don\'t have access to this plan.');
+        setTimeout(() => navigate('/dashboard'), 1800);
       }
     } catch (error) {
       console.error(error);
+      showToast('Failed to load plan. Returning to dashboard.');
+      setTimeout(() => navigate('/dashboard'), 1800);
     } finally {
       setLoading(false);
     }
   }, [courseId, user?.id]);
 
-  const fetchUsage = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/user/${user.id}/usage`);
-      const data = await res.json();
-      if (data.success) setUsageData(data);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [user?.id]);
-
-  useEffect(() => { fetchCourse(); }, [fetchCourse]);
-  useEffect(() => { if (user?.id) fetchUsage(); }, [fetchUsage, user?.id]);
+  useEffect(() => {
+    fetchCourse();
+  }, [fetchCourse]);
 
   const currentRef = useMemo(() => {
     if (!course?.modules) return null;
-    for (let m = 0; m < course.modules.length; m++) {
-      for (let s = 0; s < (course.modules[m].subtopics || []).length; s++) {
-        if (course.modules[m].subtopics[s].status === 'active') return { moduleIndex: m, subtopicIndex: s };
+    for (let moduleIndex = 0; moduleIndex < course.modules.length; moduleIndex += 1) {
+      const subtopics = course.modules[moduleIndex].subtopics || [];
+      for (let subtopicIndex = 0; subtopicIndex < subtopics.length; subtopicIndex += 1) {
+        if (subtopics[subtopicIndex].status === 'active') return { moduleIndex, subtopicIndex };
       }
     }
     return { moduleIndex: course.current_module_index || 0, subtopicIndex: course.current_subtopic_index || 0 };
   }, [course]);
+
+  const { module: currentModule, subtopic: currentSubtopic } = useMemo(
+    () => getCurrentTopic(course, currentRef),
+    [course, currentRef]
+  );
+
+  const pathStats = useMemo(() => {
+    const allSubtopics = (course?.modules || []).flatMap((module) => module.subtopics || []);
+    return {
+      total: allSubtopics.length,
+      active: allSubtopics.filter((item) => item.status === 'active').length,
+      locked: allSubtopics.filter((item) => item.status === 'locked').length,
+      ready: allSubtopics.filter((item) => item.generationStatus === 'ready').length,
+    };
+  }, [course]);
+
+  const filteredModules = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return (course?.modules || [])
+      .map((module, moduleIndex) => {
+        const moduleTitleMatch = module.module_title?.toLowerCase().includes(normalizedQuery);
+        const subtopics = (module.subtopics || [])
+          .map((subtopic, subtopicIndex) => ({ subtopic, subtopicIndex }))
+          .filter(({ subtopic }) => {
+            const matchesQuery = !normalizedQuery
+              || moduleTitleMatch
+              || subtopic.subtopic_title?.toLowerCase().includes(normalizedQuery);
+            const matchesFilter = filter === 'all'
+              || (filter === 'projects' && subtopic.subtopic_type === 'mini-project')
+              || subtopic.status === filter;
+            return matchesQuery && matchesFilter;
+          });
+
+        return { module, moduleIndex, subtopics };
+      })
+      .filter((module) => module.subtopics.length > 0);
+  }, [course, filter, query]);
+
+  const visibleCount = useMemo(
+    () => filteredModules.reduce((sum, module) => sum + module.subtopics.length, 0),
+    [filteredModules]
+  );
 
   const handleSaveConfig = async () => {
     if (!configDraft) return;
@@ -445,27 +815,30 @@ export default function GuidedStudyPlanMap() {
         body: JSON.stringify({ studyConfig: normalizeStudyConfig(configDraft, usageData?.plan || 'free') }),
       });
       const data = await res.json();
-      if (data.success) { setCourse(data.course); setConfigDraft(data.course.studyConfig); setShowStudyControls(false); }
-    } catch (error) { console.error(error); }
-    finally { setSaving(false); }
+      if (data.success) {
+        setCourse(data.course);
+        setConfigDraft(data.course.studyConfig);
+        setShowStudyControls(false);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (!isLoaded) {
-    return <LoadingScreen message="Checking your credentials..." />;
-  }
-
-  if (!isSignedIn) {
+  if (!isLoaded || (isLoaded && !isSignedIn)) {
     return (
-      <div className="course-shell flex min-h-screen items-center justify-center px-6">
-        <div className="course-surface max-w-xl rounded-[2.4rem] px-8 py-10 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-slate-100 text-slate-500">
+      <div className="flex min-h-screen items-center justify-center bg-[#050505] px-6">
+        <div className="max-w-xl rounded-[2rem] border border-white/10 bg-[#0d0e10] px-8 py-10 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-zinc-400">
             <Lock className="h-7 w-7" />
           </div>
-          <h1 className="mt-6 font-serif text-4xl font-semibold text-slate-900">Sign in to continue</h1>
-          <p className="mt-4 text-sm leading-7 text-slate-500">You must be logged in to view this study plan. If you are the creator, please sign in.</p>
+          <h1 className="mt-6 text-4xl font-black text-white">Sign in to continue</h1>
+          <p className="mt-4 text-sm leading-7 text-zinc-500">You must be logged in to view this study plan.</p>
           <div className="mt-6">
             <SignInButton mode="modal">
-              <button type="button" className="course-primary-button justify-center w-full">Sign In</button>
+              <button type="button" className="w-full rounded-full bg-white px-6 py-3 text-sm font-black text-black transition hover:bg-zinc-200">Sign in</button>
             </SignInButton>
           </div>
         </div>
@@ -473,155 +846,131 @@ export default function GuidedStudyPlanMap() {
     );
   }
 
+  /* ── Skeleton while fetching ─────────────────────────────────────────── */
   if (loading) {
-    return <LoadingScreen message="Opening your guided plan..." />;
-  }
-
-  if (!course || course.sourceType !== 'guided-topic') {
     return (
-      <div className="course-shell flex min-h-screen items-center justify-center px-6">
-        <div className="course-surface max-w-xl rounded-[2.4rem] px-8 py-10 text-center">
-          <h1 className="font-serif text-4xl font-semibold text-slate-900">Access Denied</h1>
-          <p className="mt-4 text-sm leading-7 text-slate-500">This study plan either does not exist, or you don't have permission to view it.</p>
-          <Link to="/dashboard" className="course-primary-button mt-6 justify-center">Back to dashboard</Link>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="course-shell min-h-screen px-4 pb-20 pt-28 md:px-10 lg:px-14">
-      <div className="mx-auto max-w-7xl space-y-6">
-
-        {/* ── Header ── */}
-        <section id="study-plan-progress-overview" className="course-surface overflow-hidden rounded-[2.8rem] p-6 md:p-8 lg:p-10">
-          <div className="grid gap-8 xl:grid-cols-[1.03fr_0.97fr]">
-            <div className="rounded-[2.2rem] bg-[radial-gradient(circle_at_top_left,rgba(79,70,229,0.16),transparent_42%),linear-gradient(135deg,#f8fafc,white)] p-6 md:p-7">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="rounded-full bg-[#eef2ff] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#4338ca]">
-                  Guided Study Plan
-                </span>
-                {course.studyConfig?.miniProjectsEnabled && (
-                  <span className="rounded-full bg-[#fdf5d8] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#8b6f1b]">
-                    Golden checkpoints enabled
-                  </span>
-                )}
-              </div>
-              <h1 className="mt-6 max-w-3xl break-words font-serif text-[2.5rem] font-semibold leading-[0.96] text-slate-900 md:text-[4.2rem]">
-                {course.course_title}
-              </h1>
-              {course.learningGoal && course.learningGoal !== course.course_query && (
-                <p className="mt-5 max-w-3xl text-[15px] leading-8 text-slate-500 line-clamp-2" title={course.learningGoal}>
-                  {course.learningGoal}
-                </p>
-              )}
-              <div className="mt-7 flex flex-wrap gap-3">
-                {currentRef && (
-                  <Link to={`/study-plan/${course._id}/learn/${currentRef.moduleIndex}/${currentRef.subtopicIndex}`} className="course-primary-button w-full justify-center sm:w-auto">
-                    Continue learning <ArrowRight className="h-4 w-4" />
-                  </Link>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowStudyControls(v => !v)}
-                  className="course-outline-button w-full justify-center sm:w-auto"
-                >
-                  {showStudyControls ? 'Hide defaults' : 'Tune defaults'} <Settings2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <SummaryCard label="Progress" value={`${course.progress || 0}%`} detail="Overall completion across lessons and mini-project gates." />
-              <SummaryCard label="Modules" value={course.totalModules || 0} detail="Major sections in your custom guided map." accent="#111827" />
-              <SummaryCard label="Lessons" value={course.totalSubtopics || 0} detail="Total units across explanations and milestone work." accent="#ea580c" />
-              <SummaryCard label="Done" value={course.completedSubtopics || 0} detail="Units already completed." accent="#059669" />
-            </div>
-          </div>
-        </section>
-
-        {/* ── Study Controls — expandable full-width panel ── */}
+      <DashboardShell title="Loading plan..." eyebrow="Guided Plan">
+        {/* Toast */}
         <AnimatePresence>
-          {showStudyControls && (
-            <motion.section
-              key="study-controls"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25, ease: 'easeInOut' }}
-              className="overflow-hidden"
+          {toast && (
+            <motion.div
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-200 backdrop-blur-md shadow-xl"
             >
-              <div id="study-plan-settings" className="course-surface rounded-[2.6rem] p-6 md:p-8">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-[1.6rem] border border-black/5 bg-white/80 text-[#4338ca]">
-                    <Settings2 className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Defaults</p>
-                    <h2 className="mt-1 font-serif text-[2rem] font-semibold text-slate-900">Study controls</h2>
-                    <p className="mt-1 text-sm text-slate-500">Update defaults for any lesson that has not been generated yet.</p>
-                  </div>
-                </div>
-                <StudyConfigPanel value={configDraft} onChange={setConfigDraft} plan={usageData?.plan || 'free'} />
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <button type="button" onClick={handleSaveConfig} disabled={saving} className="course-primary-button">
-                    {saving ? 'Saving...' : 'Save defaults'}
-                  </button>
-                  <button type="button" onClick={() => setShowStudyControls(false)} className="course-outline-button">
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </motion.section>
+              {toast.message}
+            </motion.div>
           )}
         </AnimatePresence>
-
-        {/* ── Main two-column layout ── */}
-        <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr] xl:items-start">
-
-          {/* Left: scrollable learning path */}
-          <section className="course-surface rounded-[2.6rem] p-6 md:p-8">
-            <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-[1.6rem] border border-black/5 bg-white/80 text-[#4338ca]">
-                <Layers3 className="h-5 w-5" />
+        <div className="mx-auto max-w-[104rem] flex flex-col gap-6 animate-pulse">
+          {/* Hero skeleton */}
+          <div className="order-1 rounded-[2.4rem] border border-white/[0.06] bg-[#0b0c0e] p-8 md:p-12">
+            <div className="grid gap-8 lg:grid-cols-[1fr_24rem]">
+              <div className="space-y-5">
+                <div className="flex gap-3">
+                  <div className="h-8 w-44 rounded-full bg-white/[0.06]" />
+                  <div className="h-8 w-32 rounded-full bg-white/[0.04]" />
+                </div>
+                <div className="h-14 w-3/4 rounded-2xl bg-white/[0.07]" />
+                <div className="h-8 w-full rounded-2xl bg-white/[0.04]" />
+                <div className="h-20 w-full rounded-2xl bg-white/[0.04]" />
+                <div className="flex gap-3 pt-2">
+                  <div className="h-12 w-32 rounded-full bg-white/[0.07]" />
+                  <div className="h-12 w-24 rounded-full bg-white/[0.04]" />
+                  <div className="h-12 w-28 rounded-full bg-white/[0.04]" />
+                </div>
               </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Map</p>
-                <h2 className="mt-1 font-serif text-[2.2rem] font-semibold text-slate-900">The learning path</h2>
-                <p className="mt-2 text-sm leading-7 text-slate-500">Open active steps to generate the lesson workspace.</p>
+              <div className="space-y-4">
+                <div className="h-36 rounded-[1.65rem] bg-white/[0.05]" />
               </div>
             </div>
+          </div>
 
-            <div className="mt-8 space-y-6">
-              {(course.modules || []).map((module, moduleIndex) => (
-                <div key={module.module_id || moduleIndex} id={`module-section-${moduleIndex}`} className="rounded-[2rem] border border-black/5 bg-white/75 p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                      <BookOpen className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Module {moduleIndex + 1}</p>
-                      <h3 className="mt-2 text-2xl font-semibold leading-tight text-slate-900">{module.module_title}</h3>
+          {/* Metric Tiles Skeleton */}
+          <div className="order-4 md:order-2 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+            {[0, 1, 2, 3].map(i => <div key={i} className="h-32 rounded-[1.45rem] bg-white/[0.04]" />)}
+          </div>
+
+          {/* Settings Skeleton */}
+          <div className="order-2 md:order-3 h-0" />
+
+          {/* Path skeleton */}
+          <div className="order-3 md:order-4 grid gap-6 xl:grid-cols-[1fr_340px]">
+            <div className="space-y-4">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="rounded-[2rem] border border-white/[0.06] bg-[#0d0e10] p-6 space-y-3">
+                  <div className="flex items-center gap-4">
+                    <div className="h-14 w-14 rounded-2xl bg-white/[0.06]" />
+                    <div className="space-y-2 flex-1">
+                      <div className="h-4 w-20 rounded bg-white/[0.04]" />
+                      <div className="h-6 w-2/3 rounded-xl bg-white/[0.06]" />
                     </div>
                   </div>
-                  <div className="mt-5 space-y-3">
-                    {(module.subtopics || []).map((subtopic, subtopicIndex) => (
-                      <SubtopicRow
-                        key={`${moduleIndex}-${subtopicIndex}`}
-                        courseId={course._id}
-                        moduleIndex={moduleIndex}
-                        subtopicIndex={subtopicIndex}
-                        subtopic={subtopic}
-                        isCurrent={currentRef?.moduleIndex === moduleIndex && currentRef?.subtopicIndex === subtopicIndex}
-                      />
-                    ))}
-                  </div>
+                  {[0, 1, 2].map(j => <div key={j} className="h-14 rounded-2xl bg-white/[0.04]" />)}
                 </div>
               ))}
             </div>
-          </section>
+            <div className="space-y-4">
+              <div className="h-64 rounded-[2rem] bg-white/[0.04]" />
+              <div className="h-48 rounded-[2rem] bg-white/[0.04]" />
+            </div>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
 
-          {/* Right: sticky panels */}
-          <aside className="xl:sticky xl:top-6 space-y-6">
+  // If access was denied, the navigate() will kick in; render nothing in the meantime
+  if (!course) return null;
+
+  return (
+    <DashboardShell title={course.course_title} eyebrow="Guided Plan">
+      <div className="mx-auto max-w-[104rem] flex flex-col gap-6">
+        <div className="order-1">
+          <CommandDeck
+            course={course}
+            currentRef={currentRef}
+            currentModule={currentModule}
+            currentSubtopic={currentSubtopic}
+            onOpenSettings={() => setShowStudyControls((value) => !value)}
+            onOpenTuner={() => scrollToElement('study-plan-tuner', 'center')}
+          />
+        </div>
+
+        <div className="order-4 md:order-2 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+          <MetricTile icon={Zap} label="Active" value={pathStats.active} detail="Current launch point" accent="#A3FF4F" />
+          <MetricTile icon={Layers3} label="Ready" value={pathStats.ready} detail="Generated lessons" accent="#f5f5f5" delay={0.04} />
+          <MetricTile icon={Lock} label="Locked" value={pathStats.locked} detail="Upcoming steps" accent="#555" delay={0.08} />
+          <MetricTile icon={Target} label="Focus" value={currentRef ? `${currentRef.moduleIndex + 1}.${currentRef.subtopicIndex + 1}` : '-'} detail="Module and lesson" accent="#FF9F1C" delay={0.12} />
+        </div>
+
+        <div className="order-2 md:order-3">
+          <SettingsPanel
+            open={showStudyControls}
+            configDraft={configDraft}
+            setConfigDraft={setConfigDraft}
+            plan={usageData?.plan || 'free'}
+            saving={saving}
+            onSave={handleSaveConfig}
+            onClose={() => setShowStudyControls(false)}
+          />
+        </div>
+
+        <div className="order-3 md:order-4 grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+          <LearningPath
+            course={course}
+            currentRef={currentRef}
+            query={query}
+            setQuery={setQuery}
+            filter={filter}
+            setFilter={setFilter}
+            filteredModules={filteredModules}
+            visibleCount={visibleCount}
+            totalCount={pathStats.total}
+          />
+
+          <aside className="min-w-0 self-start xl:sticky xl:top-24 xl:flex xl:h-[calc(100dvh-9rem)] xl:flex-col xl:gap-6 xl:overflow-hidden">
             <SyllabusTuner
               courseId={course._id}
               clerkId={user?.id}
@@ -632,13 +981,10 @@ export default function GuidedStudyPlanMap() {
                 setConfigDraft(updatedCourse.studyConfig);
               }}
             />
-            <QuickJumpNavigator
-              modules={course.modules || []}
-              currentRef={currentRef}
-            />
+            <ModuleHealthPanel modules={course.modules || []} currentRef={currentRef} />
           </aside>
         </div>
       </div>
-    </div>
+    </DashboardShell>
   );
 }
