@@ -88,6 +88,19 @@ function MermaidBlock({ code }) {
           });
         }
 
+        // 7. Strip custom styles and frontmatter config to enforce clean PDF aesthetic
+        safeCode = safeCode.split('\n').filter(line => {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('style ') || 
+              trimmed.startsWith('classDef ') || 
+              trimmed.startsWith('class ') || 
+              trimmed.startsWith('linkStyle ') ||
+              trimmed.startsWith('%%')) {
+            return false;
+          }
+          return true;
+        }).join('\n');
+
         const id = `mermaid-light-${Math.random().toString(36).substr(2, 9)}`;
         const { svg: svgOutput } = await mermaid.render(id, safeCode);
         if (isMounted) {

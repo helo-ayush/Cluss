@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
+import { useUsage } from '../contexts/UsageContext';
 import { motion } from 'motion/react';
 import { ArrowLeft, FileText, GraduationCap, WandSparkles } from 'lucide-react';
 import DashboardShell from '../components/dashboard/DashboardShell';
@@ -14,30 +15,18 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 export default function GuidedCreatePage() {
   const { user } = useUser();
   const navigate = useNavigate();
-  const [usageData, setUsageData] = useState(null);
+  const { usageData, fetchUsage } = useUsage();
   const [topic, setTopic] = useState('');
   const [syllabus, setSyllabus] = useState('');
   const [config, setConfig] = useState(DEFAULT_STUDY_CONFIG);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchUsage = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/user/${user.id}/usage`);
-      const data = await res.json();
-      if (data.success) {
-        setUsageData(data);
-        setConfig((prev) => normalizeStudyConfig(prev, data.plan));
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }, [user?.id]);
-
   useEffect(() => {
-    fetchUsage();
-  }, [fetchUsage]);
+    if (usageData) {
+      setConfig((prev) => normalizeStudyConfig(prev, usageData.plan));
+    }
+  }, [usageData?.plan]);
 
   const normalizedConfig = normalizeStudyConfig(config, usageData?.plan || 'free');
 
@@ -61,6 +50,10 @@ export default function GuidedCreatePage() {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message || data.error || 'Failed to create study plan.');
+      
+      // Update global credits after successful creation
+      fetchUsage();
+      
       navigate(`/dashboard/guided/study-plan/${data.course._id}`);
     } catch (err) {
       setError(err.message || 'Failed to create study plan.');

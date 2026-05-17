@@ -735,34 +735,66 @@ const confirmTune = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Study plan not found' });
         }
 
-        // Process removes in reverse order (so indices stay valid)
-        const removes = [...(diff.removes || [])].sort((a, b) => {
-            if (a.moduleIndex !== b.moduleIndex) return b.moduleIndex - a.moduleIndex;
-            return b.subtopicIndex - a.subtopicIndex;
-        });
+        // Apply reconstructed syllabus modules map
+        if (diff.modules && Array.isArray(diff.modules)) {
+            const newModules = [];
+            for (const mod of diff.modules) {
+                const subtopics = [];
+                for (const sub of (mod.subtopics || [])) {
+                    if (sub.type === 'existing') {
+                        // Keep or move an existing subtopic (preserves notes, practices, statuses)
+                        const originalMod = course.modules[sub.moduleIndex];
+                        const originalSub = originalMod?.subtopics?.[sub.subtopicIndex];
+                        if (originalSub) {
+                            subtopics.push(originalSub);
+                        }
+                    } else if (sub.type === 'new') {
+                        // Create a brand-new subtopic (lesson or mini-project)
+                        subtopics.push({
+                            subtopic_id: `tuner-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                            subtopic_title: sub.subtopic_title,
+                            subtopic_type: sub.subtopic_type === 'mini-project' ? 'mini-project' : 'lesson',
+                            status: 'locked',
+                            generationStatus: 'pending',
+                            lessonContent: {},
+                            practices: []
+                        });
+                    }
+                }
+                newModules.push({
+                    module_title: mod.module_title,
+                    subtopics
+                });
+            }
+            course.modules = newModules;
+        } else {
+            // Fallback legacy support for adds/removes coordinates
+            const removes = [...(diff.removes || [])].sort((a, b) => {
+                if (a.moduleIndex !== b.moduleIndex) return b.moduleIndex - a.moduleIndex;
+                return b.subtopicIndex - a.subtopicIndex;
+            });
 
-        for (const remove of removes) {
-            const mod = course.modules[remove.moduleIndex];
-            if (!mod) continue;
-            // Splice out the subtopic — this deletes lessonContent, practices, everything nested
-            mod.subtopics.splice(remove.subtopicIndex, 1);
-        }
+            for (const remove of removes) {
+                const mod = course.modules[remove.moduleIndex];
+                if (!mod) continue;
+                mod.subtopics.splice(remove.subtopicIndex, 1);
+            }
 
-        // Process adds
-        for (const add of (diff.adds || [])) {
-            const mod = course.modules[add.moduleIndex];
-            if (!mod) continue;
-            const position = Math.min(add.position ?? mod.subtopics.length, mod.subtopics.length);
-            const newSubtopic = {
-                subtopic_id: `tuner-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                subtopic_title: add.subtopic_title,
-                subtopic_type: add.subtopic_type === 'mini-project' ? 'mini-project' : 'lesson',
-                status: 'locked',
-                generationStatus: 'pending',
-                lessonContent: {},
-                practices: []
-            };
-            mod.subtopics.splice(position, 0, newSubtopic);
+            for (const add of (diff.adds || [])) {
+                const mod = course.modules[add.moduleIndex];
+                if (!mod) continue;
+                const position = Math.min(add.position ?? mod.subtopics.length, mod.subtopics.length);
+                const newSubtopic = {
+                    subtopic_id: `tuner-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                    subtopic_title: add.subtopic_title,
+                    subtopic_type: add.subtopic_type === 'mini-project' ? 'mini-project' : 'lesson',
+                    status: 'locked',
+                    generationStatus: 'pending',
+                    lessonContent: {},
+                    practices: []
+                };
+                mod.subtopics.splice(position, 0, newSubtopic);
+            }
         }
 
         // Ensure chronological states are perfectly calculated

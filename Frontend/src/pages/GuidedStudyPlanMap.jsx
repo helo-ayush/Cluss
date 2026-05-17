@@ -113,7 +113,6 @@ function MetricTile({ label, value, detail, accent = '#f5f5f5', delay = 0 }) {
       whileHover={{ y: -3, scale: 1.01 }}
       className="group relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-white/[0.045] p-4 shadow-[0_18px_54px_rgba(0,0,0,0.22)]"
     >
-      <div className="absolute inset-x-0 top-0 h-px opacity-60 transition group-hover:opacity-100" style={{ backgroundColor: accent }} />
       <div className="relative">
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">{label}</p>
         <p className="mt-2 text-3xl font-black text-white">{value}</p>
@@ -518,12 +517,18 @@ function LearningPath({ course, currentRef, query, setQuery, filter, setFilter, 
   );
 }
 
-function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate }) {
+function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate, onTuningStateChange }) {
   const [instruction, setInstruction] = useState('');
   const [loading, setLoading] = useState(false);
   const [diff, setDiff] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (onTuningStateChange) {
+      onTuningStateChange(!!diff);
+    }
+  }, [diff, onTuningStateChange]);
 
   const creditCost = getCostForAction(plan, 'courseScaffold');
 
@@ -569,36 +574,130 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate }) {
 
   const flatList = useMemo(() => {
     if (!diff || !modules) return [];
-    const removedKeys = new Set((diff.removes || []).map((item) => `${item.moduleIndex}-${item.subtopicIndex}`));
-    const rows = [];
-    modules.forEach((module, moduleIndex) => {
-      rows.push({ type: 'module', title: module.module_title, moduleIndex });
-      (module.subtopics || []).forEach((subtopic, subtopicIndex) => {
-        const key = `${moduleIndex}-${subtopicIndex}`;
-        rows.push({
-          type: 'subtopic',
-          title: subtopic.subtopic_title,
-          moduleIndex,
-          subtopicIndex,
-          status: removedKeys.has(key) ? 'removed' : 'existing',
-        });
-      });
-      (diff.adds || [])
-        .filter((item) => item.moduleIndex === moduleIndex)
-        .forEach((add) => {
+
+    // Legacy fallback support for adds/removes format
+    if (!diff.modules) {
+      const removedKeys = new Set((diff.removes || []).map((item) => `${item.moduleIndex}-${item.subtopicIndex}`));
+      const rows = [];
+      modules.forEach((module, moduleIndex) => {
+        rows.push({ type: 'module', title: module.module_title, moduleIndex });
+        (module.subtopics || []).forEach((subtopic, subtopicIndex) => {
+          const key = `${moduleIndex}-${subtopicIndex}`;
           rows.push({
             type: 'subtopic',
-            title: add.subtopic_title,
+            title: subtopic.subtopic_title,
+            subtopicType: subtopic.subtopic_type || 'lesson',
             moduleIndex,
-            status: 'added',
+            subtopicIndex,
+            status: removedKeys.has(key) ? 'removed' : 'existing',
           });
         });
+        (diff.adds || [])
+          .filter((item) => item.moduleIndex === moduleIndex)
+          .forEach((add) => {
+            rows.push({
+              type: 'subtopic',
+              title: add.subtopic_title,
+              subtopicType: add.subtopic_type || 'lesson',
+              moduleIndex,
+              status: 'added',
+            });
+          });
+      });
+      return rows;
+    }
+
+    // New reconstructed syllabus format mapping
+    const rows = [];
+    const usedSubtopicKeys = new Set();
+    const usedModuleIndices = new Set();
+
+    diff.modules.forEach((newMod, newModIdx) => {
+      // Trace original module index to detect renames/existing modules
+      const originalModIdx = modules.findIndex((m) => m.module_title === newMod.module_title);
+      let modStatus = 'added';
+      let originalIndex = -1;
+
+      if (originalModIdx !== -1 && !usedModuleIndices.has(originalModIdx)) {
+        modStatus = 'existing';
+        originalIndex = originalModIdx;
+        usedModuleIndices.add(originalModIdx);
+      } else {
+        // Renaming check
+        const unmatchedIdx = modules.findIndex((_, idx) => !usedModuleIndices.has(idx));
+        if (unmatchedIdx !== -1) {
+          modStatus = 'renamed';
+          originalIndex = unmatchedIdx;
+          usedModuleIndices.add(unmatchedIdx);
+        }
+      }
+
+      rows.push({
+        type: 'module',
+        title: newMod.module_title,
+        moduleIndex: newModIdx,
+        status: modStatus,
+        originalTitle: modStatus === 'renamed' && originalIndex !== -1 ? modules[originalIndex].module_title : null,
+      });
+
+      (newMod.subtopics || []).forEach((sub) => {
+        if (sub.type === 'existing') {
+          const origMod = modules[sub.moduleIndex];
+          const origSub = origMod?.subtopics?.[sub.subtopicIndex];
+          const key = `${sub.moduleIndex}-${sub.subtopicIndex}`;
+          usedSubtopicKeys.add(key);
+
+          if (origSub) {
+            const isMoved = sub.moduleIndex !== newModIdx;
+            rows.push({
+              type: 'subtopic',
+              title: origSub.subtopic_title,
+              subtopicType: origSub.subtopic_type || 'lesson',
+              moduleIndex: newModIdx,
+              status: isMoved ? 'moved' : 'existing',
+              movedFrom: isMoved ? `Module ${sub.moduleIndex + 1}` : null,
+            });
+          }
+        } else if (sub.type === 'new') {
+          rows.push({
+            type: 'subtopic',
+            title: sub.subtopic_title,
+            subtopicType: sub.subtopic_type || 'lesson',
+            moduleIndex: newModIdx,
+            status: 'added',
+          });
+        }
+      });
     });
+
+    // Detect all removed items
+    const removedRows = [];
+    modules.forEach((module, moduleIdx) => {
+      (module.subtopics || []).forEach((sub, subIdx) => {
+        const key = `${moduleIdx}-${subIdx}`;
+        if (!usedSubtopicKeys.has(key)) {
+          removedRows.push({
+            type: 'subtopic',
+            title: sub.subtopic_title,
+            subtopicType: sub.subtopic_type || 'lesson',
+            moduleIndex: moduleIdx,
+            status: 'removed',
+            moduleTitle: module.module_title,
+          });
+        }
+      });
+    });
+
+    if (removedRows.length > 0) {
+      rows.push({ type: 'removed_section_header', title: 'Removed Items' });
+      rows.push(...removedRows);
+    }
+
     return rows;
   }, [diff, modules]);
 
   return (
-    <section id="study-plan-tuner" className="shrink-0 rounded-[2rem] border border-white/10 bg-[#12141c] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+    <section id="study-plan-tuner" className="flex min-h-0 flex-col rounded-[2rem] border border-white/10 bg-[#12141c] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
       <div className="mb-5 flex items-start gap-4">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-teal-300/20 bg-teal-300/10 text-teal-100">
           <WandSparkles className="h-5 w-5" />
@@ -639,42 +738,92 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate }) {
             </button>
           </motion.div>
         ) : (
-          <motion.div key="diff" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+          <motion.div key="diff" className="flex min-h-0 flex-col" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             <div className="mb-3 rounded-[1.25rem] border border-white/10 bg-white/[0.035] px-4 py-3">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Summary</p>
               <p className="mt-1 text-sm font-semibold leading-6 text-zinc-300">{diff.summary}</p>
             </div>
 
-            <div className="max-h-[22rem] space-y-1 overflow-y-auto pr-1 custom-scroll">
+            <div className="flex-1 min-h-0 space-y-1 overflow-y-auto pr-1 custom-scroll">
               {flatList.map((row, index) => {
-                if (row.type === 'module') {
+                if (row.type === 'removed_section_header') {
                   return (
-                    <div key={index} className="px-2 pb-1 pt-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
-                        Module {row.moduleIndex + 1}: {row.title}
+                    <div key={index} className="border-t border-white/10 pt-4 pb-2 px-2 mt-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-400">
+                        {row.title}
                       </p>
                     </div>
                   );
                 }
+
+                if (row.type === 'module') {
+                  return (
+                    <div key={index} className="px-2 pb-1 pt-3 flex flex-wrap items-center gap-2">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                        Module {row.moduleIndex + 1}: {row.title}
+                      </p>
+                      {row.status === 'added' && (
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-emerald-300 border border-emerald-500/20">
+                          New Module
+                        </span>
+                      )}
+                      {row.status === 'renamed' && (
+                        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-amber-300 border border-amber-500/20">
+                          Renamed
+                        </span>
+                      )}
+                    </div>
+                  );
+                }
+
                 if (row.status === 'removed') {
                   return (
-                    <div key={index} className="flex items-center gap-3 rounded-xl border border-red-300/20 bg-red-400/10 px-3 py-2.5">
-                      <Trash2 className="h-3.5 w-3.5 shrink-0 text-red-300" />
-                      <span className="text-sm font-semibold text-red-200 line-through">{row.title}</span>
+                    <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-red-300/20 bg-red-400/10 px-3 py-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Trash2 className="h-3.5 w-3.5 shrink-0 text-red-300" />
+                        <span className="text-sm font-semibold text-red-200 line-through truncate">{row.title}</span>
+                      </div>
+                      <span className="shrink-0 text-[9px] font-bold text-red-300/60 uppercase tracking-wider">
+                        From: {row.moduleTitle || 'Syllabus'}
+                      </span>
                     </div>
                   );
                 }
+
                 if (row.status === 'added') {
                   return (
-                    <div key={index} className="flex items-center gap-3 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2.5">
-                      <Plus className="h-3.5 w-3.5 shrink-0 text-emerald-200" />
-                      <span className="text-sm font-semibold text-emerald-100">{row.title}</span>
+                    <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Plus className="h-3.5 w-3.5 shrink-0 text-emerald-200" />
+                        <span className="text-sm font-semibold text-emerald-100 truncate">{row.title}</span>
+                      </div>
+                      <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-300">
+                        {row.subtopicType === 'mini-project' ? 'Project' : 'Lesson'}
+                      </span>
                     </div>
                   );
                 }
+
+                if (row.status === 'moved') {
+                  return (
+                    <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-blue-400/20 bg-blue-400/10 px-3 py-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-blue-300" />
+                        <span className="text-sm font-semibold text-blue-100 truncate">{row.title}</span>
+                      </div>
+                      <span className="shrink-0 text-[9px] font-bold text-blue-300/80 uppercase tracking-wider">
+                        Moved from {row.movedFrom}
+                      </span>
+                    </div>
+                  );
+                }
+
                 return (
-                  <div key={index} className="rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2.5">
-                    <span className="text-sm font-semibold text-zinc-400">{row.title}</span>
+                  <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2.5">
+                    <span className="text-sm font-semibold text-zinc-400 truncate">{row.title}</span>
+                    <span className="shrink-0 text-[8px] font-black uppercase text-zinc-600 tracking-wider">
+                      {row.subtopicType === 'mini-project' ? 'Project' : 'Lesson'}
+                    </span>
                   </div>
                 );
               })}
@@ -712,7 +861,7 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate }) {
 export default function GuidedStudyPlanMap() {
   const { courseId } = useParams();
   const { user, isLoaded, isSignedIn } = useUser();
-  const { usageData } = useUsage();
+  const { usageData, fetchUsage } = useUsage();
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
   const [configDraft, setConfigDraft] = useState(null);
@@ -722,6 +871,7 @@ export default function GuidedStudyPlanMap() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [toast, setToast] = useState(null); // { message, type }
+  const [isTuning, setIsTuning] = useState(false);
 
   const redirectToLibrary = useCallback((message) => {
     navigate('/dashboard/guided', {
@@ -976,9 +1126,11 @@ export default function GuidedStudyPlanMap() {
               onCourseUpdate={(updatedCourse) => {
                 setCourse(updatedCourse);
                 setConfigDraft(updatedCourse.studyConfig);
+                fetchUsage();
               }}
+              onTuningStateChange={setIsTuning}
             />
-            <ModuleHealthPanel modules={course.modules || []} currentRef={currentRef} />
+            {!isTuning && <ModuleHealthPanel modules={course.modules || []} currentRef={currentRef} />}
           </aside>
         </div>
       </div>

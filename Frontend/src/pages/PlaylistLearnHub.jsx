@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import TutorChatPanel from '../components/TutorChatPanel';
 import DashboardShell from '../components/dashboard/DashboardShell';
+import { useUsage } from '../contexts/UsageContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -392,7 +393,7 @@ export default function PlaylistLearnHub() {
   const [showCheckpoint, setShowCheckpoint] = useState(false);
   const [checkpointData, setCheckpointData] = useState(null);
   const [loadingCheckpoint, setLoadingCheckpoint] = useState(false);
-  const [usageData, setUsageData] = useState(null);
+  const { usageData, fetchUsage } = useUsage();
   const [isTutorOpen, setIsTutorOpen] = useState(false);
 
   const fetchCourse = useCallback(async () => {
@@ -413,19 +414,8 @@ export default function PlaylistLearnHub() {
     }
   }, [courseId, dayIndex]);
 
-  const fetchUsage = useCallback(async () => {
-    if (!user) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/user/${user.id}/usage`);
-      const data = await res.json();
-      if (data.success) setUsageData(data);
-    } catch (err) {
-      console.error(err);
-    }
-  }, [user]);
-
   useEffect(() => { setActiveVideoIdx(0); }, [courseId, dayIndex]);
-  useEffect(() => { fetchCourse(); fetchUsage(); }, [fetchCourse, fetchUsage, isLoaded]);
+  useEffect(() => { fetchCourse(); }, [fetchCourse, isLoaded]);
 
   useEffect(() => {
     const shouldLock = loadingCheckpoint || showCheckpoint;

@@ -3,6 +3,16 @@ const { getStudyControlLimits, getModelForPlan } = require('../config/creditConf
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+function extractJson(text) {
+    if (!text) return '';
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
+        return text.substring(firstBrace, lastBrace + 1);
+    }
+    return text.replace(/^```json/mi, '').replace(/```$/mi, '').trim();
+}
+
 function sanitizeStudyConfig(requestedConfig = {}, userPlan = 'free') {
     const limits = getStudyControlLimits(userPlan);
 
@@ -97,9 +107,8 @@ Expected format:
         config: apiConfig
     });
 
-    let rawText = response.text || '';
-    rawText = rawText.replace(/^```json/mi, '').replace(/```$/mi, '').trim();
-    return JSON.parse(rawText);
+    const rawText = typeof response.text === 'function' ? await response.text() : (response.text || '');
+    return JSON.parse(extractJson(rawText));
 }
 
 const blockIdFrom = (index) => `block-${String(index + 1).padStart(2, '0')}`;
@@ -252,16 +261,11 @@ Expected format:
 
     let rawText = '';
     try {
-        rawText = response.text || '';
-        // The new SDK response might be nested or need awaiting depending on the exact version
-        if (typeof response.text === 'function') {
-            rawText = await response.text();
-        }
+        rawText = typeof response.text === 'function' ? await response.text() : (response.text || '');
+        const jsonText = extractJson(rawText);
+        if (!jsonText) throw new Error('AI returned an empty response');
         
-        rawText = rawText.replace(/^```json/mi, '').replace(/```$/mi, '').trim();
-        if (!rawText) throw new Error('AI returned an empty response');
-        
-        const parsed = JSON.parse(rawText);
+        const parsed = JSON.parse(jsonText);
         parsed.lessonContent = parsed.lessonContent || {};
         parsed.lessonContent.blocks = normalizeGeneratedBlocks(parsed.lessonContent.blocks);
         parsed.lessonContent.notesVersion = 2;
@@ -333,9 +337,8 @@ Expected format:
         config: apiConfig
     });
 
-    let rawText = response.text || '';
-    rawText = rawText.replace(/^```json/mi, '').replace(/```$/mi, '').trim();
-    return JSON.parse(rawText);
+    const rawText = typeof response.text === 'function' ? await response.text() : (response.text || '');
+    return JSON.parse(extractJson(rawText));
 }
 
 async function rewriteGuidedLessonBlock({
@@ -397,7 +400,8 @@ Output only valid JSON:
         config: { responseMimeType: 'application/json' }
     });
 
-    const parsed = JSON.parse(response.text);
+    const rawText = typeof response.text === 'function' ? await response.text() : (response.text || '');
+    const parsed = JSON.parse(extractJson(rawText));
     return {
         type: ['intro', 'concept', 'example', 'code', 'callout', 'summary', 'project', 'practice'].includes(parsed.type) ? parsed.type : block.type || 'concept',
         title: parsed.title || block.title,
@@ -465,14 +469,15 @@ Expected format:
         config: { responseMimeType: 'application/json' }
     });
 
-    return JSON.parse(response.text);
+    const rawText = typeof response.text === 'function' ? await response.text() : (response.text || '');
+    return JSON.parse(extractJson(rawText));
 }
 
 async function generateSyllabusDiff({ courseTitle, currentModules, instruction, userPlan = 'free' }) {
     const syllabusText = currentModules.map((m, mi) =>
-        `Module ${mi}: ${m.module_title}\n` +
+        `Module ${mi + 1}: ${m.module_title}\n` +
         (m.subtopics || []).map((s, si) =>
-            `  [moduleIndex=${mi}, subtopicIndex=${si}] ${s.subtopic_title} (${s.subtopic_type})`
+            `  Topic ${si + 1} [moduleIndex=${mi}, subtopicIndex=${si}] ${s.subtopic_title} (${s.subtopic_type})`
         ).join('\n')
     ).join('\n\n');
 
@@ -484,22 +489,45 @@ ${syllabusText}
 
 User instruction: "${instruction}"
 
-Your job: determine what to add or remove based on the instruction.
-Rules:
-1. Do NOT rename or reorder existing subtopics.
-2. Do NOT hallucinate subtopic indices. Only reference subtopics that exist above.
-3. For removes: use exact moduleIndex and subtopicIndex from the listing above.
-4. For adds: specify which moduleIndex to insert into, and position (0-based index within that module's subtopics list).
-5. If nothing needs changing, return empty arrays.
+Your job is to reconstruct the modules and subtopics according to the user's instruction.
+This is a highly flexible editor. You can:
+1. Add, delete, shift, or rename entire modules.
+2. Add new subtopics (lessons or mini-projects) at any position inside any module.
+3. Delete existing subtopics by simply omitting them from your reconstructed modules.
+4. Reorder subtopics, or move them between different modules!
 
-Output only valid JSON:
+To preserve existing notes, completed practices, and progress for unchanged subtopics, you MUST reference them using their original module and subtopic indices.
+
+Your JSON output must be a single object containing:
+- "summary": A short sentence describing what you changed.
+- "modules": An array of reconstructed modules in their final order. Each module must contain:
+  - "module_title": The final title of the module.
+  - "subtopics": An array of subtopics in their final order. Each subtopic must be EITHER:
+    1. An existing subtopic referenced by its original coordinates:
+       { "type": "existing", "moduleIndex": number, "subtopicIndex": number }
+    2. A brand-new subtopic:
+       { "type": "new", "subtopic_title": "string", "subtopic_type": "lesson" | "mini-project" }
+
+Keep all untouched modules and subtopics in their original states. Only perform modifications explicitly requested by the user.
+
+Output strictly valid JSON matching this structure:
 {
-  "summary": "One sentence describing the changes made",
-  "adds": [
-    { "moduleIndex": 0, "position": 2, "subtopic_title": "string", "subtopic_type": "lesson" }
-  ],
-  "removes": [
-    { "moduleIndex": 0, "subtopicIndex": 2, "subtopic_title": "string" }
+  "summary": "Divided Module 1 into HTML Basics and CSS Basics, and added a mini-project.",
+  "modules": [
+    {
+      "module_title": "HTML Basics",
+      "subtopics": [
+        { "type": "existing", "moduleIndex": 0, "subtopicIndex": 0 },
+        { "type": "existing", "moduleIndex": 0, "subtopicIndex": 1 }
+      ]
+    },
+    {
+      "module_title": "CSS Basics",
+      "subtopics": [
+        { "type": "existing", "moduleIndex": 0, "subtopicIndex": 2 },
+        { "type": "new", "subtopic_title": "Build a Landing Page", "subtopic_type": "mini-project" }
+      ]
+    }
   ]
 }
 `;
@@ -510,7 +538,8 @@ Output only valid JSON:
         config: { responseMimeType: 'application/json' }
     });
 
-    return JSON.parse(response.text);
+    const rawText = typeof response.text === 'function' ? await response.text() : (response.text || '');
+    return JSON.parse(extractJson(rawText));
 }
 
 module.exports = {

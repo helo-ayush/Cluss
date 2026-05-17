@@ -37,6 +37,7 @@ import { getCostForAction } from '../config/creditCosts';
 import { SignInButton } from '@clerk/clerk-react';
 import DashboardShell from '../components/dashboard/DashboardShell';
 import CodeChallengeBlock from '../components/CodeChallengeBlock';
+import { useUsage } from '../contexts/UsageContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -227,7 +228,6 @@ function ToolButton({ icon: Icon, label, onClick, disabled, tone = 'default' }) 
 function LessonMetric({ label, value, detail, accent = '#b9f9ff' }) {
   return (
     <div className="relative overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/[0.045] p-4">
-      <div className="absolute inset-x-0 top-0 h-px opacity-70" style={{ backgroundColor: accent }} />
       <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">{label}</p>
       <p className="mt-2 text-3xl font-black leading-none text-white">{value}</p>
       <p className="mt-2 text-xs font-semibold leading-5 text-zinc-500">{detail}</p>
@@ -801,7 +801,7 @@ export default function GuidedStudyPlanHub() {
   const navigate = useNavigate();
   const { user, isLoaded, isSignedIn } = useUser();
   const [course, setCourse] = useState(null);
-  const [usageData, setUsageData] = useState(null);
+  const { usageData, fetchUsage } = useUsage();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [rewritingBlockId, setRewritingBlockId] = useState('');
@@ -859,24 +859,9 @@ export default function GuidedStudyPlanHub() {
     }
   }, [courseId, numericModuleIndex, numericSubtopicIndex, redirectToLibrary, user?.id]);
 
-  const fetchUsage = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/user/${user.id}/usage`);
-      const data = await res.json();
-      if (data.success) setUsageData(data);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [user?.id]);
-
   useEffect(() => {
     fetchCourse();
   }, [fetchCourse]);
-
-  useEffect(() => {
-    fetchUsage();
-  }, [fetchUsage]);
 
   useEffect(() => {
     setConfidence('');

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
+import { useUsage } from '../contexts/UsageContext';
 import DashboardShell from '../components/dashboard/DashboardShell';
 import CreditCost from '../components/CreditCost';
 import { getCostForAction } from '../config/creditCosts';
@@ -10,26 +11,13 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 export default function PlaylistCreatePage() {
   const { user } = useUser();
   const navigate = useNavigate();
-  const [usageData, setUsageData] = useState(null);
+  const { usageData, fetchUsage } = useUsage();
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [hoursPerDay, setHoursPerDay] = useState(2);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchUsage = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/user/${user.id}/usage`);
-      const data = await res.json();
-      if (data.success) setUsageData(data);
-    } catch (err) {
-      console.error(err);
-    }
-  }, [user?.id]);
 
-  useEffect(() => {
-    fetchUsage();
-  }, [fetchUsage]);
 
   const handleSubmit = async () => {
     if (!playlistUrl.trim() || !user?.id) return;
@@ -48,6 +36,8 @@ export default function PlaylistCreatePage() {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message || data.error || 'Failed to import playlist.');
+      
+      fetchUsage(); // Update global credits
       navigate(`/playlist/${data.course._id}`);
     } catch (err) {
       setError(err.message || 'Failed to import playlist.');
