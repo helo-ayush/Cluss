@@ -31,6 +31,7 @@ import {
   X,
 } from 'lucide-react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import LightMarkdownRenderer from '../components/LightMarkdownRenderer';
 import CreditCost from '../components/CreditCost';
 import { getCostForAction } from '../config/creditCosts';
 import { SignInButton } from '@clerk/clerk-react';
@@ -269,7 +270,7 @@ function LessonCommandDeck({
       <div className="relative grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_27rem] lg:p-8 xl:grid-cols-[minmax(0,1fr)_31rem]">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <Link to={`/study-plan/${courseId}`} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/[0.1] hover:text-white">
+            <Link to={`/dashboard/guided/study-plan/${courseId}`} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/[0.1] hover:text-white">
               <ArrowLeft className="h-4 w-4" />
               Map
             </Link>
@@ -1198,18 +1199,18 @@ export default function GuidedStudyPlanHub() {
 
   const goNext = () => {
     if (nextUnlockedRef) {
-      navigate(`/study-plan/${courseId}/learn/${nextUnlockedRef.moduleIndex}/${nextUnlockedRef.subtopicIndex}`);
+      navigate(`/dashboard/guided/study-plan/${courseId}/learn/${nextUnlockedRef.moduleIndex}/${nextUnlockedRef.subtopicIndex}`);
       return;
     }
-    navigate(`/study-plan/${courseId}`);
+    navigate(`/dashboard/guided/study-plan/${courseId}`);
   };
 
   const goPrev = () => {
     if (prevUnlockedRef) {
-      navigate(`/study-plan/${courseId}/learn/${prevUnlockedRef.moduleIndex}/${prevUnlockedRef.subtopicIndex}`);
+      navigate(`/dashboard/guided/study-plan/${courseId}/learn/${prevUnlockedRef.moduleIndex}/${prevUnlockedRef.subtopicIndex}`);
       return;
     }
-    navigate(`/study-plan/${courseId}`);
+    navigate(`/dashboard/guided/study-plan/${courseId}`);
   };
 
   if (!isLoaded) {
@@ -1431,7 +1432,7 @@ export default function GuidedStudyPlanHub() {
             </p>
             <h2 style={{ fontSize: 22, margin: '8px 0 10px', color: '#0f172a' }}>{block.title}</h2>
             <div style={{ color: '#334155', fontSize: 13, lineHeight: 1.75 }}>
-              <MarkdownRenderer content={block.body || ''} />
+              <LightMarkdownRenderer content={block.body || ''} />
             </div>
             {block.code && (
               <pre style={{ whiteSpace: 'pre-wrap', background: '#111827', color: '#f8fafc', padding: 14, borderRadius: 14, fontSize: 11, overflowWrap: 'break-word', marginTop: 14 }}>

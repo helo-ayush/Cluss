@@ -23,6 +23,15 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
   }, [isOpen]);
 
   useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = '44px';
+      if (input) {
+        inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+      }
+    }
+  }, [input, inputRef]);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
@@ -247,8 +256,8 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
                   <textarea
                     ref={inputRef}
                     rows={1}
-                    className="flex-1 bg-transparent border-none outline-none font-body text-[14px] resize-none max-h-40 custom-scroll placeholder:opacity-50"
-                    style={{ color: 'var(--theme-text-heading)' }}
+                    className="flex-1 bg-transparent border-none outline-none font-body text-[14px] leading-[1.6] resize-none max-h-[200px] py-2.5 custom-scroll overflow-y-auto placeholder:opacity-50"
+                    style={{ color: 'var(--theme-text-heading)', minHeight: '44px' }}
                     placeholder={hasTutorAccess ? "What would you like to clarify?..." : "AI tutoring is locked..."}
                     value={input}
                     onChange={e => setInput(e.target.value)}

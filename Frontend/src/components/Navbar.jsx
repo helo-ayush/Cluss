@@ -191,15 +191,15 @@ export default function Navbar() {
 
   const handleBack = () => {
     // 1. If in Learn mode (Guided), go to Study Plan Map
-    const learnMatch = pathname.match(/^\/study-plan\/([^/]+)\/learn/);
-    if (learnMatch) return navigate(`/study-plan/${learnMatch[1]}`);
+    const learnMatch = pathname.match(/^\/dashboard\/guided\/study-plan\/([^/]+)\/learn/);
+    if (learnMatch) return navigate(`/dashboard/guided/study-plan/${learnMatch[1]}`);
 
     // 2. If in Learn mode (Playlist), go to Playlist Overview
     const playlistLearnMatch = pathname.match(/^\/playlist\/([^/]+)\/day/);
     if (playlistLearnMatch) return navigate(`/playlist/${playlistLearnMatch[1]}`);
 
     // 3. If in Study Plan Map or Playlist Overview or Profile, go to Dashboard
-    if (pathname.startsWith('/study-plan/') || pathname.startsWith('/playlist/') || pathname === '/profile') {
+    if (pathname.startsWith('/dashboard/guided/study-plan/') || pathname.startsWith('/playlist/') || pathname === '/profile') {
       return navigate('/dashboard');
     }
 
@@ -212,8 +212,8 @@ export default function Navbar() {
     navigate(-1);
   };
 
-  const studyPlanMatch = pathname.match(/^\/study-plan\/([^/]+)$/);
-  const studyPlanLearnMatch = pathname.match(/^\/study-plan\/([^/]+)\/learn\/\d+\/\d+$/);
+  const studyPlanMatch = pathname.match(/^\/dashboard\/guided\/study-plan\/([^/]+)$/);
+  const studyPlanLearnMatch = pathname.match(/^\/dashboard\/guided\/study-plan\/([^/]+)\/learn\/\d+\/\d+$/);
   const playlistCourseMatch = pathname.match(/^\/playlist\/([^/]+)$/);
   const playlistLearnMatch = pathname.match(/^\/playlist\/([^/]+)\/day\/\d+$/);
 
@@ -224,7 +224,7 @@ export default function Navbar() {
       ]
     : studyPlanLearnMatch
     ? [
-        { label: 'Plan', type: 'navigate', to: `/study-plan/${studyPlanLearnMatch[1]}` },
+        { label: 'Plan', type: 'navigate', to: `/dashboard/guided/study-plan/${studyPlanLearnMatch[1]}` },
         { label: 'Lesson', type: 'scroll', target: 'study-plan-lesson', offset: 132 },
       ]
     : playlistCourseMatch

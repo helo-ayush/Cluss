@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import NewHome from './pages/NewHome';
 import Dashboard from './pages/Dashboard';
 import DashboardChatPage from './pages/DashboardChatPage';
@@ -11,21 +11,11 @@ import PlaylistCourseMap from './pages/PlaylistCourseMap';
 import PlaylistLearnHub from './pages/PlaylistLearnHub';
 import PlanLibraryPage from './pages/PlanLibraryPage';
 import Profile from './pages/Profile';
-import FlashcardReview from './pages/FlashcardReview';
-import Navbar from './components/Navbar';
 
-function AppRoutes() {
-  const location = useLocation();
-  const isLanding = location.pathname === '/';
-  const isDashboardWorkspace = location.pathname === '/dashboard'
-    || location.pathname.startsWith('/dashboard/')
-    || location.pathname.startsWith('/create/')
-    || location.pathname.startsWith('/study-plan/')
-    || location.pathname === '/profile';
 
+export default function App() {
   return (
-    <>
-      {!isLanding && !isDashboardWorkspace && <Navbar />}
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<NewHome />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -35,23 +25,14 @@ function AppRoutes() {
         <Route path="/dashboard/progress" element={<DashboardProgressPage />} />
         <Route path="/create/guided" element={<GuidedCreatePage />} />
         <Route path="/create/playlist" element={<PlaylistCreatePage />} />
-        <Route path="/study-plan/:courseId" element={<GuidedStudyPlanMap />} />
-        <Route path="/study-plan/:courseId/learn/:moduleIndex/:subtopicIndex" element={<GuidedStudyPlanHub />} />
+        <Route path="/dashboard/guided/study-plan/:courseId" element={<GuidedStudyPlanMap />} />
+        <Route path="/dashboard/guided/study-plan/:courseId/learn/:moduleIndex/:subtopicIndex" element={<GuidedStudyPlanHub />} />
         <Route path="/playlist/:courseId" element={<PlaylistCourseMap />} />
         <Route path="/playlist/:courseId/day/:dayIndex" element={<PlaylistLearnHub />} />
         <Route path="/dashboard/profile" element={<Profile />} />
-        <Route path="/flashcards" element={<FlashcardReview />} />
+
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-
-
-    </>
-  );
-}
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <AppRoutes />
     </BrowserRouter>
   );
 }

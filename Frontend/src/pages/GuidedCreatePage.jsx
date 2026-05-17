@@ -61,7 +61,7 @@ export default function GuidedCreatePage() {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message || data.error || 'Failed to create study plan.');
-      navigate(`/study-plan/${data.course._id}`);
+      navigate(`/dashboard/guided/study-plan/${data.course._id}`);
     } catch (err) {
       setError(err.message || 'Failed to create study plan.');
     } finally {

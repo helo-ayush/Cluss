@@ -10,20 +10,20 @@ import 'katex/dist/katex.min.css';
 // Initialize mermaid
 mermaid.initialize({
   startOnLoad: false,
-  theme: 'base',
+  theme: 'dark',
   flowchart: {
     useMaxWidth: true,
     htmlLabels: true,
     padding: 20
   },
   themeVariables: {
-    fontFamily: '"Poppins", ui-sans-serif, system-ui, -apple-system, sans-serif',
-    primaryColor: '#eef2ff',
-    primaryBorderColor: '#4338ca',
-    primaryTextColor: '#1e293b',
-    lineColor: '#64748b',
-    secondaryColor: '#f8fafc',
-    tertiaryColor: '#f1f5f9'
+    fontFamily: '"Outfit", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif',
+    primaryColor: '#171717',
+    primaryBorderColor: '#333333',
+    primaryTextColor: '#ffffff',
+    lineColor: '#666666',
+    secondaryColor: '#202020',
+    tertiaryColor: '#2a2a2a'
   },
   securityLevel: 'loose',
 });
@@ -139,7 +139,7 @@ function MermaidBlock({ code }) {
 
   if (error) {
     return (
-      <div className="my-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+      <div className="my-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
         <p className="font-bold">Failed to render diagram.</p>
         <pre className="mt-2 overflow-x-auto text-[11px] opacity-70">{code}</pre>
       </div>
@@ -147,11 +147,11 @@ function MermaidBlock({ code }) {
   }
 
   return (
-    <div className="my-6 flex justify-center overflow-x-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="my-6 flex justify-center overflow-x-auto rounded-2xl border border-white/10 bg-[#0a0a0a] p-6 shadow-sm">
       {svg ? (
-        <div ref={containerRef} dangerouslySetInnerHTML={{ __html: svg }} className="w-full max-w-3xl flex justify-center" />
+        <div ref={containerRef} dangerouslySetInnerHTML={{ __html: svg }} className="w-full max-w-3xl flex justify-center [&_svg]:!max-w-full" />
       ) : (
-        <div className="h-32 flex w-full items-center justify-center text-sm text-slate-400">Loading diagram...</div>
+        <div className="h-32 flex w-full items-center justify-center text-sm text-zinc-500">Loading diagram...</div>
       )}
     </div>
   );
@@ -178,19 +178,19 @@ function CodeBlock({ className = '', children, ...props }) {
   };
 
   return (
-    <div className="my-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-sm">
-      <div className="flex items-center justify-between border-b border-white/10 bg-slate-900 px-4 py-2">
-        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-300">{language}</span>
+    <div className="my-4 overflow-hidden rounded-2xl border border-white/10 bg-[#0d0e10] shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+      <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] px-4 py-2">
+        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">{language}</span>
         <button
           type="button"
           onClick={copyCode}
-          className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/15"
+          className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-xs font-semibold text-zinc-300 transition hover:bg-white/15 hover:text-white"
         >
-          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? <Check className="h-3.5 w-3.5 text-[#A3FF4F]" /> : <Copy className="h-3.5 w-3.5" />}
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
-      <pre className="custom-scroll max-w-full overflow-x-auto p-4 text-[13px] leading-7 text-slate-100">
+      <pre className="custom-scroll max-w-full overflow-x-auto p-4 text-[13.5px] leading-7 text-zinc-300">
         <code className={className} {...props}>
           {children}
         </code>
@@ -203,61 +203,60 @@ export default function MarkdownRenderer({ content, className = '' }) {
   if (!content) return null;
 
   const components = React.useMemo(() => ({
-          p: ({ node, ...props }) => <p className="mb-3 last:mb-0 leading-7 text-slate-600" {...props} />,
-          strong: ({ node, ...props }) => <strong className="font-bold text-slate-950" {...props} />,
-          em: ({ node, ...props }) => <em className="italic text-slate-700" {...props} />,
+          p: ({ node, ...props }) => <p className="mb-4 leading-[1.8] text-zinc-300 last:mb-0" {...props} />,
+          strong: ({ node, ...props }) => <strong className="font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]" {...props} />,
+          em: ({ node, ...props }) => <em className="italic text-zinc-400" {...props} />,
           pre: ({ children, ...props }) => {
             if (React.isValidElement(children) && children.props.node?.tagName === 'code') {
               return <CodeBlock className={children.props.className}>{children.props.children}</CodeBlock>;
             }
-            // Fallback for pre without code child
             return <pre {...props}>{children}</pre>;
           },
           code: ({ node, className, children, ...props }) => (
-            <code className={`rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 font-mono text-[0.86em] text-slate-900 ${className || ''}`} {...props}>
+            <code className={`rounded-[0.4rem] border border-white/10 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[0.86em] text-indigo-300 shadow-sm ${className || ''}`} {...props}>
               {children}
             </code>
           ),
-          ul: ({ node, ...props }) => <ul className="mb-4 list-disc space-y-2 pl-5 text-slate-600" {...props} />,
-          ol: ({ node, ...props }) => <ol className="mb-4 list-decimal space-y-2 pl-5 text-slate-600" {...props} />,
-          li: ({ node, ...props }) => <li className="pl-1 leading-7" {...props} />,
-          h1: ({ node, ...props }) => <h1 className="mb-4 mt-6 text-2xl font-bold leading-tight text-slate-950 first:mt-0" {...props} />,
-          h2: ({ node, ...props }) => <h2 className="mb-3 mt-6 text-xl font-bold leading-tight text-slate-950 first:mt-0" {...props} />,
-          h3: ({ node, ...props }) => <h3 className="mb-2 mt-5 text-lg font-bold leading-tight text-slate-950 first:mt-0" {...props} />,
-          h4: ({ node, ...props }) => <h4 className="mb-2 mt-4 text-base font-bold leading-tight text-slate-950 first:mt-0" {...props} />,
-          a: ({ node, ...props }) => <a className="font-medium text-[#4338ca] underline underline-offset-4 hover:text-[#3730a3]" {...props} />,
+          ul: ({ node, ...props }) => <ul className="mb-5 list-none space-y-2.5 pl-2 text-zinc-300 [&>li]:relative [&>li]:pl-6 [&>li::before]:absolute [&>li::before]:left-1.5 [&>li::before]:top-[0.6em] [&>li::before]:h-1.5 [&>li::before]:w-1.5 [&>li::before]:rounded-full [&>li::before]:bg-zinc-500" {...props} />,
+          ol: ({ node, ...props }) => <ol className="mb-5 list-decimal space-y-2.5 pl-6 text-zinc-300" {...props} />,
+          li: ({ node, ...props }) => <li className="leading-[1.7]" {...props} />,
+          h1: ({ node, ...props }) => <h1 className="mb-5 mt-8 text-[1.75rem] font-black leading-tight tracking-tight text-white first:mt-0" {...props} />,
+          h2: ({ node, ...props }) => <h2 className="mb-4 mt-8 text-2xl font-black leading-tight tracking-tight text-white first:mt-0" {...props} />,
+          h3: ({ node, ...props }) => <h3 className="mb-3 mt-6 text-xl font-bold leading-tight tracking-tight text-white first:mt-0" {...props} />,
+          h4: ({ node, ...props }) => <h4 className="mb-2 mt-5 text-lg font-bold leading-tight text-white first:mt-0" {...props} />,
+          a: ({ node, ...props }) => <a className="font-bold text-[#A3FF4F] underline decoration-white/20 underline-offset-4 transition hover:text-white hover:decoration-[#A3FF4F]/50" {...props} />,
           blockquote: ({ node, children, ...props }) => {
-            // Check for specific callout types
             const text = React.Children.toArray(children).map(c => c.props?.children || c).join('');
-            let borderClass = 'border-slate-900';
-            let bgClass = 'bg-slate-100';
-            let textClass = 'text-slate-800';
+            let borderClass = 'border-zinc-700/50';
+            let bgClass = 'bg-white/[0.02]';
+            let textClass = 'text-zinc-300';
+            let icon = null;
             
             if (text.includes('💡')) {
-              borderClass = 'border-indigo-500'; bgClass = 'bg-indigo-50'; textClass = 'text-indigo-900';
+              borderClass = 'border-indigo-500/40'; bgClass = 'bg-indigo-500/5'; textClass = 'text-indigo-200';
             } else if (text.includes('⚠️')) {
-              borderClass = 'border-amber-500'; bgClass = 'bg-amber-50'; textClass = 'text-amber-900';
+              borderClass = 'border-[#FF9F1C]/40'; bgClass = 'bg-[#FF9F1C]/5'; textClass = 'text-[#FFBE55]';
             } else if (text.includes('🔗')) {
-              borderClass = 'border-teal-500'; bgClass = 'bg-teal-50'; textClass = 'text-teal-900';
+              borderClass = 'border-teal-500/40'; bgClass = 'bg-teal-500/5'; textClass = 'text-teal-200';
             }
             
             return (
-              <blockquote className={`my-6 rounded-r-2xl border-l-4 ${borderClass} ${bgClass} px-5 py-4 text-[15px] leading-7 ${textClass}`} {...props}>
+              <blockquote className={`my-6 rounded-r-2xl border-l-[3px] ${borderClass} ${bgClass} px-6 py-4 text-[15px] leading-[1.8] ${textClass} shadow-sm`} {...props}>
                 {children}
               </blockquote>
             );
           },
           table: ({ node, ...props }) => (
-            <div className="my-6 w-full overflow-x-auto rounded-2xl border border-slate-200">
+            <div className="my-6 w-full overflow-x-auto rounded-2xl border border-white/10 bg-[#0d0e10] shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
               <table className="w-full text-left text-sm" {...props} />
             </div>
           ),
-          thead: ({ node, ...props }) => <thead className="bg-slate-50 text-xs uppercase text-slate-500" {...props} />,
-          tbody: ({ node, ...props }) => <tbody className="divide-y divide-slate-200" {...props} />,
-          tr: ({ node, ...props }) => <tr className="hover:bg-slate-50/50" {...props} />,
-          th: ({ node, ...props }) => <th className="px-6 py-4 font-semibold text-slate-900" {...props} />,
-          td: ({ node, ...props }) => <td className="px-6 py-4 text-slate-600" {...props} />,
-          hr: ({ node, ...props }) => <hr className="my-8 border-slate-200" {...props} />,
+          thead: ({ node, ...props }) => <thead className="border-b border-white/10 bg-white/[0.03] text-xs uppercase tracking-wider text-zinc-400" {...props} />,
+          tbody: ({ node, ...props }) => <tbody className="divide-y divide-white/5" {...props} />,
+          tr: ({ node, ...props }) => <tr className="transition hover:bg-white/[0.02]" {...props} />,
+          th: ({ node, ...props }) => <th className="px-6 py-4 font-black text-white" {...props} />,
+          td: ({ node, ...props }) => <td className="px-6 py-4 text-zinc-300" {...props} />,
+          hr: ({ node, ...props }) => <hr className="my-10 border-white/10" {...props} />,
   }), []);
 
   return (

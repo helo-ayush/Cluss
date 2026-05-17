@@ -30,7 +30,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
-import StudyConfigPanel from '../components/StudyConfigPanel';
+import StudyConfigPanel from '../components/dashboard/DarkStudyConfigPanel';
 import { normalizeStudyConfig } from '../utils/studyConfig';
 import CreditCost from '../components/CreditCost';
 import { getCostForAction } from '../config/creditCosts';
@@ -125,8 +125,8 @@ function MetricTile({ label, value, detail, accent = '#f5f5f5', delay = 0 }) {
 
 function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathStats, onOpenSettings }) {
   const continueUrl = currentRef
-    ? `/study-plan/${course._id}/learn/${currentRef.moduleIndex}/${currentRef.subtopicIndex}`
-    : `/study-plan/${course._id}`;
+    ? `/dashboard/guided/study-plan/${course._id}/learn/${currentRef.moduleIndex}/${currentRef.subtopicIndex}`
+    : `/dashboard/guided/study-plan/${course._id}`;
   const moduleProgress = moduleCompletion(currentModule);
 
   return (
@@ -386,7 +386,7 @@ function SubtopicRow({ courseId, moduleIndex, subtopicIndex, subtopic, isCurrent
     <motion.button
       type="button"
       id={isCurrent ? 'study-plan-current-topic' : undefined}
-      onClick={() => !locked && navigate(`/study-plan/${courseId}/learn/${moduleIndex}/${subtopicIndex}`)}
+      onClick={() => !locked && navigate(`/dashboard/guided/study-plan/${courseId}/learn/${moduleIndex}/${subtopicIndex}`)}
       disabled={locked}
       whileHover={locked ? {} : { y: -2 }}
       transition={{ duration: 0.18 }}

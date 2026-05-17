@@ -58,7 +58,7 @@ export default function PlanLibraryPage({ type = 'guided' }) {
 
   const openPlan = (plan) => {
     if (plan.sourceType === 'playlist') navigate(`/playlist/${plan._id}`);
-    else navigate(`/study-plan/${plan._id}`);
+    else navigate(`/dashboard/guided/study-plan/${plan._id}`);
   };
 
   const handleDelete = async () => {

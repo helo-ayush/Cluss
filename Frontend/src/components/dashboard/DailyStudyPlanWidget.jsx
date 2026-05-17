@@ -37,7 +37,7 @@ export default function DailyStudyPlanWidget() {
 
   const handleTaskClick = (courseId) => {
     if (courseId && courseId !== "000000000000000000000000") {
-      navigate(`/study-plan/${courseId}`);
+      navigate(`/dashboard/guided/study-plan/${courseId}`);
     } else {
       navigate(`/dashboard/guided`); // Fallback for "empty state" plans
     }

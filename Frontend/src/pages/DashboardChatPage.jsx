@@ -97,6 +97,15 @@ function Composer({ input, setInput, sendMessage, loading, usageData, textareaRe
     return () => document.removeEventListener('mousedown', handler);
   }, [pickerOpen]);
 
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '44px'; // Base height for 1 line
+      if (input) {
+        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      }
+    }
+  }, [input, textareaRef]);
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-3 pt-3 sm:px-6">
       <div className="rounded-[1.85rem] border border-white/12 bg-[#2b2b2f] shadow-[0_28px_70px_rgba(0,0,0,0.48)] transition focus-within:border-white/25 focus-within:bg-[#313136] focus-within:shadow-[0_32px_80px_rgba(0,0,0,0.58)]">
@@ -187,8 +196,9 @@ function Composer({ input, setInput, sendMessage, loading, usageData, textareaRe
               }
             }}
             rows={1}
-            placeholder={selectedCourse ? `Ask about ${selectedCourse.course_title}...` : 'Ask anything'}
-            className="custom-scroll max-h-40 min-h-[2.8rem] flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-7 text-white outline-none placeholder:text-zinc-500"
+            placeholder={selectedCourse ? `Ask about ${selectedCourse.course_title.length > 35 ? selectedCourse.course_title.slice(0, 35) + '...' : selectedCourse.course_title}` : 'Ask anything'}
+            className="custom-scroll max-h-[200px] flex-1 resize-none bg-transparent py-2.5 text-[15px] leading-[1.6] text-white outline-none placeholder:text-zinc-500 overflow-y-auto"
+            style={{ minHeight: '44px' }}
           />
 
           <button

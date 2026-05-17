@@ -34,9 +34,9 @@ export default function DashboardSidebar({ mobileMenuOpen, setMobileMenuOpen }) 
         <Link 
           to="/" 
           onClick={() => setMobileMenuOpen?.(false)}
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-2xl font-black tracking-tighter text-black"
+          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/[0.06] bg-[#000000] hover:border-white/20 transition duration-300"
         >
-          N
+          <img src="/Logo.png" alt="Cluss Logo" className="h-7 w-7 object-contain" />
         </Link>
 
         <nav className="mt-12 flex flex-1 flex-col items-center gap-4 overflow-y-auto w-full no-scrollbar">
