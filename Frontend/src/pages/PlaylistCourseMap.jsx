@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { motion } from 'motion/react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
-import LoadingScreen from '../components/LoadingScreen';
+import DashboardShell from '../components/dashboard/DashboardShell';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -110,20 +110,20 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
         initial={{ opacity: 0, y: 22, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.28, ease: 'easeOut' }}
-        className="course-modal-panel flex h-screen w-full max-w-6xl flex-col overflow-hidden md:h-[min(92vh,960px)] md:rounded-[2rem]"
+        className="flex h-screen w-full max-w-6xl flex-col overflow-hidden md:h-[min(92vh,960px)] md:rounded-[2rem] border border-white/10 bg-[#111111] shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-black/5 px-5 py-5 md:px-7">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5 md:px-7">
           <div>
-            <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+            <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">
               Day {dayIndex + 1} Checkpoint
             </p>
-            <h2 className="mt-2 font-serif text-3xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+            <h2 className="mt-2 font-serif text-3xl font-semibold text-white">
               {isReview ? 'Checkpoint Review' : 'Show what you learned'}
             </h2>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span className="course-stat-chip">{attemptsUsed}/{maxAttempts} attempts used</span>
+              <span className="inline-flex items-center rounded-full bg-[#161616] border border-white/10 px-3 py-1 text-xs font-bold text-slate-300">{attemptsUsed}/{maxAttempts} attempts used</span>
               {result && (
-                <span className="course-stat-chip" style={{ color: result.passed ? '#15803d' : '#b91c1c' }}>
+                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold" style={{ borderColor: result.passed ? 'rgba(21, 128, 61, 0.3)' : 'rgba(185, 28, 28, 0.3)', color: result.passed ? '#4ade80' : '#f87171', backgroundColor: result.passed ? 'rgba(21, 128, 61, 0.1)' : 'rgba(185, 28, 28, 0.1)' }}>
                   {result.overallScore}% score
                 </span>
               )}
@@ -132,9 +132,9 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white/80"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#161616] text-slate-400 transition hover:bg-[#1c1c1c] hover:text-white"
           >
-            <span className="material-symbols-outlined text-[18px]" style={{ color: 'var(--theme-text-muted)' }}>
+            <span className="material-symbols-outlined text-[18px]">
               close
             </span>
           </button>
@@ -151,12 +151,11 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 className={`rounded-full px-4 py-2 font-label text-[11px] font-bold uppercase tracking-[0.18em] transition ${
-                  activeTab === tab.key ? 'text-white' : ''
+                  activeTab === tab.key ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
                 style={{
-                  background: activeTab === tab.key ? 'linear-gradient(135deg, #111827, #312e81)' : 'rgba(255,255,255,0.7)',
-                  color: activeTab === tab.key ? '#ffffff' : 'rgba(15, 23, 42, 0.58)',
-                  border: '1px solid rgba(15, 23, 42, 0.08)',
+                  background: activeTab === tab.key ? 'linear-gradient(135deg, #312e81, #111827)' : 'transparent',
+                  border: activeTab === tab.key ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
                 }}
               >
                 {tab.label}
@@ -171,23 +170,23 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
               {(checkpoint?.theoryQuestions || []).map((question, index) => {
                 const feedback = result?.theoryScores?.find((entry) => entry.questionIndex === index);
                 return (
-                  <div key={index} className="course-surface rounded-[1.7rem] p-5">
+                  <div key={index} className="rounded-[1.7rem] border border-white/10 bg-[#161616] p-5">
                     <div className="flex items-start gap-4">
                       <div
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-label text-xs font-bold"
                         style={{
                           background: feedback
                             ? feedback.score >= 60
-                              ? 'rgba(21, 128, 61, 0.12)'
-                              : 'rgba(185, 28, 28, 0.12)'
-                            : 'rgba(67, 56, 202, 0.12)',
-                          color: feedback ? (feedback.score >= 60 ? '#15803d' : '#b91c1c') : '#4338ca',
+                              ? 'rgba(74, 222, 128, 0.12)'
+                              : 'rgba(248, 113, 113, 0.12)'
+                            : 'rgba(99, 102, 241, 0.12)',
+                          color: feedback ? (feedback.score >= 60 ? '#4ade80' : '#f87171') : '#818cf8',
                         }}
                       >
                         {feedback ? feedback.score : index + 1}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-body text-sm font-semibold leading-7" style={{ color: 'var(--theme-text-heading)' }}>
+                        <div className="font-body text-sm font-semibold leading-7 text-white">
                           <MarkdownRenderer content={question.question} />
                         </div>
                       </div>
@@ -199,16 +198,15 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
                       disabled={isReview}
                       rows={5}
                       placeholder="Write your answer here..."
-                      className="mt-4 w-full resize-y rounded-[1.2rem] border border-black/10 bg-white/70 p-4 font-body text-sm outline-none transition focus:border-[#4338ca]/35"
-                      style={{ color: 'var(--theme-text-heading)' }}
+                      className="mt-4 w-full resize-y rounded-[1.2rem] border border-white/10 bg-[#0a0b10] p-4 font-body text-sm outline-none transition focus:border-indigo-500/50 text-slate-300 placeholder-slate-600"
                     />
 
                     {feedback?.feedback && (
-                      <div className="course-surface-soft mt-4 rounded-[1.2rem] p-4">
-                        <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: '#4338ca' }}>
+                      <div className="mt-4 rounded-[1.2rem] border border-indigo-500/20 bg-indigo-500/10 p-4">
+                        <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-400">
                           Feedback
                         </p>
-                        <div className="mt-2 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                        <div className="mt-2 font-body text-sm leading-7 text-indigo-100">
                           <MarkdownRenderer content={feedback.feedback} />
                         </div>
                       </div>
@@ -221,19 +219,19 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
 
           {activeTab === 'coding' && checkpoint?.questionType === 'mixed' && (
             <div className="mx-auto w-full max-w-4xl space-y-5">
-              <div className="course-surface rounded-[1.7rem] p-5">
-                <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: '#4338ca' }}>
+              <div className="rounded-[1.7rem] border border-white/10 bg-[#161616] p-5">
+                <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-400">
                   Coding Challenge
                 </p>
-                <div className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                <div className="mt-3 font-body text-sm leading-7 text-slate-300">
                   <MarkdownRenderer content={checkpoint.codingQuestion?.prompt} />
                 </div>
                 {checkpoint.codingQuestion?.expectedBehavior && (
-                  <div className="course-surface-soft mt-4 rounded-[1.2rem] p-4">
-                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: '#15803d' }}>
+                  <div className="mt-4 rounded-[1.2rem] border border-emerald-500/20 bg-emerald-500/10 p-4">
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-400">
                       Expected Behavior
                     </p>
-                    <div className="mt-2 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                    <div className="mt-2 font-body text-sm leading-7 text-emerald-100">
                       <MarkdownRenderer content={checkpoint.codingQuestion.expectedBehavior} />
                     </div>
                   </div>
@@ -241,32 +239,31 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
               </div>
 
               {codeFiles.map((file, index) => (
-                <div key={index} className="overflow-hidden rounded-[1.7rem] border border-black/10">
-                  <div className="course-surface flex items-center gap-3 border-b border-black/10 px-4 py-3">
-                    <span className="material-symbols-outlined text-[18px]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                <div key={index} className="overflow-hidden rounded-[1.7rem] border border-white/10">
+                  <div className="flex items-center gap-3 border-b border-white/10 bg-[#161616] px-4 py-3">
+                    <span className="material-symbols-outlined text-[18px] text-slate-400">
                       description
                     </span>
                     <input
                       value={file.fileName}
                       onChange={(event) => updateFile(index, 'fileName', event.target.value)}
                       disabled={isReview}
-                      className="flex-1 bg-transparent font-label text-[11px] font-bold uppercase tracking-[0.18em] outline-none"
-                      style={{ color: 'var(--theme-text-heading)' }}
+                      className="flex-1 bg-transparent font-label text-[11px] font-bold uppercase tracking-[0.18em] outline-none text-white placeholder-slate-600"
                       placeholder="filename"
                     />
                     {codeFiles.length > 1 && !isReview && (
-                      <button type="button" onClick={() => removeFile(index)} className="text-[#b91c1c]">
+                      <button type="button" onClick={() => removeFile(index)} className="text-red-400 hover:text-red-300">
                         <span className="material-symbols-outlined text-[18px]">close</span>
                       </button>
                     )}
                   </div>
 
-                  <div className="course-code-surface flex min-h-[220px] overflow-hidden">
+                  <div className="flex min-h-[220px] overflow-hidden bg-[#0a0b10]">
                     <div
                       ref={(element) => {
                         gutterRefs.current[index] = element;
                       }}
-                      className="w-12 shrink-0 overflow-hidden border-r border-white/8 bg-[#111318] py-5 pr-3 text-right font-mono text-[11px] text-[#677083]"
+                      className="w-12 shrink-0 overflow-hidden border-r border-white/10 bg-[#0a0b10] py-5 pr-3 text-right font-mono text-[11px] text-slate-500"
                     >
                       {file.content.split('\n').map((_, lineIndex) => (
                         <div key={lineIndex} className="h-[21px]">
@@ -281,30 +278,30 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
                       disabled={isReview}
                       rows={10}
                       placeholder="Paste your code here..."
-                      className="custom-scroll flex-1 resize-none bg-transparent p-5 font-mono text-[13px] leading-[21px] text-[#e5e7eb] outline-none"
+                      className="custom-scroll flex-1 resize-none bg-transparent p-5 font-mono text-[13px] leading-[21px] text-[#e5e7eb] outline-none placeholder-slate-600"
                     />
                   </div>
                 </div>
               ))}
 
               {!isReview && (
-                <button type="button" onClick={addFile} className="course-outline-button w-full justify-center">
+                <button type="button" onClick={addFile} className="flex w-full items-center justify-center gap-2 rounded-[1.2rem] border border-white/10 bg-[#161616] px-5 py-4 text-sm font-bold text-slate-300 transition hover:bg-[#1c1c1c] hover:text-white">
                   <span className="material-symbols-outlined text-[18px]">add</span>
                   Add File
                 </button>
               )}
 
               {result?.codingScore && (
-                <div className="course-surface-soft rounded-[1.6rem] p-5">
+                <div className="rounded-[1.6rem] border border-white/10 bg-[#161616] p-5">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: '#4338ca' }}>
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-400">
                       Coding Score
                     </p>
-                    <span className="font-headline text-2xl font-bold" style={{ color: result.codingScore.score >= 60 ? '#15803d' : '#b91c1c' }}>
+                    <span className="font-headline text-2xl font-bold" style={{ color: result.codingScore.score >= 60 ? '#4ade80' : '#f87171' }}>
                       {result.codingScore.score}/100
                     </span>
                   </div>
-                  <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+                  <p className="mt-3 font-body text-sm leading-7 text-slate-300">
                     {result.codingScore.feedback}
                   </p>
                 </div>
@@ -313,9 +310,9 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
           )}
         </div>
 
-        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-t border-black/5 px-5 py-5 md:px-7">
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-5 py-5 md:px-7">
           {result ? (
-            <div className="course-stat-chip" style={{ color: result.passed ? '#15803d' : '#b91c1c' }}>
+            <div className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-bold" style={{ borderColor: result.passed ? 'rgba(21, 128, 61, 0.3)' : 'rgba(185, 28, 28, 0.3)', color: result.passed ? '#4ade80' : '#f87171', backgroundColor: result.passed ? 'rgba(21, 128, 61, 0.1)' : 'rgba(185, 28, 28, 0.1)' }}>
               {result.passed ? 'Checkpoint passed' : 'Keep refining your answers'}
             </div>
           ) : (
@@ -323,10 +320,10 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
           )}
 
           {!isReview && attemptsUsed < maxAttempts ? (
-            <button type="button" onClick={handleSubmit} disabled={submitting} className="course-primary-button">
+            <button type="button" onClick={handleSubmit} disabled={submitting} className="flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-black transition hover:bg-slate-200 disabled:opacity-50">
               {submitting ? (
                 <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />
                   Grading
                 </>
               ) : (
@@ -337,7 +334,7 @@ function CheckpointModal({ checkpoint, courseId, dayIndex, clerkId, onClose, onS
               )}
             </button>
           ) : (
-            <button type="button" onClick={onClose} className="course-outline-button">
+            <button type="button" onClick={onClose} className="flex items-center justify-center gap-2 rounded-full border border-white/10 bg-[#161616] px-5 py-3 text-sm font-bold text-slate-300 transition hover:bg-[#1c1c1c] hover:text-white">
               Close
             </button>
           )}
@@ -361,17 +358,19 @@ function DayCard({ day, index, isCurrent, courseId, onStartCheckpoint }) {
       animate={{ opacity: locked ? 0.6 : 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.4, ease: 'easeOut' }}
       id={isCurrent ? 'playlist-current-day' : undefined}
-      className={`course-surface relative overflow-hidden rounded-[2rem] p-6 md:p-7 ${locked ? 'grayscale-[0.5]' : ''}`}
+      className={`relative overflow-hidden rounded-[2rem] border border-white/10 p-6 md:p-7 ${
+        isCurrent ? 'bg-[#141414] shadow-[0_20px_60px_rgba(99,102,241,0.15)]' : 'bg-[#111111]'
+      } ${locked ? 'grayscale-[0.5]' : ''}`}
     >
       <div className="pointer-events-none absolute inset-0">
         <div
           className="absolute inset-x-0 top-0 h-28"
           style={{
             background: isCurrent
-              ? 'linear-gradient(180deg, rgba(67, 56, 202, 0.14), transparent)'
+              ? 'linear-gradient(180deg, rgba(99, 102, 241, 0.15), transparent)'
               : day.status === 'ready'
-              ? 'linear-gradient(180deg, rgba(21, 128, 61, 0.12), transparent)'
-              : 'linear-gradient(180deg, rgba(15, 23, 42, 0.05), transparent)',
+              ? 'linear-gradient(180deg, rgba(74, 222, 128, 0.08), transparent)'
+              : 'linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent)',
           }}
         />
       </div>
@@ -382,53 +381,53 @@ function DayCard({ day, index, isCurrent, courseId, onStartCheckpoint }) {
             <div
               className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.4rem] font-headline text-xl font-bold"
               style={{
-                background: isCurrent ? 'rgba(67, 56, 202, 0.12)' : 'rgba(15, 23, 42, 0.06)',
-                color: isCurrent ? '#4338ca' : 'var(--theme-text-heading)',
+                background: isCurrent ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.06)',
+                color: isCurrent ? '#818cf8' : '#e2e8f0',
               }}
             >
               {day.dayNumber}
             </div>
             <div>
-              <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+              <p className="font-label text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
                 Playlist Day {day.dayNumber}
               </p>
-              <h3 className="mt-2 font-serif text-3xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+              <h3 className="mt-2 font-serif text-3xl font-semibold text-white">
                 {day.isFiller ? `Focus: ${day.fillerTopic}` : `Study block for day ${day.dayNumber}`}
               </h3>
-              <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+              <p className="mt-3 font-body text-sm leading-7 text-slate-400">
                 {day.videos.length} video{day.videos.length === 1 ? '' : 's'} planned for this day, with about{' '}
                 {formatDuration(day.totalDuration)} of study time.
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {isCurrent && <span className="course-kicker">Current Day</span>}
+            {isCurrent && <span className="inline-flex items-center rounded-full bg-indigo-500/20 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-indigo-400 border border-indigo-500/30">Current Day</span>}
             <StatusPill status={day.status} />
           </div>
         </div>
 
         <div className="mt-6 grid gap-3 md:grid-cols-3">
-          <div className="course-surface-soft rounded-[1.35rem] px-4 py-4">
-            <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+          <div className="rounded-[1.35rem] border border-white/5 bg-[#161616] px-4 py-4">
+            <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
               Videos
             </p>
-            <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+            <p className="mt-2 font-headline text-3xl font-bold text-white">
               {day.videos.length}
             </p>
           </div>
-          <div className="course-surface-soft rounded-[1.35rem] px-4 py-4">
-            <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+          <div className="rounded-[1.35rem] border border-white/5 bg-[#161616] px-4 py-4">
+            <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
               Estimated Time
             </p>
-            <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+            <p className="mt-2 font-headline text-3xl font-bold text-white">
               {formatDuration(day.totalDuration)}
             </p>
           </div>
-          <div className="course-surface-soft rounded-[1.35rem] px-4 py-4">
-            <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+          <div className="rounded-[1.35rem] border border-white/5 bg-[#161616] px-4 py-4">
+            <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
               Checkpoint
             </p>
-            <p className="mt-2 font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+            <p className="mt-2 font-body text-sm font-semibold text-white">
               {day.status === 'ready'
                 ? 'Passed'
                 : checkpointStatus === 'failed_all'
@@ -442,22 +441,22 @@ function DayCard({ day, index, isCurrent, courseId, onStartCheckpoint }) {
 
         <div className="mt-6 space-y-2">
           {day.videos.slice(0, 4).map((video, videoIndex) => (
-            <div key={video.videoId || videoIndex} className="course-surface-soft flex items-center gap-3 rounded-[1.2rem] px-4 py-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4338ca]">
+            <div key={video.videoId || videoIndex} className="flex items-center gap-3 rounded-[1.2rem] border border-white/5 bg-[#161616] px-4 py-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400">
                 <span className="font-label text-xs font-bold">{String(videoIndex + 1).padStart(2, '0')}</span>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-body text-sm font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+                <p className="truncate font-body text-sm font-semibold text-slate-200">
                   {video.title}
                 </p>
-                <p className="mt-1 truncate font-body text-xs" style={{ color: 'var(--theme-text-body)' }}>
+                <p className="mt-1 truncate font-body text-xs text-slate-500">
                   {video.channel || 'YouTube'} • {formatDuration(video.duration)}
                 </p>
               </div>
             </div>
           ))}
           {day.videos.length > 4 && (
-            <p className="pl-1 font-label text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+            <p className="pl-1 font-label text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
               + {day.videos.length - 4} more video{day.videos.length - 4 === 1 ? '' : 's'}
             </p>
           )}
@@ -468,7 +467,7 @@ function DayCard({ day, index, isCurrent, courseId, onStartCheckpoint }) {
             type="button"
             disabled={locked}
             onClick={() => !locked && navigate(`/playlist/${courseId}/day/${index}`)}
-            className="course-primary-button justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
           >
             <span className="material-symbols-outlined text-[18px]">
               {locked ? 'lock' : 'play_circle'}
@@ -477,7 +476,7 @@ function DayCard({ day, index, isCurrent, courseId, onStartCheckpoint }) {
           </button>
 
           {showCheckpointButton && (
-            <button type="button" onClick={() => onStartCheckpoint(index)} className="course-outline-button justify-center">
+            <button type="button" onClick={() => onStartCheckpoint(index)} className="flex items-center justify-center gap-2 rounded-full border border-white/10 bg-[#161616] px-5 py-3 text-sm font-bold text-slate-300 transition hover:-translate-y-0.5 hover:bg-[#1c1c1c] hover:text-white">
               <span className="material-symbols-outlined text-[18px]">quiz</span>
               {checkpointStatus === 'passed'
                 ? 'Review Checkpoint'
@@ -489,11 +488,11 @@ function DayCard({ day, index, isCurrent, courseId, onStartCheckpoint }) {
         </div>
 
         {day.status === 'ready' && (
-          <div className="course-surface-soft mt-5 flex items-center gap-3 rounded-[1.3rem] px-4 py-4">
-            <span className="material-symbols-outlined text-[20px]" style={{ color: '#15803d' }}>
+          <div className="mt-5 flex items-center gap-3 rounded-[1.3rem] border border-emerald-500/20 bg-emerald-500/10 px-4 py-4">
+            <span className="material-symbols-outlined text-[20px] text-emerald-400">
               verified
             </span>
-            <p className="font-body text-sm font-semibold" style={{ color: '#15803d' }}>
+            <p className="font-body text-sm font-semibold text-emerald-300">
               Day complete. The checkpoint for this day has been passed.
             </p>
           </div>
@@ -504,7 +503,20 @@ function DayCard({ day, index, isCurrent, courseId, onStartCheckpoint }) {
 }
 
 function LoadingState() {
-  return <LoadingScreen message="Building your playlist plan..." />;
+  return (
+    <div className="mx-auto max-w-[96rem] space-y-6 px-4 pt-24 pb-20 sm:px-6 lg:px-8">
+      <div className="rounded-[2.6rem] border border-white/10 bg-[#111111] p-8 md:p-12">
+        <div className="h-10 w-56 animate-pulse rounded-full bg-white/[0.06]" />
+        <div className="mt-6 h-16 w-3/4 animate-pulse rounded-2xl bg-white/[0.08]" />
+        <div className="mt-4 h-6 w-1/2 animate-pulse rounded-xl bg-white/[0.05]" />
+      </div>
+      <div className="grid gap-5 lg:grid-cols-3">
+        {[0, 1, 2].map((item) => (
+          <div key={item} className="h-72 animate-pulse rounded-[2rem] border border-white/10 bg-white/[0.04]" />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function PlaylistCourseMap() {
@@ -569,31 +581,42 @@ export default function PlaylistCourseMap() {
   }, [days]);
 
   if (loading) {
-    return <LoadingState />;
+    return (
+      <DashboardShell title="Loading" showCreate={false} disableDefaultPadding>
+        <LoadingState />
+      </DashboardShell>
+    );
   }
 
   if (!course || !course.days) {
     return (
-      <div className="course-shell flex min-h-screen items-center justify-center px-6">
-        <div className="course-surface max-w-xl rounded-[2rem] px-8 py-10 text-center">
-          <h1 className="font-serif text-4xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
-            Playlist course not found
-          </h1>
-          <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
-            We could not load this study plan. Head back to the dashboard and open it again.
-          </p>
-          <Link to="/dashboard" className="course-primary-button mt-6">
-            Return to Dashboard
-          </Link>
+      <DashboardShell title="Not Found" showCreate={false} disableDefaultPadding>
+        <div className="flex min-h-screen items-center justify-center px-6">
+          <div className="max-w-xl rounded-[2.4rem] border border-white/10 bg-[#111111] px-8 py-10 text-center shadow-[0_20px_60px_rgba(0,0,0,0.4)] w-full">
+            <h1 className="font-serif text-4xl font-semibold text-white">
+              Playlist course not found
+            </h1>
+            <p className="mt-4 font-body text-sm leading-7 text-slate-400">
+              We could not load this study plan. Head back to the dashboard and open it again.
+            </p>
+            <Link to="/dashboard" className="flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-black transition hover:bg-slate-200 mt-6 min-w-[200px] mx-auto">
+              Return to Dashboard
+            </Link>
+          </div>
         </div>
-      </div>
+      </DashboardShell>
     );
   }
 
   const currentDayIndex = course.currentDayIndex || 0;
 
   return (
-    <div className="course-shell">
+    <DashboardShell
+      title={course.course_title}
+      eyebrow="Playlist Plan"
+      showCreate={false}
+      disableDefaultPadding
+    >
       {checkpointData && checkpointDay !== null && (
         <CheckpointModal
           checkpoint={checkpointData}
@@ -610,36 +633,36 @@ export default function PlaylistCourseMap() {
 
       {loadingCheckpoint && (
         <div className="course-modal-backdrop fixed inset-0 z-[1090] flex items-center justify-center">
-          <div className="course-surface flex flex-col items-center gap-4 rounded-[2rem] px-8 py-8 text-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#111827] border-t-transparent" />
-            <p className="font-body text-sm" style={{ color: 'var(--theme-text-body)' }}>
+          <div className="flex flex-col items-center gap-4 rounded-[2rem] border border-white/10 bg-[#161616] px-8 py-8 text-center shadow-2xl">
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+            <p className="font-body text-sm text-slate-300">
               Preparing checkpoint questions...
             </p>
           </div>
         </div>
       )}
 
-      <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-4 pb-20 pt-28 md:px-6 lg:px-8">
+      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pb-20 pt-24 md:px-6 lg:px-8">
         <motion.section
           id="playlist-progress-overview"
           initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
-          className="course-hero-card overflow-hidden rounded-[2.5rem] px-6 py-8 md:px-10 md:py-10"
+          className="overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#111111] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent px-6 py-8 md:px-10 md:py-10 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
-              <Link to="/dashboard" className="course-outline-button">
-                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              <Link to="/dashboard" className="flex items-center justify-center gap-2 rounded-full border border-white/10 bg-[#161616] px-4 py-2 text-xs font-bold text-slate-300 transition hover:bg-[#1c1c1c] hover:text-white">
+                <span className="material-symbols-outlined text-[16px]">arrow_back</span>
                 Dashboard
               </Link>
-              <span className="course-kicker">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/20 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-indigo-400">
                 <span className="material-symbols-outlined text-[14px]">smart_display</span>
                 Playlist Course
               </span>
             </div>
-            <div className="course-stat-chip">
-              <span className="material-symbols-outlined text-[18px]" style={{ color: '#4338ca' }}>
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#161616] px-4 py-2 text-xs font-bold text-slate-300">
+              <span className="material-symbols-outlined text-[18px] text-indigo-400">
                 event_note
               </span>
               Day {Math.min(currentDayIndex + 1, days.length)} of {days.length}
@@ -648,50 +671,50 @@ export default function PlaylistCourseMap() {
 
           <div className="mt-8 grid gap-8 lg:grid-cols-[1.35fr_0.95fr]">
             <div>
-              <p className="font-label text-[11px] font-bold uppercase tracking-[0.24em]" style={{ color: 'rgba(15, 23, 42, 0.44)' }}>
+              <p className="font-label text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">
                 Structured Study Plan
               </p>
-              <h1 className="mt-4 font-serif text-4xl font-semibold leading-tight md:text-6xl" style={{ color: 'var(--theme-text-heading)' }}>
+              <h1 className="mt-4 font-serif text-4xl font-semibold leading-tight text-white md:text-6xl">
                 {course.course_title}
               </h1>
-              <p className="mt-4 max-w-3xl font-body text-sm leading-7 md:text-[15px]" style={{ color: 'var(--theme-text-body)' }}>
+              <p className="mt-4 max-w-3xl font-body text-sm leading-7 text-slate-400 md:text-[15px]">
                 Your playlist has been reshaped into day-by-day study blocks with checkpoints so
                 each session feels intentional instead of overwhelming.
               </p>
             </div>
 
-            <div className="course-surface-soft rounded-[2rem] p-6">
-              <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+            <div className="rounded-[2rem] border border-white/5 bg-[#161616] p-6">
+              <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
                 Plan Progress
               </p>
               <div className="mt-5 grid gap-3">
-                <div className="course-surface rounded-[1.3rem] px-4 py-4">
+                <div className="rounded-[1.3rem] border border-white/5 bg-[#0a0b10] px-4 py-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                    <span className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
                       Completion
                     </span>
-                    <span className="font-label text-xs font-bold" style={{ color: '#4338ca' }}>
+                    <span className="font-label text-xs font-bold text-indigo-400">
                       {stats.progressPct}%
                     </span>
                   </div>
-                  <div className="mt-3 course-progress-track">
-                    <div className="course-progress-fill" style={{ width: `${stats.progressPct}%` }} />
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#1c1c1c]">
+                    <div className="h-full bg-indigo-500" style={{ width: `${stats.progressPct}%` }} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="course-surface rounded-[1.3rem] px-4 py-4">
-                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                  <div className="rounded-[1.3rem] border border-white/5 bg-[#0a0b10] px-4 py-4">
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
                       Videos
                     </p>
-                    <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+                    <p className="mt-2 font-headline text-3xl font-bold text-white">
                       {stats.totalVideos}
                     </p>
                   </div>
-                  <div className="course-surface rounded-[1.3rem] px-4 py-4">
-                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(15, 23, 42, 0.42)' }}>
+                  <div className="rounded-[1.3rem] border border-white/5 bg-[#0a0b10] px-4 py-4">
+                    <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
                       Total Time
                     </p>
-                    <p className="mt-2 font-headline text-3xl font-bold" style={{ color: 'var(--theme-text-heading)' }}>
+                    <p className="mt-2 font-headline text-3xl font-bold text-white">
                       {formatDuration(stats.totalDuration)}
                     </p>
                   </div>
@@ -718,23 +741,23 @@ export default function PlaylistCourseMap() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.45 }}
-          className="course-surface mx-auto max-w-3xl rounded-[2rem] px-6 py-8 text-center"
+          className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-[#111111] px-6 py-8 text-center"
         >
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#eef2ff] text-[#4338ca]">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-400">
             <span className="material-symbols-outlined text-[30px]">
               {stats.progressPct === 100 ? 'emoji_events' : 'sports_score'}
             </span>
           </div>
-          <h2 className="mt-4 font-serif text-3xl font-semibold" style={{ color: 'var(--theme-text-heading)' }}>
+          <h2 className="mt-4 font-serif text-3xl font-semibold text-white">
             {stats.progressPct === 100 ? 'Playlist Complete' : 'Keep the streak alive'}
           </h2>
-          <p className="mt-3 font-body text-sm leading-7" style={{ color: 'var(--theme-text-body)' }}>
+          <p className="mt-3 font-body text-sm leading-7 text-slate-400">
             {stats.progressPct === 100
               ? 'Every planned day is complete. You can revisit any session or checkpoint whenever you want.'
               : `${stats.completedDays} of ${days.length} study days are complete so far.`}
           </p>
         </motion.section>
       </main>
-    </div>
+    </DashboardShell>
   );
 }

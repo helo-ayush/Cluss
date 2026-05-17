@@ -20,7 +20,7 @@ export default function DarkPlanCard({ plan, onOpen, onDelete, compact = false }
       viewport={{ once: true, margin: '-50px' }}
       whileHover={{ y: -8, scale: 1.02 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-      className="group relative flex flex-col min-w-0 overflow-hidden rounded-[2.4rem] bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/30 hover:shadow-[0_30px_80px_rgba(255,255,255,0.1)]"
+      className="group relative flex flex-col min-w-0 overflow-hidden rounded-[2.4rem] bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/30 hover:shadow-[0_30px_80px_rgba(255,255,255,0.1)]"
       onClick={() => onOpen(plan)}
       style={{ cursor: 'pointer' }}
     >
@@ -79,7 +79,7 @@ export default function DarkPlanCard({ plan, onOpen, onDelete, compact = false }
             </div>
             
             {/* Custom Sleek Progress Bar */}
-            <div className="relative h-2 w-full overflow-hidden rounded-full bg-black border border-white/10 shadow-inner">
+            <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/[0.04] border border-white/10 shadow-inner">
               <motion.div 
                 initial={{ width: 0 }}
                 whileInView={{ width: `${Math.min(progress, 100)}%` }}

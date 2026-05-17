@@ -78,39 +78,39 @@ function StackCard({ card, index, cardsLength, onSwipe }) {
 
         {/* Front Face */}
         <div 
-          className="absolute inset-0 flex flex-col items-center justify-center rounded-[2.5rem] border border-slate-200/80 bg-gradient-to-br from-white to-slate-50 p-8 text-center shadow-[0_20px_40px_rgba(15,23,42,0.08)]"
+          className="absolute inset-0 flex flex-col items-center justify-center rounded-[2.5rem] border border-white/10 bg-[#161616] p-8 text-center shadow-[0_20px_40px_rgba(0,0,0,0.5)]"
           style={{ backfaceVisibility: 'hidden' }}
         >
-          <div className="absolute top-6 rounded-full bg-slate-100 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 shadow-sm border border-black/5">
+          <div className="absolute top-6 rounded-full border border-white/10 bg-[#111111] px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 shadow-sm">
             Question
           </div>
-          <h3 className="text-[1.4rem] font-semibold leading-snug text-slate-800">
+          <h3 className="text-[1.4rem] font-semibold leading-snug text-white">
             {card.front}
           </h3>
-          <div className="absolute bottom-6 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-indigo-500/70">
+          <div className="absolute bottom-6 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-indigo-400">
             <RotateCcw className="h-3.5 w-3.5" /> Tap to reveal
           </div>
         </div>
 
         {/* Back Face */}
         <div 
-          className="absolute inset-0 flex flex-col items-center justify-center rounded-[2.5rem] border border-indigo-400 bg-gradient-to-b from-[#4338ca] to-[#312e81] p-8 text-center shadow-[0_20px_50px_rgba(67,56,202,0.3)]"
+          className="absolute inset-0 flex flex-col items-center justify-center rounded-[2.5rem] border border-indigo-500/30 bg-gradient-to-b from-[#1e1b4b] to-[#0f172a] p-8 text-center shadow-[0_20px_50px_rgba(67,56,202,0.15)]"
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
-          <div className="absolute top-6 rounded-full bg-white/10 backdrop-blur-md px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-100 border border-white/20">
+          <div className="absolute top-6 rounded-full bg-white/5 backdrop-blur-md px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-200 border border-white/10">
             Answer
           </div>
           <h3 className="text-[1.4rem] font-medium leading-snug text-white drop-shadow-md">
             {card.back}
           </h3>
           {isInitiallySolved ? (
-             <div className="absolute bottom-6 flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-emerald-200 backdrop-blur-sm border border-emerald-500/30">
+             <div className="absolute bottom-6 flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-emerald-400 backdrop-blur-sm border border-emerald-500/20">
                <Check className="h-3 w-3" /> Reviewed
              </div>
           ) : (
-            <div className="absolute bottom-6 w-full px-8 flex justify-between text-[11px] font-bold uppercase tracking-widest text-white/70">
-               <span className="flex items-center gap-1.5 text-red-300 drop-shadow-sm"><ArrowLeft className="h-3.5 w-3.5"/> Hard</span>
-               <span className="flex items-center gap-1.5 text-emerald-300 drop-shadow-sm">Easy <ArrowRight className="h-3.5 w-3.5"/></span>
+            <div className="absolute bottom-6 w-full px-8 flex justify-between text-[11px] font-bold uppercase tracking-widest text-slate-400">
+               <span className="flex items-center gap-1.5 text-red-400 drop-shadow-sm"><ArrowLeft className="h-3.5 w-3.5"/> Hard</span>
+               <span className="flex items-center gap-1.5 text-emerald-400 drop-shadow-sm">Easy <ArrowRight className="h-3.5 w-3.5"/></span>
             </div>
           )}
         </div>
@@ -122,11 +122,11 @@ function StackCard({ card, index, cardsLength, onSwipe }) {
 function SkeletonCard() {
   return (
     <div className="absolute origin-bottom" style={{ zIndex: 10 }}>
-      <div className="relative h-[400px] w-[320px] rounded-[2.5rem] border border-black/5 bg-white p-8 text-center shadow-[0_20px_40px_rgba(15,23,42,0.06)] flex flex-col justify-center items-center">
-        <div className="absolute top-6 h-6 w-20 animate-pulse rounded-full bg-slate-100"></div>
-        <div className="h-4 w-3/4 animate-pulse rounded-md bg-slate-200 mb-5"></div>
-        <div className="h-4 w-1/2 animate-pulse rounded-md bg-slate-200"></div>
-        <div className="absolute bottom-6 h-4 w-24 animate-pulse rounded-md bg-slate-100"></div>
+      <div className="relative h-[400px] w-[320px] rounded-[2.5rem] border border-white/10 bg-[#161616] p-8 text-center shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex flex-col justify-center items-center">
+        <div className="absolute top-6 h-6 w-20 animate-pulse rounded-full bg-white/5"></div>
+        <div className="h-4 w-3/4 animate-pulse rounded-md bg-white/10 mb-5"></div>
+        <div className="h-4 w-1/2 animate-pulse rounded-md bg-white/10"></div>
+        <div className="absolute bottom-6 h-4 w-24 animate-pulse rounded-md bg-white/5"></div>
       </div>
     </div>
   );
@@ -187,18 +187,18 @@ export default function DashboardFlashcardWidget() {
   }
 
   return (
-    <section className="course-surface rounded-[2.6rem] p-6 md:p-8 mb-10 overflow-hidden">
+    <section className="rounded-[2.6rem] border border-white/10 bg-[#161616] p-6 md:p-8 mb-10 overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
       <div className="mb-8 flex items-center gap-4">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.6rem] border border-black/5 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.6rem] border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
           <Brain className="h-6 w-6" />
         </div>
         <div>
-          <p className="font-label text-[11px] font-bold uppercase tracking-[0.22em] text-indigo-600">Daily Habit</p>
-          <h3 className="mt-1 text-2xl font-semibold text-slate-900">Review your Flashcards</h3>
+          <p className="font-label text-[11px] font-bold uppercase tracking-[0.22em] text-indigo-400">Daily Habit</p>
+          <h3 className="mt-1 text-2xl font-semibold text-white">Review your Flashcards</h3>
         </div>
       </div>
 
-      <div className="relative flex h-[480px] w-full items-center justify-center rounded-[2rem] bg-slate-50/50 outline outline-1 outline-black/5">
+      <div className="relative flex h-[480px] w-full items-center justify-center rounded-[2rem] border border-white/5 bg-[#111111]">
         {loading ? (
           <SkeletonCard />
         ) : (

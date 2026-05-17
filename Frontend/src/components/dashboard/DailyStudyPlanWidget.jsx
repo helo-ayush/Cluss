@@ -44,7 +44,7 @@ export default function DailyStudyPlanWidget() {
   };
 
   return (
-    <section className="relative overflow-hidden flex flex-col rounded-[2.4rem] border border-white/10 bg-[#0a0a0a] shadow-[0_20px_60px_rgba(0,0,0,0.4)] min-h-[32rem]">
+    <section className="relative overflow-hidden flex flex-col rounded-[2.4rem] border border-white/10 bg-[#111111] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent shadow-[0_20px_60px_rgba(0,0,0,0.4)] min-h-[32rem]">
       {/* Background aesthetics — warm amber glow */}
       <div className="absolute -right-24 -top-10 h-[28rem] w-[28rem] rounded-full bg-amber-500/[0.04] blur-[130px] pointer-events-none" />
       <div className="absolute -left-16 bottom-0 h-64 w-64 rounded-full bg-orange-500/[0.03] blur-[100px] pointer-events-none" />

@@ -107,7 +107,7 @@ export default function DashboardFlashcardsPanel() {
   };
 
   return (
-    <section className="relative overflow-hidden flex flex-col rounded-[2.4rem] border border-white/10 bg-[#0a0a0a] shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
+    <section className="relative overflow-hidden flex flex-col rounded-[2.4rem] border border-white/10 bg-[#111111] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
       {/* Background aesthetics */}
       <div className="absolute -left-32 top-10 h-96 w-96 rounded-full bg-emerald-500/[0.04] blur-[120px] pointer-events-none" />
       <div className="absolute -right-20 bottom-10 h-72 w-72 rounded-full bg-teal-500/[0.04] blur-[100px] pointer-events-none" />

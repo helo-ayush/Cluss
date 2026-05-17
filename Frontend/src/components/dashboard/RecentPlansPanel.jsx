@@ -4,7 +4,7 @@ import DarkPlanCard from './DarkPlanCard';
 
 export default function RecentPlansPanel({ plans, onOpen, onDelete }) {
   return (
-    <section className="rounded-[2.4rem] border border-white/10 bg-[#111111] p-5 md:p-6" id="library">
+    <section className="rounded-[2.4rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-5 md:p-6" id="library">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="inline-flex rounded-full bg-white/5 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
@@ -24,7 +24,7 @@ export default function RecentPlansPanel({ plans, onOpen, onDelete }) {
       </div>
 
       {plans.length === 0 ? (
-        <div className="mt-6 rounded-[2rem] border border-dashed border-white/10 bg-black/25 px-6 py-12 text-center">
+        <div className="mt-6 rounded-[2rem] border border-dashed border-white/10 bg-[#16181d] px-6 py-12 text-center">
           <p className="text-lg font-black text-white">No study plans yet</p>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-500">Use the Create button to start a guided plan or convert a playlist.</p>
         </div>

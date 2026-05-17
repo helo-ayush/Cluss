@@ -10,7 +10,7 @@ function StatTile({ icon: Icon, label, value, detail, accent = '#f5f5f5', delay 
       viewport={{ once: true, margin: '-80px' }}
       transition={{ delay, duration: 0.45 }}
       whileHover={{ y: -6, scale: 1.015 }}
-      className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#171717] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.25)]"
+      className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#161616] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-5 shadow-[0_20px_70px_rgba(0,0,0,0.25)]"
     >
       <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full opacity-25 blur-2xl transition group-hover:opacity-45" style={{ backgroundColor: accent }} />
       <div className="relative flex items-start justify-between gap-4">
@@ -81,7 +81,7 @@ export function MomentumPanel({ stats, clerkId }) {
     : Array.from({ length: 7 }, () => ({ height: 8, count: 0, label: '', isToday: false }));
 
   return (
-    <section className="rounded-[2.4rem] border border-white/10 bg-[#171717] p-6">
+    <section className="rounded-[2.4rem] border border-white/10 bg-[#161616] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-500">Momentum</p>

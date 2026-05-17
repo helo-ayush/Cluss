@@ -252,7 +252,7 @@ const Profile = () => {
       <div className="max-w-6xl mx-auto space-y-8">
         
         {/* ══ PREMIUM HEADER ══ */}
-        <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#111111] shadow-[0_30px_100px_rgba(0,0,0,0.35)] p-8 md:p-12">
+        <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#111111] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent shadow-[0_30px_100px_rgba(0,0,0,0.35)] p-8 md:p-12">
           <div className="absolute -left-16 top-0 h-80 w-80 rounded-full bg-white/[0.04] blur-[100px] pointer-events-none" />
           <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-zinc-500/[0.04] blur-[100px] pointer-events-none" />
           
@@ -260,7 +260,7 @@ const Profile = () => {
             <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
               <div className="relative group">
                 <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-white/20 to-transparent opacity-50 blur-md transition-opacity duration-500 group-hover:opacity-100" />
-                <div className="relative w-32 h-32 rounded-full overflow-hidden border border-white/10 shadow-2xl bg-[#111] flex items-center justify-center">
+                <div className="relative w-32 h-32 rounded-full overflow-hidden border border-white/10 shadow-2xl bg-[#16181d] flex items-center justify-center">
                   {isNone ? (
                     <img src={user.imageUrl || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
@@ -287,7 +287,7 @@ const Profile = () => {
 
         {/* ══ CREDIT BALANCE (HIGH-CONTRAST MONOCHROME) ══ */}
         {usageData && (
-          <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-gradient-to-b from-[#1a1a1a] to-[#111111] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/30 group">
+          <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-8 shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/30 group">
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
             
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -345,7 +345,7 @@ const Profile = () => {
                 transition={{ duration: 0.4, delay: idx * 0.1, ease: 'easeOut' }}
                 whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.02)' }}
                 key={idx} 
-                className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0c0c0c] p-6 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex items-center gap-6 group hover:border-white/30 transition-colors cursor-default"
+                className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#161616] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-6 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex items-center gap-6 group hover:border-white/30 transition-colors cursor-default"
               >
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-white transition-all duration-300 group-hover:scale-110 group-hover:bg-white group-hover:text-black">
                   <stat.icon className="h-6 w-6" />
@@ -364,7 +364,7 @@ const Profile = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
               whileHover={{ scale: 1.01 }}
-              className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-[#111111] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-colors hover:border-white/20"
+              className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-colors hover:border-white/20"
             >
               <h3 className="text-xl font-black tracking-tight text-white mb-2">Momentum</h3>
               <p className="text-xs font-semibold text-zinc-500">Lessons past 7 days</p>
@@ -375,7 +375,7 @@ const Profile = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
               whileHover={{ scale: 1.01 }}
-              className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-[#111111] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-colors hover:border-white/20"
+              className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-colors hover:border-white/20"
             >
               <h3 className="text-xl font-black tracking-tight text-white mb-2">Heatmap</h3>
               <MiniCalendar activityData={activityData} />
@@ -386,7 +386,7 @@ const Profile = () => {
         {/* ══ AVATARS & BADGES ══ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Avatar Selection */}
-          <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#111111] p-8 shadow-xl">
+          <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-8 shadow-xl">
             <h2 className="text-2xl font-black tracking-tight text-white mb-8">Identity</h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
               {AVATARS.map((avatar) => {
@@ -416,7 +416,7 @@ const Profile = () => {
           </section>
 
           {/* Badges Selection */}
-          <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#111111] p-8 shadow-xl">
+          <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-8 shadow-xl">
             <h2 className="text-2xl font-black tracking-tight text-white mb-8">Achievements</h2>
             <div className="custom-scroll max-h-[340px] overflow-y-auto pr-4 grid grid-cols-1 gap-4">
               {BADGES.map((badge, index) => {
@@ -438,7 +438,7 @@ const Profile = () => {
                     className={`p-5 rounded-[1.5rem] border ${
                       unlocked 
                         ? 'bg-gradient-to-r from-white/10 to-transparent border-white/20' 
-                        : 'bg-black/40 border-white/5 opacity-50 grayscale'
+                        : 'bg-[#16181d] border-white/5 opacity-50 grayscale'
                     } flex items-center gap-5 transition-all duration-300 hover:border-white/30`}
                   >
                     <div className={`w-14 h-14 shrink-0 rounded-[1.2rem] flex items-center justify-center p-2 border ${unlocked ? 'border-white/10 bg-black/50 shadow-inner' : 'border-transparent bg-transparent'}`}>

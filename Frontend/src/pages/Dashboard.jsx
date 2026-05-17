@@ -14,7 +14,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 function DashboardHero({ userName, recentPlan, onOpen }) {
   return (
-    <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-black p-6 shadow-[0_30px_100px_rgba(0,0,0,0.35)] md:p-8 xl:p-10">
+    <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#111111] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-6 shadow-[0_30px_100px_rgba(0,0,0,0.35)] md:p-8 xl:p-10">
       <div className="absolute -left-16 top-0 h-80 w-80 rounded-full bg-white/[0.08] blur-[100px]" />
       <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-zinc-400/[0.08] blur-[110px]" />
       <div className="relative grid gap-8 xl:grid-cols-[1fr_25rem] xl:items-end">
@@ -36,7 +36,7 @@ function DashboardHero({ userName, recentPlan, onOpen }) {
           </div>
         </div>
 
-        <div className="group relative rounded-[2.4rem] border border-white/10 bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/30 hover:shadow-[0_30px_80px_rgba(255,255,255,0.1)]">
+        <div className="group relative rounded-[2.4rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/30 hover:shadow-[0_30px_80px_rgba(255,255,255,0.1)]">
           {/* Top Border Shine Effect */}
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
           
@@ -52,7 +52,7 @@ function DashboardHero({ userName, recentPlan, onOpen }) {
                   <div className="flex items-center justify-between gap-3 text-sm mb-3">
                     <span className="font-black text-zinc-300 uppercase tracking-wider text-[11px]">{recentPlan.progress || 0}% complete</span>
                   </div>
-                  <div className="relative h-2 w-full overflow-hidden rounded-full bg-black border border-white/10 shadow-inner">
+                  <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/[0.04] border border-white/10 shadow-inner">
                     <div 
                       className="absolute inset-y-0 left-0 rounded-full" 
                       style={{ 
@@ -80,7 +80,7 @@ function DashboardHero({ userName, recentPlan, onOpen }) {
                 </button>
               </>
             ) : (
-              <div className="mt-4 rounded-[1.5rem] border border-dashed border-white/10 bg-black/30 p-5 text-sm leading-6 text-zinc-500">
+              <div className="mt-4 rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.02] p-5 text-sm leading-6 text-zinc-500">
                 No recent plan yet. Create one and your shortcut appears here.
               </div>
             )}

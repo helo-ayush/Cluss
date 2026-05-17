@@ -60,7 +60,7 @@ export default function DashboardProgressPage() {
   return (
     <DashboardShell title="Progress" usageData={usageData}>
       <div className="mx-auto max-w-[96rem] space-y-5">
-        <section className="rounded-[2.6rem] border border-white/10 bg-black p-6 md:p-8">
+        <section className="rounded-[2.6rem] border border-white/10 bg-[#111111] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-6 md:p-8">
           <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-500">Monitoring</p>
           <h2 className="mt-4 text-5xl font-black tracking-tight text-white">Progress board</h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-zinc-400">

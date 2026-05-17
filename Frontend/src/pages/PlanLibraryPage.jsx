@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Compass, Youtube, PlayCircle, Layers, Plus } from 'lucide-react';
 import DashboardShell from '../components/dashboard/DashboardShell';
 import DarkPlanCard from '../components/dashboard/DarkPlanCard';
@@ -15,10 +15,20 @@ export default function PlanLibraryPage({ type = 'guided' }) {
   const { user, isLoaded } = useUser();
   const { usageData } = useUsage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [studyPlans, setStudyPlans] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(location.state?.toast || null);
   const isPlaylist = type === 'playlist';
+
+  useEffect(() => {
+    if (!location.state?.toast) return;
+    setToast(location.state.toast);
+    const timer = setTimeout(() => setToast(null), 3200);
+    window.history.replaceState({}, document.title);
+    return () => clearTimeout(timer);
+  }, [location.state]);
 
   const fetchAll = useCallback(async () => {
     if (!user?.id) return;
@@ -73,9 +83,21 @@ export default function PlanLibraryPage({ type = 'guided' }) {
 
   return (
     <DashboardShell title={title} eyebrow="Study library" usageData={usageData}>
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            className="fixed left-1/2 top-6 z-[2000] -translate-x-1/2 rounded-2xl border border-white/10 bg-[#12141c]/95 px-5 py-3 text-sm font-bold text-zinc-200 shadow-2xl backdrop-blur-xl"
+          >
+            {toast.message || toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="mx-auto max-w-[96rem] space-y-8">
         {/* ═══ PREMIUM HERO SECTION ═══ */}
-        <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#0a0a0a] shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
+        <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#111111] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
           {/* Ambient Glows */}
           <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full opacity-20 blur-[120px] pointer-events-none" style={{ backgroundColor: accentColor }} />
           <div className="absolute -right-20 -bottom-20 h-80 w-80 rounded-full bg-white/[0.03] blur-[100px] pointer-events-none" />
@@ -104,7 +126,7 @@ export default function PlanLibraryPage({ type = 'guided' }) {
 
               {/* Right Stats Box */}
               <div className="shrink-0 flex items-center gap-4">
-                <div className="flex flex-col items-center justify-center rounded-[2rem] border border-white/10 bg-[#171717]/80 backdrop-blur-xl p-6 min-w-[140px]">
+                <div className="flex flex-col items-center justify-center rounded-[2rem] border border-white/10 bg-[#181a21]/80 backdrop-blur-xl p-6 min-w-[140px]">
                   <span className="text-3xl font-black text-white">{plans.length}</span>
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mt-2">Total Plans</span>
                 </div>
@@ -117,13 +139,13 @@ export default function PlanLibraryPage({ type = 'guided' }) {
         {loading ? (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {[1, 2, 3].map((item) => (
-              <div key={item} className="h-80 animate-pulse rounded-[2rem] border border-white/10 bg-white/[0.02]" />
+              <div key={item} className="h-80 animate-pulse rounded-[2rem] border border-white/10 bg-white/[0.045]" />
             ))}
           </div>
         ) : plans.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center rounded-[2.8rem] border border-white/10 bg-[#0a0a0a] py-24 px-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.2)]"
+            className="flex flex-col items-center justify-center rounded-[2.8rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent py-24 px-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.2)]"
           >
             <div className="h-20 w-20 rounded-full bg-white/[0.02] border border-white/10 flex items-center justify-center mb-6">
               {isPlaylist ? <PlayCircle className="h-8 w-8 text-zinc-500" /> : <Layers className="h-8 w-8 text-zinc-500" />}

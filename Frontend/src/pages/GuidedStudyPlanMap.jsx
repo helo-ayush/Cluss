@@ -4,6 +4,7 @@ import { SignInButton, useUser } from '@clerk/clerk-react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowRight,
+  ArrowLeft,
   BookOpen,
   CheckCircle,
   ChevronRight,
@@ -33,7 +34,6 @@ import StudyConfigPanel from '../components/StudyConfigPanel';
 import { normalizeStudyConfig } from '../utils/studyConfig';
 import CreditCost from '../components/CreditCost';
 import { getCostForAction } from '../config/creditCosts';
-import LoadingScreen from '../components/LoadingScreen';
 import DashboardShell from '../components/dashboard/DashboardShell';
 import { useUsage } from '../contexts/UsageContext';
 
@@ -110,20 +110,20 @@ function MetricTile({ label, value, detail, accent = '#f5f5f5', delay = 0 }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-80px' }}
       transition={{ delay, duration: 0.45 }}
-      whileHover={{ y: -6, scale: 1.015 }}
-      className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#171717] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.25)]"
+      whileHover={{ y: -3, scale: 1.01 }}
+      className="group relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-white/[0.045] p-4 shadow-[0_18px_54px_rgba(0,0,0,0.22)]"
     >
-      <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full opacity-12 blur-2xl transition group-hover:opacity-25" style={{ backgroundColor: accent }} />
+      <div className="absolute inset-x-0 top-0 h-px opacity-60 transition group-hover:opacity-100" style={{ backgroundColor: accent }} />
       <div className="relative">
-        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-500">{label}</p>
-        <p className="mt-4 text-4xl font-black text-white">{value}</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">{label}</p>
+        <p className="mt-2 text-3xl font-black text-white">{value}</p>
       </div>
-      <p className="relative mt-4 text-sm leading-6 text-zinc-400">{detail}</p>
+      <p className="relative mt-2 text-xs font-semibold leading-5 text-zinc-500">{detail}</p>
     </motion.div>
   );
 }
 
-function CommandDeck({ course, currentRef, currentModule, currentSubtopic, onOpenSettings, onOpenTuner }) {
+function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathStats, onOpenSettings }) {
   const continueUrl = currentRef
     ? `/study-plan/${course._id}/learn/${currentRef.moduleIndex}/${currentRef.subtopicIndex}`
     : `/study-plan/${course._id}`;
@@ -141,13 +141,15 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, onOpe
           {/* Badges + Title */}
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100">
-                <LayoutDashboard className="h-3.5 w-3.5" />
+              <Link to="/dashboard/guided" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/[0.1] hover:text-white">
+                <ArrowLeft className="h-4 w-4" />
+                Library
+              </Link>
+              <span className="inline-flex items-center rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100">
                 Guided command center
               </span>
               {course.studyConfig?.miniProjectsEnabled && (
-                <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-amber-200">
-                  <Trophy className="h-3.5 w-3.5" />
+                <span className="inline-flex items-center rounded-full border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-amber-200">
                   Checkpoints on
                 </span>
               )}
@@ -163,20 +165,25 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, onOpe
           </div>
 
           {/* Up Next card */}
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <div className="w-full max-w-[32rem] overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Up next</p>
-            <div className="mt-3 min-w-0">
-              <p className="truncate text-sm font-bold text-zinc-400">
-                {currentModule ? `Module ${currentRef.moduleIndex + 1}: ${currentModule.module_title}` : 'No active module'}
-              </p>
-              <h2 className="mt-1 text-xl font-black leading-snug text-white">
-                {currentSubtopic?.subtopic_title || 'Your plan is ready'}
-              </h2>
-              <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-200 via-white to-amber-200 transition-all duration-700"
-                  style={{ width: `${moduleProgress}%` }}
-                />
+            <div className="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-black">
+                <CirclePlay className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-zinc-400">
+                  {currentModule ? `Module ${currentRef.moduleIndex + 1}: ${currentModule.module_title}` : 'No active module'}
+                </p>
+                <h2 className="mt-1 break-words text-xl font-black leading-snug text-white line-clamp-2">
+                  {currentSubtopic?.subtopic_title || 'Your plan is ready'}
+                </h2>
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-cyan-200 via-white to-amber-200 transition-all duration-700"
+                    style={{ width: `${moduleProgress}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -191,14 +198,6 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, onOpe
             </Link>
             <button
               type="button"
-              onClick={onOpenTuner}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/10 px-5 py-3 text-sm font-black text-teal-100 transition hover:-translate-y-0.5 hover:bg-teal-300/15"
-            >
-              <WandSparkles className="h-4 w-4" />
-              Tune
-            </button>
-            <button
-              type="button"
               onClick={onOpenSettings}
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-black text-zinc-200 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
             >
@@ -209,8 +208,14 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, onOpe
         </div>
 
         {/* ── Right: Study Pulse ── */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:items-end">
           <StudyPulsePanel progress={course.progress || 0} currentModule={currentModule} currentSubtopic={currentSubtopic} />
+          <div className="grid w-full grid-cols-2 gap-3">
+            <MetricTile label="Modules" value={(course.modules || []).length} detail="Major sections" accent="#b9f9ff" />
+            <MetricTile label="Lessons" value={pathStats.total} detail="Learning units" accent="#ffffff" delay={0.04} />
+            <MetricTile label="Done" value={(course.modules || []).flatMap((module) => module.subtopics || []).filter((item) => item.status === 'completed').length} detail="Completed units" accent="#6ee7b7" delay={0.08} />
+            <MetricTile label="Gates" value={(course.modules || []).flatMap((module) => module.subtopics || []).filter((item) => item.subtopic_type === 'mini-project').length} detail="Mini projects" accent="#fde68a" delay={0.12} />
+          </div>
         </div>
 
       </div>
@@ -268,13 +273,13 @@ function SettingsPanel({ open, configDraft, setConfigDraft, plan, saving, onSave
 
 function ModuleHealthPanel({ modules, currentRef }) {
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-[2rem] border border-white/10 bg-[#0d0e10] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
-      <div className="mb-5 flex shrink-0 items-center justify-between gap-3">
+    <section className="flex min-h-0 flex-1 flex-col rounded-[2rem] border border-white/10 bg-[#0d0e10] p-4 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+      <div className="mb-4 flex shrink-0 items-center justify-between gap-3 px-1">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">Module stack</p>
           <h2 className="mt-1 text-xl font-black text-white">Plan health</h2>
         </div>
-        <Gauge className="h-5 w-5 text-zinc-500" />
+        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-black text-zinc-500">{(modules || []).length}</span>
       </div>
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 custom-scroll">
@@ -287,28 +292,26 @@ function ModuleHealthPanel({ modules, currentRef }) {
               key={module.module_id || index}
               type="button"
               onClick={() => scrollToElement(`module-section-${index}`)}
-              className={`group w-full rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5 ${
+              className={`group w-full rounded-[1.15rem] border px-3 py-2.5 text-left transition hover:-translate-y-0.5 ${
                 active
                   ? 'border-cyan-200/30 bg-cyan-200/10'
                   : 'border-white/[0.08] bg-white/[0.03] hover:border-white/[0.16] hover:bg-white/[0.055]'
               }`}
             >
-              <div className="flex items-center gap-3">
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-black ${active ? 'bg-cyan-100 text-black' : 'bg-black/35 text-zinc-300'}`}>
+              <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-black ${active ? 'bg-cyan-100 text-black' : 'bg-black/35 text-zinc-300'}`}>
                   {index + 1}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className={`truncate text-sm font-black ${active ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{module.module_title}</p>
-                    <span className="text-xs font-black text-zinc-500">{progress}%</span>
-                  </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                <div className="min-w-0">
+                  <p className={`truncate text-xs font-black ${active ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{module.module_title}</p>
+                  <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.08]">
                     <div
                       className={`h-full rounded-full transition-all duration-700 ${active ? 'bg-cyan-100' : progress === 100 ? 'bg-emerald-300' : 'bg-white/40'}`}
                       style={{ width: `${progress}%` }}
                     />
                   </div>
                 </div>
+                <span className="text-[11px] font-black text-zinc-500">{progress}%</span>
               </div>
             </button>
           );
@@ -720,32 +723,31 @@ export default function GuidedStudyPlanMap() {
   const [filter, setFilter] = useState('all');
   const [toast, setToast] = useState(null); // { message, type }
 
-  const showToast = (message, type = 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
+  const redirectToLibrary = useCallback((message) => {
+    navigate('/dashboard/guided', {
+      replace: true,
+      state: { toast: { message } },
+    });
+  }, [navigate]);
 
   const fetchCourse = useCallback(async () => {
     if (!user?.id) return;
     try {
       const res = await fetch(`${API_BASE}/api/study-plans/${courseId}?clerkId=${user.id}`);
       const data = await res.json();
-      if (data.success && data.course?.sourceType === 'guided-topic') {
-        setCourse(data.course);
-        setConfigDraft(data.course.studyConfig);
-      } else {
-        // Ownership / not-found — redirect with toast
-        showToast('You don\'t have access to this plan.');
-        setTimeout(() => navigate('/dashboard'), 1800);
+      if (!data.success || data.course?.sourceType !== 'guided-topic') {
+        redirectToLibrary(data.message || 'Access denied: You are not the creator of this study plan.');
+        return;
       }
+      setCourse(data.course);
+      setConfigDraft(data.course.studyConfig);
     } catch (error) {
       console.error(error);
-      showToast('Failed to load plan. Returning to dashboard.');
-      setTimeout(() => navigate('/dashboard'), 1800);
+      redirectToLibrary('Access denied: You are not the creator of this study plan.');
     } finally {
       setLoading(false);
     }
-  }, [courseId, user?.id]);
+  }, [courseId, user?.id, redirectToLibrary]);
 
   useEffect(() => {
     fetchCourse();
@@ -827,27 +829,30 @@ export default function GuidedStudyPlanMap() {
     }
   };
 
-  if (!isLoaded || (isLoaded && !isSignedIn)) {
+
+  if (isLoaded && !isSignedIn) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050505] px-6">
-        <div className="max-w-xl rounded-[2rem] border border-white/10 bg-[#0d0e10] px-8 py-10 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-zinc-400">
-            <Lock className="h-7 w-7" />
-          </div>
-          <h1 className="mt-6 text-4xl font-black text-white">Sign in to continue</h1>
-          <p className="mt-4 text-sm leading-7 text-zinc-500">You must be logged in to view this study plan.</p>
-          <div className="mt-6">
-            <SignInButton mode="modal">
-              <button type="button" className="w-full rounded-full bg-white px-6 py-3 text-sm font-black text-black transition hover:bg-zinc-200">Sign in</button>
-            </SignInButton>
+      <DashboardShell title="Sign in required" showCreate={false} disableDefaultPadding>
+        <div className="flex min-h-screen items-center justify-center px-6 bg-[#050505]">
+          <div className="max-w-xl rounded-[2.4rem] border border-white/10 bg-[#111111] px-8 py-10 text-center shadow-[0_20px_60px_rgba(0,0,0,0.4)] w-full">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-indigo-500/10 text-indigo-400">
+              <Lock className="h-7 w-7" />
+            </div>
+            <h1 className="mt-6 font-serif text-4xl font-semibold text-white">Sign in to continue</h1>
+            <p className="mt-4 text-sm leading-7 text-slate-400">You must be logged in to view this study plan. If you are the creator, please sign in.</p>
+            <div className="mt-6">
+              <SignInButton mode="modal">
+                <button type="button" className="w-full rounded-full bg-white px-6 py-3 text-sm font-black text-black transition hover:bg-zinc-200">Sign in</button>
+              </SignInButton>
+            </div>
           </div>
         </div>
-      </div>
+      </DashboardShell>
     );
   }
 
   /* ── Skeleton while fetching ─────────────────────────────────────────── */
-  if (loading) {
+  if (loading || !isLoaded || !course) {
     return (
       <DashboardShell title="Loading plan..." eyebrow="Guided Plan">
         {/* Toast */}
@@ -921,8 +926,7 @@ export default function GuidedStudyPlanMap() {
     );
   }
 
-  // If access was denied, the navigate() will kick in; render nothing in the meantime
-  if (!course) return null;
+
 
   return (
     <DashboardShell title={course.course_title} eyebrow="Guided Plan">
@@ -933,16 +937,9 @@ export default function GuidedStudyPlanMap() {
             currentRef={currentRef}
             currentModule={currentModule}
             currentSubtopic={currentSubtopic}
+            pathStats={pathStats}
             onOpenSettings={() => setShowStudyControls((value) => !value)}
-            onOpenTuner={() => scrollToElement('study-plan-tuner', 'center')}
           />
-        </div>
-
-        <div className="order-4 md:order-2 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          <MetricTile icon={Zap} label="Active" value={pathStats.active} detail="Current launch point" accent="#A3FF4F" />
-          <MetricTile icon={Layers3} label="Ready" value={pathStats.ready} detail="Generated lessons" accent="#f5f5f5" delay={0.04} />
-          <MetricTile icon={Lock} label="Locked" value={pathStats.locked} detail="Upcoming steps" accent="#555" delay={0.08} />
-          <MetricTile icon={Target} label="Focus" value={currentRef ? `${currentRef.moduleIndex + 1}.${currentRef.subtopicIndex + 1}` : '-'} detail="Module and lesson" accent="#FF9F1C" delay={0.12} />
         </div>
 
         <div className="order-2 md:order-3">
