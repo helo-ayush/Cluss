@@ -674,10 +674,15 @@ function TutorPanel({ courseId, moduleIndex, subtopicIndex, user, selectedBlock,
   ]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   }, [messages, sending]);
 
   useEffect(() => {
@@ -748,7 +753,7 @@ function TutorPanel({ courseId, moduleIndex, subtopicIndex, user, selectedBlock,
         </div>
       </div>
 
-      <div className="no-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4">
+      <div ref={chatContainerRef} className="no-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4">
         {messages.map((message, index) => (
           <div key={`${message.role}-${index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[92%] rounded-2xl px-5 py-4 text-sm leading-relaxed ${
@@ -768,7 +773,6 @@ function TutorPanel({ courseId, moduleIndex, subtopicIndex, user, selectedBlock,
             </div>
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
       <div className="border-t border-white/10 bg-transparent p-4">
