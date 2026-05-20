@@ -404,6 +404,18 @@ Requirements for Visual & Rich Formatting (CRITICAL):
    - CRITICAL: In sequenceDiagrams, ALWAYS wrap participant names in double quotes if they contain hyphens, dots, or spaces. Example: \`"create-next-app"\` instead of \`create-next-app\`.
    - CRITICAL: NEVER put spaces inside the shape brackets. Use \`A["Text"]\` NOT \`A[ "Text" ]\`, use \`B{"Text"}\` NOT \`B{ "Text" }\`.
    - Diagrams must be syntactically valid.
+   
+   MANDATORY RULES FOR HIGH-QUALITY CONCEPT MAP DIAGRAMS:
+   a) NEVER use single-letter or abstract placeholder node IDs as labels (e.g., A, B, C). Every node MUST have a descriptive, human-readable label that explains the concept it represents.
+      - BAD:  \`A["Relations"] --> B["Reflexive"]\`
+      - GOOD: \`DEF["Relation: A subset of A×B"] --> REF["Reflexive: aRa for every element a in A"]\`
+   b) Node labels MUST be pedagogically meaningful: include brief definitions, formulas, or key properties inside the label text itself (max ~10 words per node). The graph should teach the student at a glance.
+      - Example: \`NORM["Normal Form: Eliminate redundancy"]\` instead of \`NF["Normal Form"]\`
+   c) Edge labels MUST describe the logical relationship between connected concepts. Use descriptive arrow labels like \`-- "is a type of" -->\`, \`-- "requires" -->\`, \`-- "produces" -->\`, \`-- "if condition" -->\`.
+      - BAD:  \`A --> B\`  (no label, no meaning)
+      - GOOD: \`INP["User Input"] -- "validated by" --> VAL["Input Validator"]\`
+   d) Aim for 5-10 nodes per diagram. Avoid trivially simple 2-3 node graphs. Build a meaningful topology that shows how concepts connect, flow, or depend on each other.
+   e) Structure the graph to reflect real conceptual relationships: cause-effect chains, decision trees, classification hierarchies, process pipelines, or dependency graphs—whatever best fits the subject matter.
 2. USE COMPARISON TABLES: When explaining multiple related concepts (e.g. INNER vs LEFT JOIN), use Markdown tables.
 3. USE STRUCTURED CALLOUTS: Use blockquotes in the \`body\` for special notes:
    - \`> 💡 Key insight: [text]\`

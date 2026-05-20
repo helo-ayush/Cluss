@@ -3,93 +3,179 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import mermaid from 'mermaid';
-import { Check, Copy, Search, AlertCircle, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Check, Copy, AlertCircle, X, ZoomIn, ZoomOut, RotateCcw, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 
-// Mermaid configuration
-const mermaidConfig = {
-  startOnLoad: false,
-  suppressErrorRendering: true,
-  theme: 'dark',
-  flowchart: { useMaxWidth: true, htmlLabels: true, padding: 20, curve: 'basis' },
-  sequence: {
-    useMaxWidth: true, actorFontWeight: 700, noteFontWeight: 600, messageFontWeight: 600,
-    actorFontFamily: '"Outfit", "Inter", sans-serif',
-    noteFontFamily: '"Outfit", "Inter", sans-serif',
-    messageFontFamily: '"Outfit", "Inter", sans-serif',
-  },
-  themeVariables: {
-    fontFamily: '"Outfit", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif',
-    primaryColor: '#1c1c1e',
-    primaryBorderColor: '#555',
-    primaryTextColor: '#e4e4e7',
-    lineColor: '#888',
-    edgeLabelBackground: '#2a2a2e',
-    secondaryColor: '#222225',
-    secondaryBorderColor: '#4a4a4e',
-    secondaryTextColor: '#d4d4d8',
-    tertiaryColor: '#1a1a1d',
-    tertiaryBorderColor: '#404044',
-    tertiaryTextColor: '#a1a1aa',
-    actorBkg: '#1c1c1e', actorBorder: '#555', actorTextColor: '#e4e4e7', actorLineColor: '#666',
-    signalColor: '#d4d4d8', signalTextColor: '#d4d4d8',
-    labelBoxBkgColor: '#2a2a2e', labelBoxBorderColor: '#555', labelTextColor: '#e4e4e7',
-    loopTextColor: '#a1a1aa',
-    noteBorderColor: '#4a4a4e', noteBkgColor: '#2a2a2e', noteTextColor: '#e4e4e7',
-    activationBorderColor: '#666', activationBkgColor: '#2a2a2e',
-    classText: '#e4e4e7',
-    background: '#09090b', mainBkg: '#1c1c1e',
-  },
-  themeCSS: `
-    .node rect, .node polygon, .node circle, .node ellipse, .node path {
-      rx: 12px !important; ry: 12px !important; stroke-width: 2px !important;
-      fill: #1c1c1e !important; stroke: #555 !important;
-    }
-    .node .label, .node .label div, .node .label text, .node text,
-    .label foreignObject div, .label foreignObject span, .nodeLabel {
-      font-weight: 700 !important; color: #e4e4e7 !important; fill: #e4e4e7 !important;
-    }
-    .edgePath .path, .flowchart-link, path.path {
-      stroke: #888 !important; stroke-width: 2.5px !important;
-    }
-    .marker, .arrowheadPath, defs marker path {
-      fill: #888 !important; stroke: #888 !important;
-    }
-    .edgeLabel, .edgeLabel rect, .edgeLabel foreignObject, .edgeLabel .label {
-      background: #2a2a2e !important; background-color: #2a2a2e !important;
-      color: #d4d4d8 !important; fill: #2a2a2e !important;
-      border-radius: 8px !important; font-weight: 700 !important;
-    }
-    .edgeLabel foreignObject div {
-      background: #2a2a2e !important; color: #d4d4d8 !important;
-      border-radius: 8px !important; padding: 3px 10px !important;
-      font-weight: 700 !important; border: 1px solid #44444855 !important;
-      display: inline-block !important;
-    }
-    .actor, .actor-top, .actor-bottom, .actor text, text.actor {
-      fill: #e4e4e7 !important; color: #e4e4e7 !important; font-weight: 700 !important;
-    }
-    .messageText, .labelText, text.messageText, text.labelText {
-      fill: #d4d4d8 !important; color: #d4d4d8 !important; font-weight: 600 !important;
-    }
-    .loopText, .loopText > tspan, text.loopText { fill: #a1a1aa !important; }
-    .noteText, text.noteText { fill: #e4e4e7 !important; }
-    .sequenceNumber { fill: #e4e4e7 !important; }
-    line.actor-line, line { stroke: #444 !important; }
-    rect.activation0, rect.activation1, rect.activation2 {
-      fill: #2a2a2e !important; stroke: #666 !important; stroke-width: 2px !important;
-    }
-    .messageLine0, .messageLine1 { stroke: #888 !important; stroke-width: 2px !important; }
-    rect.actor { fill: #1c1c1e !important; stroke: #555 !important; stroke-width: 2px !important; }
-    .cluster-label text, .cluster text { fill: #a1a1aa !important; font-weight: 700 !important; }
-    .cluster rect { stroke: #44444466 !important; stroke-width: 1.5px !important; fill: #1c1c1e55 !important; }
-  `,
-  securityLevel: 'loose',
-};
 
-// Initialize with config
-mermaid.initialize(mermaidConfig);
+// Pure JS Layout Engine for hierarchical concept maps (Bypasses Mermaid completely!)
+function computeLayout(nodes, edges, direction = 'TD') {
+  if (nodes.length === 0) return { nodes: [], edges: [], width: 0, height: 0 };
+
+  const adj = {};
+  const inEdges = {};
+  const outEdges = {};
+  nodes.forEach(n => {
+    adj[n.id] = [];
+    inEdges[n.id] = [];
+    outEdges[n.id] = [];
+  });
+
+  edges.forEach(e => {
+    if (adj[e.from] && adj[e.to]) {
+      adj[e.from].push(e.to);
+      outEdges[e.from].push(e);
+      inEdges[e.to].push(e);
+    }
+  });
+
+  const levels = {};
+  nodes.forEach(n => { levels[n.id] = 0; });
+
+  const sources = nodes.filter(n => inEdges[n.id].length === 0).map(n => n.id);
+  const startNodes = sources.length > 0 ? sources : [nodes[0].id];
+
+  const visited = new Set();
+  const queue = [];
+  startNodes.forEach(id => {
+    queue.push({ id, level: 0 });
+    levels[id] = 0;
+    visited.add(id);
+  });
+
+  while (queue.length > 0) {
+    const { id, level } = queue.shift();
+    const children = adj[id] || [];
+    children.forEach(childId => {
+      const nextLevel = Math.max(levels[childId], level + 1);
+      levels[childId] = nextLevel;
+      if (!visited.has(childId)) {
+        visited.add(childId);
+        queue.push({ id: childId, level: nextLevel });
+      }
+    });
+  }
+
+  nodes.forEach(n => {
+    if (!visited.has(n.id)) {
+      levels[n.id] = 0;
+    }
+  });
+
+  const levelsMap = {};
+  nodes.forEach(n => {
+    const lvl = levels[n.id];
+    if (!levelsMap[lvl]) levelsMap[lvl] = [];
+    levelsMap[lvl].push(n);
+  });
+
+  const levelIds = Object.keys(levelsMap).map(Number).sort((a, b) => a - b);
+
+  const isHorizontal = direction === 'LR' || direction === 'RL';
+  const nodeW = 180;
+  const nodeH = 70;
+  const colSpacing = isHorizontal ? 240 : 220;
+  const rowSpacing = isHorizontal ? 100 : 120;
+
+  const positionedNodes = [];
+  const nodePositions = {};
+
+  let maxW = 0;
+  let maxH = 0;
+  let minX = Infinity;
+  let minY = Infinity;
+
+  levelIds.forEach(lvl => {
+    const lvlNodes = levelsMap[lvl];
+    const K = lvlNodes.length;
+
+    lvlNodes.forEach((node, idx) => {
+      let x, y;
+      if (isHorizontal) {
+        x = lvl * colSpacing + 100;
+        y = (idx - (K - 1) / 2) * rowSpacing + 300;
+      } else {
+        x = (idx - (K - 1) / 2) * colSpacing + 400;
+        y = lvl * rowSpacing + 100;
+      }
+
+      nodePositions[node.id] = { x, y };
+      positionedNodes.push({
+        ...node,
+        x,
+        y,
+        width: nodeW,
+        height: nodeH
+      });
+
+      minX = Math.min(minX, x - nodeW / 2);
+      minY = Math.min(minY, y - nodeH / 2);
+    });
+  });
+
+  const paddingX = 80;
+  const paddingY = 80;
+  positionedNodes.forEach(node => {
+    node.x = node.x - minX + paddingX;
+    node.y = node.y - minY + paddingY;
+    nodePositions[node.id] = { x: node.x, y: node.y };
+    maxW = Math.max(maxW, node.x + nodeW + paddingX);
+    maxH = Math.max(maxH, node.y + nodeH + paddingY);
+  });
+
+  const positionedEdges = edges.map((edge, idx) => {
+    const start = nodePositions[edge.from];
+    const end = nodePositions[edge.to];
+    if (!start || !end) return null;
+
+    const sx = start.x + nodeW / 2;
+    const sy = start.y + nodeH / 2;
+    const ex = end.x + nodeW / 2;
+    const ey = end.y + nodeH / 2;
+
+    let startX = sx;
+    let startY = sy;
+    let endX = ex;
+    let endY = ey;
+
+    if (isHorizontal) {
+      startX = start.x + nodeW;
+      startY = sy;
+      endX = end.x;
+      endY = ey;
+    } else {
+      startX = sx;
+      startY = start.y + nodeH;
+      endX = ex;
+      endY = end.y;
+    }
+
+    let path = '';
+    if (isHorizontal) {
+      const midX = (startX + endX) / 2;
+      path = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`;
+    } else {
+      const midY = (startY + endY) / 2;
+      path = `M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`;
+    }
+
+    return {
+      ...edge,
+      id: `edge-${idx}`,
+      path,
+      startX,
+      startY,
+      endX,
+      endY
+    };
+  }).filter(Boolean);
+
+  return {
+    nodes: positionedNodes,
+    edges: positionedEdges,
+    width: Math.max(maxW, 800),
+    height: Math.max(maxH, 500)
+  };
+}
 
 // Helper to recursively parse flowchart connections in a line
 function parseLine(line) {
@@ -309,553 +395,494 @@ function reconstructFlowchart(code) {
   }
 }
 
-function InteractiveFallbackMap({ data, theme = 'dark' }) {
+function InteractiveVisualGraph({ data, theme = 'dark' }) {
   const [selectedId, setSelectedId] = useState(data.nodes[0]?.id || '');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [direction, setDirection] = useState(data.direction || 'TD');
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const canvasRef = useRef(null);
 
-  const activeNode = data.nodes.find(n => n.id === selectedId) || data.nodes[0];
-
-  const filteredNodes = data.nodes.filter(node => {
-    const label = node.label || node.id;
-    return label.toLowerCase().includes(searchQuery.toLowerCase()) || node.id.toLowerCase().includes(searchQuery.toLowerCase());
-  });
-
-  const incomingEdges = selectedId ? data.edges.filter(e => e.to === selectedId) : [];
-  const outgoingEdges = selectedId ? data.edges.filter(e => e.from === selectedId) : [];
-
-  const getNodeLabel = (id) => {
-    const node = data.nodes.find(n => n.id === id);
-    return node ? (node.label || node.id) : id;
-  };
-
-  const getNodeShapeIcon = (node) => {
-    if (!node) return null;
-    if (node.shape === 'diamond') return <div className="h-3 w-3 rotate-45 border border-indigo-400 bg-indigo-500/10" />;
-    if (node.shape === 'double-circle' || node.shape === 'circle' || node.shape === 'round') {
-      return <div className="h-3 w-3 rounded-full border border-indigo-400 bg-indigo-500/10" />;
-    }
-    return <div className="h-3 w-3 border border-indigo-400 bg-indigo-500/10 rounded-sm" />;
-  };
-
-  if (data.nodes.length === 0) {
-    return (
-      <div className="my-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6 text-center text-sm text-amber-400">
-        <AlertCircle className="mx-auto h-8 w-8 mb-2 opacity-80" />
-        <p className="font-bold">No visual structure could be parsed from this diagram.</p>
-      </div>
-    );
-  }
+  // Expanded/Collapsable Tray State (Collapsed by default)
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const isDark = theme === 'dark';
 
+  // Compute layout coordinates dynamically
+  const layout = React.useMemo(() => {
+    return computeLayout(data.nodes, data.edges, direction);
+  }, [data.nodes, data.edges, direction]);
+
+  const activeNode = layout.nodes.find(n => n.id === selectedId) || layout.nodes[0];
+
+  // Fit to screen: calculate zoom/pan to show entire graph
+  const fitToView = useCallback(() => {
+    const el = canvasRef.current;
+    if (!el || !layout.width || !layout.height) {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+      return;
+    }
+    const containerW = el.clientWidth;
+    const containerH = el.clientHeight;
+    const scaleX = containerW / layout.width;
+    const scaleY = containerH / layout.height;
+    const newZoom = Math.min(scaleX, scaleY, 1) * 0.92; // 0.92 for a little breathing room
+    const offsetX = (containerW - layout.width * newZoom) / 2;
+    const offsetY = (containerH - layout.height * newZoom) / 2;
+    setZoom(newZoom);
+    setPan({ x: offsetX, y: offsetY });
+  }, [layout.width, layout.height]);
+
+  const resetView = useCallback(() => {
+    fitToView();
+  }, [fitToView]);
+
+  // Auto-fit on initial render and when layout changes
+  useEffect(() => {
+    fitToView();
+  }, [fitToView]);
+
+  const handleZoomIn = () => setZoom(z => Math.min(4, z + 0.15));
+  const handleZoomOut = () => setZoom(z => Math.max(0.2, z - 0.15));
+
+
+
+  // Drag pan
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return;
+    setIsPanning(true);
+    panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isPanning) return;
+    setPan({
+      x: panStart.current.panX + (e.clientX - panStart.current.x),
+      y: panStart.current.panY + (e.clientY - panStart.current.y)
+    });
+  };
+
+  const handleMouseUp = () => setIsPanning(false);
+
+  // Touch pan
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      setIsPanning(true);
+      panStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, panX: pan.x, panY: pan.y };
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isPanning || e.touches.length !== 1) return;
+    setPan({
+      x: panStart.current.panX + (e.touches[0].clientX - panStart.current.x),
+      y: panStart.current.panY + (e.touches[0].clientY - panStart.current.y)
+    });
+  };
+
+  const handleTouchEnd = () => setIsPanning(false);
+
+
+
+  const incomingEdges = selectedId ? layout.edges.filter(e => e.to === selectedId) : [];
+  const outgoingEdges = selectedId ? layout.edges.filter(e => e.from === selectedId) : [];
+
+  const getNodeLabel = (id) => {
+    const node = layout.nodes.find(n => n.id === id);
+    return node ? (node.label || node.id) : id;
+  };
+
+
+
+  const renderNodeText = (label, textColor) => {
+    const words = label.split(' ');
+    let line1 = '';
+    let line2 = '';
+    
+    if (words.length > 3) {
+      const mid = Math.ceil(words.length / 2);
+      line1 = words.slice(0, mid).join(' ');
+      line2 = words.slice(mid).join(' ');
+    } else {
+      line1 = label;
+    }
+
+    if (line2) {
+      return (
+        <>
+          <text x="90" y="35" fill={textColor} fontSize="11" fontWeight="800" textAnchor="middle">{line1}</text>
+          <text x="90" y="49" fill={textColor} fontSize="11" fontWeight="800" textAnchor="middle">{line2}</text>
+        </>
+      );
+    }
+    return (
+      <text x="90" y="42" fill={textColor} fontSize="11" fontWeight="800" textAnchor="middle">{line1}</text>
+    );
+  };
+
   return (
     <div className={`my-6 overflow-hidden rounded-2xl border ${isDark ? 'border-zinc-800 bg-[#0c0d0f] text-zinc-300' : 'border-slate-200 bg-white text-slate-700'} shadow-lg transition-all`}>
-      {/* Top Header Panel */}
       <div className={`flex flex-wrap items-center justify-between border-b ${isDark ? 'border-zinc-800/80 bg-zinc-900/35' : 'border-slate-200 bg-slate-50/50'} px-5 py-3.5`}>
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 items-center justify-center rounded-full bg-indigo-500/15 px-2.5 text-[10px] font-black uppercase tracking-wider text-indigo-400">
-            Concept Map
+            Interactive Graph
           </div>
-          <span className={`text-[12px] font-semibold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Interactive Flow Explorer</span>
+          <span className={`text-[12px] font-semibold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Concept Path Navigator</span>
         </div>
-        <div className={`text-[11px] font-medium ${isDark ? 'text-zinc-500' : 'text-slate-400'} italic`}>
-          Click nodes to navigate steps
+        <div className="flex items-center gap-2">
+          {/* Collapse/Expand Sidebar Toggle */}
+          <button 
+            onClick={() => setIsExpanded(e => !e)}
+            className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1.5 ${
+              isExpanded 
+                ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' 
+                : isDark 
+                  ? 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white' 
+                  : 'bg-slate-100 border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Info className="w-3.5 h-3.5" />
+            {isExpanded ? 'Hide Pathways' : 'Show Pathways'}
+          </button>
+          <div className="w-px h-4 bg-zinc-800/50 dark:bg-zinc-700/50 mx-1" />
+          
+          <button 
+            onClick={() => setDirection(d => d === 'TD' ? 'LR' : 'TD')}
+            className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+              isDark 
+                ? 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white' 
+                : 'bg-slate-100 border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Layout: {direction === 'TD' ? 'Vertical' : 'Horizontal'}
+          </button>
+          <div className="w-px h-4 bg-zinc-800/50 dark:bg-zinc-700/50 mx-1" />
+          <button onClick={handleZoomOut} className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'}`} title="Zoom out"><ZoomOut className="w-3.5 h-3.5" /></button>
+          <button onClick={handleZoomIn} className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'}`} title="Zoom in"><ZoomIn className="w-3.5 h-3.5" /></button>
+          <button onClick={resetView} className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'}`} title="Reset Zoom"><RotateCcw className="w-3.5 h-3.5" /></button>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row min-h-[350px]">
-        {/* Left List Pane */}
-        <div className={`w-full md:w-80 border-r ${isDark ? 'border-zinc-800/60' : 'border-slate-200'} p-4 flex flex-col gap-3`}>
-          <div className="relative">
-            <Search className={`absolute left-3 top-2.5 h-4 w-4 ${isDark ? 'text-zinc-500' : 'text-slate-400'}`} />
-            <input
-              type="text"
-              placeholder="Search concepts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full rounded-xl border py-2 pl-9 pr-4 text-xs outline-none transition-all ${
+      <div className="flex flex-col lg:flex-row min-h-[450px] relative">
+        <div 
+          ref={canvasRef}
+          className="flex-1 relative overflow-hidden h-[450px] cursor-grab active:cursor-grabbing select-none"
+          style={{
+            backgroundColor: isDark ? '#08080a' : '#f8fafc',
+            backgroundImage: isDark
+              ? 'linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)'
+              : 'linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px)',
+            backgroundSize: '24px 24px'
+          }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Floating toggle button when collapsed */}
+          {!isExpanded && (
+            <button
+              onClick={() => setIsExpanded(true)}
+              className={`absolute right-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full flex items-center justify-center border shadow-md hover:scale-105 active:scale-95 transition-all ${
                 isDark 
-                  ? 'border-zinc-800/80 bg-zinc-900/40 text-white placeholder-zinc-500 focus:border-indigo-500/50 focus:bg-zinc-900/60' 
-                  : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-indigo-500/50 focus:bg-white'
+                  ? 'bg-zinc-950 border-zinc-800 text-indigo-400 hover:text-white hover:border-zinc-700' 
+                  : 'bg-white border-slate-200 text-indigo-500 hover:text-indigo-600 hover:border-slate-300'
               }`}
-            />
-          </div>
-
-          <div className="custom-scroll flex-1 max-h-[300px] overflow-y-auto pr-1 space-y-1.5">
-            {filteredNodes.map((node) => {
-              const isActive = node.id === selectedId;
-              return (
-                <button
-                  key={node.id}
-                  onClick={() => setSelectedId(node.id)}
-                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all ${
-                    isActive
-                      ? isDark
-                        ? 'bg-indigo-500/10 border-l-[3px] border-l-indigo-500 text-white pl-2'
-                        : 'bg-indigo-50 border-l-[3px] border-l-indigo-600 text-indigo-900 pl-2'
-                      : isDark
-                        ? 'bg-transparent border-l-[3px] border-l-transparent text-zinc-400 hover:bg-zinc-800/30 hover:text-zinc-200'
-                        : 'bg-transparent border-l-[3px] border-l-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-                >
-                  {getNodeShapeIcon(node)}
-                  <span className="truncate flex-1">{node.label || node.id}</span>
-                </button>
-              );
-            })}
-            {filteredNodes.length === 0 && (
-              <div className={`text-center py-8 text-xs ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-                No matching concepts found
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Active Node Inspector */}
-        <div className={`flex-1 p-6 flex flex-col justify-between ${isDark ? 'bg-zinc-950/20' : 'bg-slate-50/20'}`}>
-          {activeNode ? (
-            <div className="space-y-6">
-              {/* Active Header Card */}
-              <div className={`rounded-2xl border p-5 shadow-sm transition-all ${
-                isDark 
-                  ? 'border-indigo-500/20 bg-gradient-to-br from-[#121316] to-[#0e0f12] shadow-indigo-950/10' 
-                  : 'border-indigo-100 bg-gradient-to-br from-indigo-50/20 to-white shadow-indigo-100/50'
-              }`}>
-                <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>
-                  Selected Concept
-                </span>
-                <h3 className={`mt-1.5 text-lg font-black tracking-tight leading-snug ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {activeNode.label || activeNode.id}
-                </h3>
-              </div>
-
-              {/* Connections Columns */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Incoming / Leads From Column */}
-                <div className="space-y-2">
-                  <span className={`text-[11px] font-black uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-                    Preceded By
-                  </span>
-                  <div className="space-y-2">
-                    {incomingEdges.map((edge, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setSelectedId(edge.from)}
-                        className={`w-full flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all ${
-                          isDark
-                            ? 'border-zinc-800 bg-[#0e0f12]/60 hover:bg-zinc-900/60 hover:border-zinc-700/80 text-zinc-300'
-                            : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700'
-                        }`}
-                      >
-                        <span className="text-[10px] font-semibold text-indigo-400 inline-flex items-center gap-1">
-                          ← {edge.label ? `[${edge.label}]` : 'leads to selected'}
-                        </span>
-                        <span className="text-xs font-bold truncate w-full">{getNodeLabel(edge.from)}</span>
-                      </button>
-                    ))}
-                    {incomingEdges.length === 0 && (
-                      <div className={`rounded-xl border border-dashed py-6 text-center text-xs ${isDark ? 'border-zinc-800/80 text-zinc-600' : 'border-slate-200/80 text-slate-400'}`}>
-                        Starting point (no parent nodes)
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Outgoing / Leads To Column */}
-                <div className="space-y-2">
-                  <span className={`text-[11px] font-black uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-                    Leads To
-                  </span>
-                  <div className="space-y-2">
-                    {outgoingEdges.map((edge, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setSelectedId(edge.to)}
-                        className={`w-full flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all ${
-                          isDark
-                            ? 'border-indigo-500/10 bg-[#0e0f12]/60 hover:bg-indigo-500/5 hover:border-indigo-500/30 text-zinc-300'
-                            : 'border-slate-200 bg-white hover:bg-indigo-50/20 hover:border-indigo-300 text-slate-700'
-                        }`}
-                      >
-                        <span className="text-[10px] font-semibold text-indigo-400 inline-flex items-center gap-1">
-                          {edge.label ? `[${edge.label}]` : 'leads next'} →
-                        </span>
-                        <span className="text-xs font-bold truncate w-full">{getNodeLabel(edge.to)}</span>
-                      </button>
-                    ))}
-                    {outgoingEdges.length === 0 && (
-                      <div className={`rounded-xl border border-dashed py-6 text-center text-xs ${isDark ? 'border-zinc-800/80 text-zinc-600' : 'border-slate-200/80 text-slate-400'}`}>
-                        End point (no sub-concepts)
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className={`text-center py-12 text-sm ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-              Select a concept from the list to explore
-            </div>
+              title="Open Concept Pathways"
+            >
+              <ChevronLeft className="w-4 h-4 animate-pulse" />
+            </button>
           )}
+
+          <div 
+            className="w-full h-full"
+            style={{
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transformOrigin: '0 0',
+              transition: isPanning ? 'none' : 'transform 0.15s ease-out'
+            }}
+          >
+            <svg 
+              width={layout.width} 
+              height={layout.height} 
+              className="overflow-visible"
+            >
+              <defs>
+                <marker id="arrow-marker" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 2 L 8 5 L 0 8 z" fill="#6366f1"/>
+                </marker>
+                <marker id="arrow-marker-muted" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                  <path d="M 0 2 L 8 5 L 0 8 z" fill={isDark ? '#4b5563' : '#94a3b8'}/>
+                </marker>
+              </defs>
+
+              {layout.edges.map((edge) => {
+                const isActive = edge.from === selectedId || edge.to === selectedId;
+                return (
+                  <g key={edge.id}>
+                    <path
+                      d={edge.path}
+                      fill="none"
+                      stroke={isActive ? '#6366f1' : isDark ? '#374151' : '#cbd5e1'}
+                      strokeWidth={isActive ? 2.5 : 1.5}
+                      markerEnd={`url(#${isActive ? 'arrow-marker' : 'arrow-marker-muted'})`}
+                      className="transition-all duration-300"
+                    />
+                    {edge.label && (
+                      <foreignObject
+                        x={(edge.startX + edge.endX) / 2 - 40}
+                        y={(edge.startY + edge.endY) / 2 - 10}
+                        width="80"
+                        height="20"
+                      >
+                        <div className="flex items-center justify-center h-full">
+                          <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-md border ${
+                            isDark 
+                              ? 'bg-[#0f1013] border-zinc-800 text-zinc-400' 
+                              : 'bg-white border-slate-100 text-slate-500'
+                          } truncate`}>
+                            {edge.label}
+                          </span>
+                        </div>
+                      </foreignObject>
+                    )}
+                  </g>
+                );
+              })}
+
+              {layout.nodes.map((node) => {
+                const isActive = node.id === selectedId;
+                const cardFill = isDark ? '#111215' : '#f8fafc';
+                const cardStroke = isActive ? '#6366f1' : isDark ? '#27272a' : '#cbd5e1';
+                const labelColor = isDark ? '#f4f4f5' : '#1e293b';
+
+                return (
+                  <g 
+                    key={node.id} 
+                    transform={`translate(${node.x}, ${node.y})`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedId(node.id);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    {isActive && (
+                      <rect 
+                        x="-3" 
+                        y="-3" 
+                        width="186" 
+                        height="76" 
+                        rx="15" 
+                        fill="rgba(99, 102, 241, 0.08)" 
+                        stroke="#6366f1" 
+                        strokeWidth="2.5" 
+                      />
+                    )}
+                    <rect
+                      x="0"
+                      y="0"
+                      width="180"
+                      height="70"
+                      rx="12"
+                      fill={cardFill}
+                      stroke={cardStroke}
+                      strokeWidth={isActive ? 2 : 1.5}
+                      className="transition-all duration-300"
+                    />
+                    <rect 
+                      x="15" 
+                      y="-9" 
+                      width="70" 
+                      height="18" 
+                      rx="5" 
+                      fill={isDark ? '#1a1b20' : '#f1f5f9'} 
+                      stroke={isActive ? '#6366f1' : isDark ? '#27272a' : '#cbd5e1'} 
+                      strokeWidth="1" 
+                    />
+                    <text 
+                      x="50" 
+                      y="3" 
+                      fill={isActive ? '#6366f1' : isDark ? '#a1a1aa' : '#64748b'} 
+                      fontSize="8" 
+                      fontWeight="900" 
+                      letterSpacing="0.5" 
+                      textAnchor="middle"
+                    >
+                      {node.shape.toUpperCase()}
+                    </text>
+
+                    {renderNodeText(node.label || node.id, labelColor)}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
         </div>
+
+        {/* Right side expandable/collapsable tray */}
+        {isExpanded && (
+          <div className={`w-full lg:w-[350px] border-t lg:border-t-0 lg:border-l ${isDark ? 'border-zinc-800 bg-[#0a0a0c]' : 'border-slate-200 bg-slate-50/90 backdrop-blur-md'} p-5 flex flex-col gap-4 relative animate-in slide-in-from-right duration-250`}>
+            {/* Close / Collapse header */}
+            <div className="flex items-center justify-between border-b border-zinc-800/50 pb-2">
+              <div className="flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5 text-indigo-400" />
+                <span className={`text-xs font-bold ${isDark ? 'text-zinc-200' : 'text-slate-800'}`}>Concept Pathways</span>
+              </div>
+
+              {/* Close Button */}
+              <button 
+                onClick={() => setIsExpanded(false)} 
+                className={`p-1.5 rounded-lg border transition-all ${
+                  isDark 
+                    ? 'border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:text-white hover:border-zinc-700' 
+                    : 'border-slate-200 bg-slate-100 text-slate-500 hover:text-slate-800 hover:border-slate-300'
+                }`}
+                title="Collapse sidebar"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-4 max-h-[350px] lg:max-h-[380px] custom-scroll pr-1">
+              {activeNode ? (
+                <div className="space-y-4">
+                  <div className={`rounded-xl border p-4 shadow-sm ${
+                    isDark 
+                      ? 'border-indigo-500/20 bg-gradient-to-br from-[#121316] to-[#0e0f12]' 
+                      : 'border-indigo-100 bg-gradient-to-br from-indigo-50/20 to-white'
+                  }`}>
+                    <span className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                      Active Node
+                    </span>
+                    <h4 className={`mt-1 text-sm font-black tracking-tight leading-snug ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      {activeNode.label || activeNode.id}
+                    </h4>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className={`text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                      Preceded By
+                    </span>
+                    <div className="space-y-1.5">
+                      {incomingEdges.map((edge, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedId(edge.from)}
+                          className={`w-full flex items-center justify-between rounded-xl border p-2.5 text-left text-xs transition-all ${
+                            isDark
+                              ? 'border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/60 hover:border-zinc-700 text-zinc-300'
+                              : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700'
+                          }`}
+                        >
+                          <span className="font-bold truncate max-w-[160px]">{getNodeLabel(edge.from)}</span>
+                          {edge.label && <span className="text-[8px] font-extrabold text-indigo-400 border border-indigo-500/20 px-1 py-0.5 rounded">{edge.label}</span>}
+                        </button>
+                      ))}
+                      {incomingEdges.length === 0 && (
+                        <div className={`rounded-xl border border-dashed py-4 text-center text-[11px] ${isDark ? 'border-zinc-800/80 text-zinc-600' : 'border-slate-200/80 text-slate-400'}`}>
+                          Start Node (No parents)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className={`text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                      Leads To
+                    </span>
+                    <div className="space-y-1.5">
+                      {outgoingEdges.map((edge, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedId(edge.to)}
+                          className={`w-full flex items-center justify-between rounded-xl border p-2.5 text-left text-xs transition-all ${
+                            isDark
+                              ? 'border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/60 hover:border-zinc-700 text-zinc-300'
+                              : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700'
+                          }`}
+                        >
+                          <span className="font-bold truncate max-w-[160px]">{getNodeLabel(edge.to)}</span>
+                          {edge.label && <span className="text-[8px] font-extrabold text-indigo-400 border border-indigo-500/20 px-1 py-0.5 rounded">{edge.label}</span>}
+                        </button>
+                      ))}
+                      {outgoingEdges.length === 0 && (
+                        <div className={`rounded-xl border border-dashed py-4 text-center text-[11px] ${isDark ? 'border-zinc-800/80 text-zinc-600' : 'border-slate-200/80 text-slate-400'}`}>
+                          End Node (No children)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className={`text-center py-8 text-xs ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                  Select a concept node to view its graph pathways.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+
 function MermaidBlock({ code }) {
-  const [svg, setSvg] = useState('');
-  const [error, setError] = useState(false);
-  const [fallbackData, setFallbackData] = useState(null);
-  const containerRef = useRef(null);
+  const [data, setData] = useState(null);
 
   useEffect(() => {
-    let isMounted = true;
+    let cleanCode = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    
+    // Mindmap conversion if needed
+    if (/^\s*mindmap\b/i.test(cleanCode)) {
+      const lines = cleanCode.split('\n').filter(l => l.trim());
+      const nodes = [];
+      const edges = [];
+      let nodeId = 0;
+      const depthMap = {};
 
-    const cleanLeakedMermaidElements = () => {
-      const leakedElements = document.querySelectorAll(
-        'body > [id^="mermaid-"], body > [id^="dmermaid-"], body > .mermaid, body > .mermaid-error, body > div[id^="dmermaid-"]'
-      );
-      leakedElements.forEach(el => {
-        try {
-          el.remove();
-        } catch (e) {
-          // ignore
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        const stripped = line.replace(/^\s+/, '');
+        const indent = line.length - line.trimStart().length;
+        const depth = Math.floor(indent / 2);
+        let label = stripped.replace(/^[-*]\s*/, '').trim();
+        if (!label || /^::icon/i.test(label)) continue;
+
+        const nodeWrapperMatch = label.match(/^[a-zA-Z0-9_-]+(?:\(\(\s*["']?|\[\s*["']?|\{\s*["']?|["'])(.*?)(?:\s*["']?\)\)|\s*["']?\]|\s*["']?\}|["'])$/);
+        if (nodeWrapperMatch) {
+          label = nodeWrapperMatch[1].trim();
         }
-      });
-    };
 
-    const renderDiagram = async () => {
-      cleanLeakedMermaidElements();
+        const id = `N${nodeId++}`;
+        nodes.push({ id, label, depth });
+        depthMap[depth] = id;
 
-      // Enforce dark theme configurations before parsing & rendering to prevent other renderers from overriding it
-      mermaid.initialize(mermaidConfig);
-
-      let safeCode = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-      // 0. Convert mindmap → flowchart (mindmap syntax is extremely fragile)
-      if (/^\s*mindmap\b/i.test(safeCode)) {
-        const lines = safeCode.split('\n').filter(l => l.trim());
-        const nodes = [];
-        const edges = [];
-        let nodeId = 0;
-        const depthMap = {};
-
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i];
-          const stripped = line.replace(/^\s+/, '');
-          const indent = line.length - line.trimStart().length;
-          // Rough depth: every 2-space indent is one level
-          const depth = Math.floor(indent / 2);
-          let label = stripped.replace(/^[-*]\s*/, '').trim();
-          if (!label || /^::icon/i.test(label)) continue;
-
-          // Clean up common AI mindmap-to-flowchart bracketed prefixes/wrappers (e.g. root(("text")), A["text"])
-          const nodeWrapperMatch = label.match(/^[a-zA-Z0-9_-]+(?:\(\(\s*["']?|\[\s*["']?|\{\s*["']?|["'])(.*?)(?:\s*["']?\)\)|\s*["']?\]|\s*["']?\}|["'])$/);
-          if (nodeWrapperMatch) {
-            label = nodeWrapperMatch[1].trim();
-          }
-
-          const id = `N${nodeId++}`;
-          nodes.push({ id, label, depth });
-          depthMap[depth] = id;
-
-          // Connect to closest parent at a shallower depth
-          for (let d = depth - 1; d >= 0; d--) {
-            if (depthMap[d]) {
-              edges.push(`${depthMap[d]} --> ${id}`);
-              break;
-            }
+        for (let d = depth - 1; d >= 0; d--) {
+          if (depthMap[d]) {
+            edges.push(`${depthMap[d]} --> ${id}`);
+            break;
           }
         }
-
-        if (nodes.length > 0) {
-          const nodeDefs = nodes.map(n => `${n.id}["${n.label.replace(/"/g, "'")}"]`).join('\n');
-          const edgeDefs = edges.join('\n');
-          safeCode = `graph TD\n${nodeDefs}\n${edgeDefs}`;
-        }
       }
 
-      // 1. Strip HTML tags like <br/>, <b>, <i> etc. — Mermaid cannot parse them
-      safeCode = safeCode.replace(/<br\s*\/?>/gi, ' ');
-      safeCode = safeCode.replace(/<\/?[a-z][a-z0-9]*\b[^>]*>/gi, '');
-
-      // 2. Normalize excessive whitespace left behind by tag stripping
-      safeCode = safeCode.replace(/[ \t]{2,}/g, ' ');
-
-      // 3. Fix spaces inside shape delimiters: { "text" } → {"text"}, (( "text" )) → (("text"))
-      safeCode = safeCode.replace(/\{\s+"([^"]*?)"\s+\}/g, '{"$1"}');
-      safeCode = safeCode.replace(/\(\(\s+"([^"]*?)"\s+\)\)/g, '(("$1"))');
-      safeCode = safeCode.replace(/\(\s+"([^"]*?)"\s+\)/g, '("$1")');
-      safeCode = safeCode.replace(/\[\s+"([^"]*?)"\s+\]/g, '["$1"]');
-
-      // 4. Force-quote unquoted bracket [...] labels with special chars.
-      safeCode = safeCode.replace(/\[([^\]]+)\]/g, (match, inner) => {
-        if (inner.startsWith('"') || inner.startsWith("'")) return match;
-        if (/[(){}=<>,;|]/.test(inner)) return `["${inner.trim()}"]`;
-        return match;
-      });
-
-      // 5. Force-quote unquoted diamond {...} labels with special chars (but skip subgraph/class braces)
-      safeCode = safeCode.replace(/(\w)\{([^}]+)\}/g, (match, prefix, inner) => {
-        if (inner.startsWith('"') || inner.startsWith("'")) return match;
-        if (/[()=<>,;|[\]]/.test(inner)) return `${prefix}{"${inner.trim()}"}`;
-        return match;
-      });
-
-      // 6. Fix sequenceDiagram participants with hyphens (e.g., create-next-app)
-      if (/^\s*sequenceDiagram\b/i.test(safeCode)) {
-        // Wrap declarations: participant create-next-app → participant "create-next-app"
-        safeCode = safeCode.replace(/(participant|actor)\s+([a-zA-Z0-9_\-\.]+)/gi, (match, type, name) => {
-          if (name.startsWith('"')) return match;
-          return `${type} "${name}"`;
-        });
-        
-        // Wrap arrows: A-B ->> C-D → "A-B" ->> "C-D"
-        safeCode = safeCode.replace(/([a-zA-Z0-9_\-\.]+)\s*(->+|-->>?)\s*([a-zA-Z0-9_\-\.]+)/g, (match, p1, arrow, p2) => {
-          const quote = (p) => {
-            if (p.startsWith('"')) return p;
-            if (p.includes('-') || p.includes('.')) return `"${p}"`;
-            return p;
-          };
-          return `${quote(p1)} ${arrow} ${quote(p2)}`;
-        });
+      if (nodes.length > 0) {
+        const nodeDefs = nodes.map(n => `${n.id}["${n.label.replace(/"/g, "'")}"]`).join('\n');
+        const edgeDefs = edges.join('\n');
+        cleanCode = `graph TD\n${nodeDefs}\n${edgeDefs}`;
       }
+    }
 
-      // 7. Strip custom styles and frontmatter config to enforce Stealth Monochrome aesthetic
-      safeCode = safeCode.split('\n').filter(line => {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('style ') || 
-            trimmed.startsWith('classDef ') || 
-            trimmed.startsWith('class ') || 
-            trimmed.startsWith('linkStyle ') ||
-            trimmed.startsWith('%%')) {
-          return false;
-        }
-        return true;
-      }).join('\n');
-
-      // Layer 1: Attempt standard rendering
-      try {
-        await mermaid.parse(safeCode);
-        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-        const { svg: svgOutput } = await mermaid.render(id, safeCode);
-        if (svgOutput && svgOutput.includes("Syntax error in text")) {
-          throw new Error("Mermaid returned a syntax error placeholder SVG");
-        }
-        if (isMounted) {
-          setSvg(svgOutput);
-          setError(false);
-          setFallbackData(null);
-        }
-        return;
-      } catch (err) {
-        console.warn('Standard Mermaid rendering failed, attempting recovery...', err);
-        cleanLeakedMermaidElements();
-      }
-
-      // Layer 2: Attempt auto-reconstruction and retry
-      try {
-        const reconstructed = reconstructFlowchart(safeCode);
-        await mermaid.parse(reconstructed);
-        const id = `mermaid-reconstructed-${Math.random().toString(36).substr(2, 9)}`;
-        const { svg: svgOutput } = await mermaid.render(id, reconstructed);
-        if (svgOutput && svgOutput.includes("Syntax error in text")) {
-          throw new Error("Reconstructed Mermaid returned a syntax error placeholder SVG");
-        }
-        if (isMounted) {
-          setSvg(svgOutput);
-          setError(false);
-          setFallbackData(null);
-        }
-        return;
-      } catch (err) {
-        console.warn('Reconstructed flowchart rendering failed, loading Interactive Fallback...', err);
-        cleanLeakedMermaidElements();
-      }
-
-      // Layer 3: Load Interactive Fallback Component
-      if (isMounted) {
-        const parsed = parseFlowchartData(safeCode);
-        setFallbackData(parsed);
-        setError(true);
-      }
-    };
-
-    if (code) renderDiagram();
-    return () => {
-      isMounted = false;
-      cleanLeakedMermaidElements();
-    };
+    const parsed = parseFlowchartData(cleanCode);
+    setData(parsed);
   }, [code]);
 
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
-  const [naturalSize, setNaturalSize] = useState({ w: 600, h: 400 });
-  const [bboxInfo, setBboxInfo] = useState(null);
-  const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
-  const lightboxRef = useRef(null);
-  // thumbnailRef: always in the DOM at natural size — used for measurement
-  const thumbnailRef = useRef(null);
-  // lightboxSvgRef: only rendered inside the lightbox modal
-  const lightboxSvgRef = useRef(null);
-
-  // Always measure from the thumbnail which is always rendered at 1:1 scale
-  const calcAutoFitZoom = useCallback((naturalW, naturalH) => {
-    const w = naturalW || (bboxInfo ? bboxInfo.w : naturalSize.w);
-    const h = naturalH || (bboxInfo ? bboxInfo.h : naturalSize.h);
-    // Card body available area (card = 90vw×80vh capped at 1100×800, minus header 46px + footer 37px)
-    const cardW = Math.min(window.innerWidth * 0.9, 1100) - 48;
-    const cardH = Math.min(window.innerHeight * 0.8, 800) - 100;
-    return Math.min(cardW / Math.max(w, 1), cardH / Math.max(h, 1), 4);
-  }, [naturalSize, bboxInfo]);
-
-  const openLightbox = useCallback(() => {
-    const container = thumbnailRef.current;
-    let w = 600;
-    let h = 400;
-    let bbox = null;
-    if (container) {
-      const svgEl = container.querySelector('svg');
-      if (svgEl) {
-        // Try getting exact bounding box first to exclude extra whitespace
-        try {
-          const rect = svgEl.getBBox();
-          if (rect && rect.width > 0 && rect.height > 0) {
-            bbox = {
-              x: rect.x - 12,
-              y: rect.y - 12,
-              w: rect.width + 24,
-              h: rect.height + 24
-            };
-            w = bbox.w;
-            h = bbox.h;
-          }
-        } catch (e) {
-          console.warn('Failed to get SVG bounding box:', e);
-        }
-
-        // Fallback to viewBox attribute parsing
-        if (!bbox) {
-          const viewBoxAttr = svgEl.getAttribute('viewBox');
-          if (viewBoxAttr) {
-            const parts = viewBoxAttr.trim().split(/\s+/);
-            if (parts.length === 4) {
-              const parsedW = parseFloat(parts[2]);
-              const parsedH = parseFloat(parts[3]);
-              if (!isNaN(parsedW) && parsedW > 0 && !isNaN(parsedH) && parsedH > 0) {
-                w = parsedW;
-                h = parsedH;
-                bbox = { x: 0, y: 0, w, h };
-              }
-            }
-          }
-        }
-
-        // Ultimate fallback
-        if (!bbox) {
-          const vb = svgEl.viewBox?.baseVal;
-          w = (vb && vb.width > 0) ? vb.width
-            : (parseFloat(svgEl.getAttribute('width')) || svgEl.getBoundingClientRect().width || 600);
-          h = (vb && vb.height > 0) ? vb.height
-            : (parseFloat(svgEl.getAttribute('height')) || svgEl.getBoundingClientRect().height || 400);
-          bbox = { x: 0, y: 0, w, h };
-        }
-      }
-    }
-    setBboxInfo(bbox);
-    setNaturalSize({ w, h });
-    const targetZoom = calcAutoFitZoom(w, h);
-    // Start slightly zoomed out to trigger a beautiful spring scale-in effect
-    setZoom(targetZoom * 0.85);
-    setPan({ x: 0, y: 0 });
-    setLightboxOpen(true);
-
-    // Smoothly spring to target fitting zoom
-    setTimeout(() => {
-      setZoom(targetZoom);
-    }, 50);
-  }, [calcAutoFitZoom]);
-
-  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
-
-  const resetView = useCallback(() => {
-    const w = bboxInfo ? bboxInfo.w : naturalSize.w;
-    const h = bboxInfo ? bboxInfo.h : naturalSize.h;
-    const z = calcAutoFitZoom(w, h);
-    setZoom(z);
-    setPan({ x: 0, y: 0 });
-  }, [calcAutoFitZoom, bboxInfo, naturalSize]);
-
-  const handleWheel = useCallback((e) => {
-    e.preventDefault();
-    const factor = e.deltaY > 0 ? 0.92 : 1.08;
-    setZoom(z => Math.min(8, Math.max(0.1, z * factor)));
-  }, []);
-
-  const handleMouseDown = useCallback((e) => {
-    if (e.button !== 0) return;
-    setIsPanning(true);
-    panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
-  }, [pan]);
-
-  const handleMouseMove = useCallback((e) => {
-    if (!isPanning) return;
-    setPan({
-      x: panStart.current.panX + (e.clientX - panStart.current.x),
-      y: panStart.current.panY + (e.clientY - panStart.current.y),
-    });
-  }, [isPanning]);
-
-  const handleMouseUp = useCallback(() => setIsPanning(false), []);
-
-  const handleTouchStart = useCallback((e) => {
-    if (e.touches.length === 1) {
-      setIsPanning(true);
-      panStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, panX: pan.x, panY: pan.y };
-    }
-  }, [pan]);
-  const handleTouchMove = useCallback((e) => {
-    if (!isPanning || e.touches.length !== 1) return;
-    e.preventDefault();
-    setPan({
-      x: panStart.current.panX + (e.touches[0].clientX - panStart.current.x),
-      y: panStart.current.panY + (e.touches[0].clientY - panStart.current.y),
-    });
-  }, [isPanning]);
-  const handleTouchEnd = useCallback(() => setIsPanning(false), []);
-
-  useEffect(() => {
-    if (!lightboxOpen) return;
-    const el = lightboxRef.current;
-    if (!el) return;
-    el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleWheel);
-  }, [lightboxOpen, handleWheel]);
-
-  useEffect(() => {
-    if (!lightboxOpen) return;
-    const onKey = (e) => { if (e.key === 'Escape') closeLightbox(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [lightboxOpen, closeLightbox]);
-
-  useEffect(() => {
-    if (lightboxOpen && lightboxSvgRef.current && bboxInfo) {
-      const svgEl = lightboxSvgRef.current.querySelector('svg');
-      if (svgEl) {
-        svgEl.setAttribute('viewBox', `${bboxInfo.x} ${bboxInfo.y} ${bboxInfo.w} ${bboxInfo.h}`);
-      }
-    }
-  }, [lightboxOpen, bboxInfo]);
-
-  if (error && fallbackData) {
-    return <InteractiveFallbackMap data={fallbackData} theme="dark" />;
-  }
-
-  if (error) {
+  if (!data || data.nodes.length === 0) {
     return (
       <div className="my-6 rounded-2xl border border-zinc-800 bg-[#0c0d0f] p-6 text-center text-sm text-zinc-400">
         <AlertCircle className="mx-auto h-8 w-8 mb-2 text-indigo-400 opacity-80" />
@@ -865,114 +892,7 @@ function MermaidBlock({ code }) {
     );
   }
 
-  return (
-    <>
-      {/* Diagram Thumbnail — thumbnailRef is ALWAYS in DOM at natural 1:1 scale for measurement */}
-      <div
-        className="my-6 group relative cursor-zoom-in overflow-x-auto rounded-2xl border border-zinc-800/60 p-6 transition-all duration-200 hover:border-zinc-700 hover:shadow-lg hover:shadow-black/30"
-        style={{
-          backgroundColor: '#0a0a0c',
-          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px)',
-          backgroundSize: '20px 20px'
-        }}
-        onClick={openLightbox}
-        title="Click to expand diagram"
-      >
-        {svg ? (
-          <div ref={thumbnailRef} dangerouslySetInnerHTML={{ __html: svg }} className="w-full flex justify-center [&_svg]:!max-w-full pointer-events-none select-none" />
-        ) : (
-          <div className="h-32 flex w-full items-center justify-center text-sm text-zinc-600">Loading diagram...</div>
-        )}
-        {svg && (
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-            <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-zinc-900/80 border border-zinc-700 text-zinc-300 backdrop-blur-sm">
-              <ZoomIn className="w-3 h-3" /> Click to expand
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Popup Card Modal */}
-      {lightboxOpen && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8"
-          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', animation: 'lbBgIn 0.18s ease' }}
-          onClick={(e) => { if (e.target === e.currentTarget) closeLightbox(); }}
-        >
-          <style>{`
-            @keyframes lbBgIn { from { opacity: 0; } to { opacity: 1; } }
-            @keyframes lbCardIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-          `}</style>
-          {/* Card */}
-          <div
-            className="relative flex flex-col rounded-2xl overflow-hidden shadow-2xl"
-            style={{ background: '#18181b', border: '1px solid #2a2a2e', width: '90vw', maxWidth: '1100px', height: '80vh', maxHeight: '800px', animation: 'lbCardIn 0.2s cubic-bezier(0.34, 1.3, 0.64, 1)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Card Header: controls */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800 bg-zinc-900/80 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-zinc-500 bg-zinc-800 border border-zinc-700 rounded-md px-2 py-0.5">
-                  {Math.round(zoom * 100)}%
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setZoom(z => Math.max(0.1, z / 1.25))} className="w-7 h-7 rounded-md flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors" title="Zoom out"><ZoomOut className="w-3.5 h-3.5" /></button>
-                <button onClick={() => setZoom(z => Math.min(8, z * 1.25))} className="w-7 h-7 rounded-md flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors" title="Zoom in"><ZoomIn className="w-3.5 h-3.5" /></button>
-                <button onClick={resetView} className="w-7 h-7 rounded-md flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors" title="Fit to view"><RotateCcw className="w-3.5 h-3.5" /></button>
-                <div className="w-px h-4 bg-zinc-700 mx-1" />
-                <button onClick={closeLightbox} className="w-7 h-7 rounded-md flex items-center justify-center text-zinc-400 hover:text-red-400 hover:bg-zinc-700 transition-colors" title="Close (Esc)"><X className="w-3.5 h-3.5" /></button>
-              </div>
-            </div>
-
-            {/* Card Body: zoomable canvas */}
-            <div
-              ref={lightboxRef}
-              className="flex-1 overflow-hidden relative"
-              style={{
-                cursor: isPanning ? 'grabbing' : 'grab',
-                backgroundColor: '#111113',
-                backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px)',
-                backgroundSize: '24px 24px'
-              }}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              <div className="w-full h-full flex items-center justify-center" style={{ pointerEvents: 'none' }}>
-                <div
-                  style={{
-                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                    transformOrigin: 'center center',
-                    transition: isPanning ? 'none' : 'transform 0.35s cubic-bezier(0.34, 1.3, 0.64, 1)',
-                    userSelect: 'none',
-                    width: `${naturalSize.w}px`,
-                    height: `${naturalSize.h}px`,
-                  }}
-                >
-                  {/* lightboxSvgRef: separate from thumbnailRef — never affects measurement */}
-                  <div
-                    ref={lightboxSvgRef}
-                    dangerouslySetInnerHTML={{ __html: svg }}
-                    className="pointer-events-none select-none w-full h-full [&_svg]:!w-full [&_svg]:!h-full [&_svg]:!max-w-none [&_svg]:!max-h-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Card Footer: hint */}
-            <div className="flex items-center justify-center px-4 py-2 border-t border-zinc-800 bg-zinc-900/80 shrink-0">
-              <span className="text-[11px] text-zinc-600">Scroll to zoom · Drag to pan · Esc to close</span>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
+  return <InteractiveVisualGraph data={data} theme="dark" />;
 }
 
 function CodeBlock({ className = '', children, ...props }) {
