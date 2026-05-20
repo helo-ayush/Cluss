@@ -26,7 +26,7 @@ const FREE_FEATURES = [
 
 const PRO_FEATURES = [
     '150 credits per day (accumulates)',
-    'Advanced AI · Gemini 2.5 Pro',
+    'Advanced AI · Gemini 3.1 Pro',
     '15 credits · Generate Course Map',
     '30 credits · Generate Lesson Notes',
     '3 credits · Tutor Chat message',
@@ -52,16 +52,16 @@ const Toast = ({ toast }) => (
                 exit={{ opacity: 0, y: 50, scale: 0.9 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
                 style={{ position: 'fixed', bottom: '30px', right: '30px', zIndex: 9999 }}
-                className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 flex items-center gap-3 min-w-[280px]"
+                className="bg-zinc-900 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-white/10 p-4 flex items-center gap-3 min-w-[280px]"
             >
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${toast.type === 'success' ? 'bg-green-50' : 'bg-red-50'}`}>
-                    <span className={`text-lg ${toast.type === 'success' ? 'text-green-500' : 'text-red-500'}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${toast.type === 'success' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                    <span className={`text-lg font-bold ${toast.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
                         {toast.type === 'success' ? '✓' : '✕'}
                     </span>
                 </div>
                 <div>
-                    <p className="font-semibold text-gray-900 text-sm">{toast.type === 'success' ? 'Success!' : 'Error'}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">{toast.message}</p>
+                    <p className="font-semibold text-white text-sm">{toast.type === 'success' ? 'Success!' : 'Error'}</p>
+                    <p className="text-zinc-400 text-xs mt-0.5">{toast.message}</p>
                 </div>
             </motion.div>
         )}
@@ -138,7 +138,7 @@ const Pricing = () => {
                     }
                 },
                 prefill: { name: user.fullName || '', email: user.primaryEmailAddress?.emailAddress || '' },
-                theme: { color: "#000000" },
+                theme: { color: "#6366f1" },
             };
 
             const paymentObject = new window.Razorpay(options);
@@ -164,151 +164,151 @@ const Pricing = () => {
     return (
         <div id="pricing" className='w-full flex justify-center pb-20'>
             <Toast toast={toast} />
-            <div className='w-[90vw] bg-white rounded-4xl relative overflow-hidden'>
-                    <div className='py-16 flex flex-col items-center gap-12'>
+            <div className='w-[90vw] bg-gradient-to-b from-[#252830] to-[#1e2028] rounded-4xl border border-white/[0.08] shadow-[0_20px_60px_rgba(0,0,0,0.5)] relative overflow-hidden'>
+                <div className='py-16 flex flex-col items-center gap-12'>
 
-                        {/* Header */}
-                        <div className='flex flex-col items-center text-center gap-4 px-4'>
-                            <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
-                                <div className="w-1.5 h-1.5 rounded-full bg-black" />
-                                Pricing
-                            </div>
-                            <h2 className='text-[40px] md:text-[50px] font-medium leading-tight text-black tracking-tight'>
-                                Plans and Pricing
-                            </h2>
-                            <p className='text-[18px] text-gray-700 max-w-lg'>
-                                Start for free and create your first study plan today. Upgrade anytime for more depth and control.
-                            </p>
+                    {/* Header */}
+                    <div className='flex flex-col items-center text-center gap-4 px-4'>
+                        <div className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                            Pricing
                         </div>
-
-                        {/* Cards Container */}
-                        <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-[1100px] px-8'>
-
-                            {/* Free Plan */}
-                            <div className={`flex flex-col p-8 rounded-[32px] border h-full justify-between gap-10 ${isCurrentPlan('free') ? 'border-black border-2' : 'border-[#ebebeb]'} bg-white`}>
-                                <div>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className='text-2xl font-medium text-gray-900'>Free</h3>
-                                        {isCurrentPlan('free') && (
-                                            <span className='bg-black text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase'>Current</span>
-                                        )}
-                                    </div>
-                                    <div className='mb-6 flex flex-col'>
-                                        <span className='text-[45px] font-medium leading-tight text-gray-900'>₹0</span>
-                                        <p className='text-sm text-gray-700'>Perfect for casual learners</p>
-                                    </div>
-
-                                    <div className='space-y-4 mb-4'>
-                                        <p className='font-medium text-black'>Daily Learning Essentials</p>
-                                        <ul className='space-y-3'>
-                                            {FREE_FEATURES.map((feature, i) => (
-                                                <li key={i} className='flex items-center gap-3 text-sm text-[#444]'>
-                                                    <div className='bg-[#f4f4f5] min-w-5 h-5 flex items-center justify-center rounded text-black'>
-                                                        <Check size={10} strokeWidth={4} />
-                                                    </div>
-                                                    {feature}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <button
-                                    disabled={loadingPlan === 'free' || isCurrentPlan('free')}
-                                    onClick={() => !user ? openSignIn() : navigate('/dashboard')}
-                                    className='group relative cursor-pointer w-full py-4 bg-white border border-[#e5e5e5] flex justify-center items-center gap-2 rounded-2xl overflow-hidden disabled:opacity-60 disabled:cursor-default'
-                                >
-                                    <div className='absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out'></div>
-                                    <div className='relative z-10 font-medium text-gray-900 group-hover:text-white transition-colors duration-500'>
-                                        {isCurrentPlan('free') ? 'Your current plan' : 'Get started for free'}
-                                    </div>
-                                </button>
-                            </div>
-
-                            {/* Pro Plan */}
-                            <div className={`flex flex-col p-8 rounded-[32px] border h-full justify-between gap-10 relative ${isCurrentPlan('pro') ? 'border-black border-2' : 'border-[#ebebeb]'} bg-white`}>
-                                <div>
-                                    <div className='flex items-center justify-between mb-2'>
-                                        <h3 className='text-2xl font-medium text-gray-900'>Pro</h3>
-                                        <span className='bg-[#ff6b50] text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase flex items-center gap-1'>
-                                            <span className='text-xs'>🔥</span> Popular
-                                        </span>
-                                    </div>
-                                    <div className='mb-6 flex flex-col'>
-                                        <span className='text-[45px] font-medium leading-tight text-gray-900'>₹49</span>
-                                        <p className='text-sm text-gray-700'>Per month · For serious learners</p>
-                                    </div>
-
-                                    <div className='space-y-4 mb-4'>
-                                        <p className='font-medium text-black'>Everything in Free, plus:</p>
-                                        <ul className='space-y-3'>
-                                            {PRO_FEATURES.map((feature, i) => (
-                                                <li key={i} className='flex items-center gap-3 text-sm text-[#444]'>
-                                                    <div className='bg-[#f4f4f5] min-w-5 h-5 flex items-center justify-center rounded text-black'>
-                                                        <Check size={10} strokeWidth={4} />
-                                                    </div>
-                                                    {feature}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <button
-                                    disabled={loadingPlan === 'pro' || isCurrentPlan('pro')}
-                                    onClick={() => handleCheckout('pro')}
-                                    className='group relative cursor-pointer w-full py-4 bg-white border border-[#e5e5e5] flex justify-center items-center gap-2 rounded-2xl overflow-hidden disabled:opacity-60 disabled:cursor-default'
-                                >
-                                    <div className='absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out'></div>
-                                    <div className='relative z-10 font-medium text-gray-900 group-hover:text-white transition-colors duration-500'>
-                                        {getButtonLabel('pro')}
-                                    </div>
-                                </button>
-                            </div>
-
-                            {/* Ultra Plan */}
-                            <div className={`flex flex-col p-8 rounded-[32px] bg-[#1a1a1a] text-white h-full justify-between gap-10 ${isCurrentPlan('ultra') ? 'ring-2 ring-white' : ''}`}>
-                                <div>
-                                    <div className='flex items-center justify-between mb-4'>
-                                        <h3 className='text-2xl font-medium'>Ultra</h3>
-                                        {isCurrentPlan('ultra') && (
-                                            <span className='bg-white text-black text-[10px] font-bold px-2.5 py-1 rounded-full uppercase'>Current</span>
-                                        )}
-                                    </div>
-                                    <div className='mb-6 flex flex-col'>
-                                        <span className='text-[45px] font-medium leading-tight'>₹99</span>
-                                        <p className='text-sm text-gray-400'>Per month · For power learners</p>
-                                    </div>
-
-                                    <div className='space-y-4 mb-4'>
-                                        <p className='font-medium text-white'>Everything in Pro, plus:</p>
-                                        <ul className='space-y-3'>
-                                            {ULTRA_FEATURES.map((feature, i) => (
-                                                <li key={i} className='flex items-center gap-3 text-sm text-gray-300'>
-                                                    <div className='bg-white text-black min-w-5 h-5 flex items-center justify-center rounded'>
-                                                        <Check size={10} strokeWidth={4} />
-                                                    </div>
-                                                    {feature}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <button
-                                    disabled={loadingPlan === 'ultra' || isCurrentPlan('ultra')}
-                                    onClick={() => handleCheckout('ultra')}
-                                    className='group relative cursor-pointer w-full py-4 bg-white text-black flex justify-center items-center gap-2 rounded-2xl overflow-hidden disabled:opacity-60 disabled:cursor-default'
-                                >
-                                    <div className='absolute inset-0 bg-[#e5e9eb] translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out'></div>
-                                    <div className='relative z-10 font-medium transition-colors duration-500'>
-                                        {getButtonLabel('ultra')}
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-
+                        <h2 className='text-[40px] md:text-[50px] font-medium leading-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400 tracking-tight'>
+                            Plans and Pricing
+                        </h2>
+                        <p className='text-[18px] text-zinc-400 max-w-lg'>
+                            Start for free and create your first study plan today. Upgrade anytime for more depth and control.
+                        </p>
                     </div>
+
+                    {/* Cards Container */}
+                    <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-[1100px] px-8'>
+
+                        {/* Free Plan */}
+                        <div className={`flex flex-col p-8 rounded-[32px] border h-full justify-between gap-10 transition-all duration-300 hover:border-white/15 ${isCurrentPlan('free') ? 'border-indigo-500 border-2 shadow-[0_0_20px_rgba(99,102,241,0.2)] bg-gradient-to-b from-[#272a33] to-[#1e2028]' : 'border-white/[0.08] bg-gradient-to-b from-[#22252d] to-[#1b1d25]'}`}>
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className='text-2xl font-medium text-white'>Free</h3>
+                                    {isCurrentPlan('free') && (
+                                        <span className='bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase shadow-[0_0_8px_rgba(99,102,241,0.5)]'>Current</span>
+                                    )}
+                                </div>
+                                <div className='mb-6 flex flex-col'>
+                                    <span className='text-[45px] font-medium leading-tight text-white'>₹0</span>
+                                    <p className='text-sm text-zinc-400'>Perfect for casual learners</p>
+                                </div>
+
+                                <div className='space-y-4 mb-4'>
+                                    <p className='font-medium text-zinc-200'>Daily Learning Essentials</p>
+                                    <ul className='space-y-3'>
+                                        {FREE_FEATURES.map((feature, i) => (
+                                            <li key={i} className='flex items-center gap-3 text-sm text-zinc-400'>
+                                                <div className='bg-white/10 min-w-5 h-5 flex items-center justify-center rounded text-indigo-400'>
+                                                    <Check size={10} strokeWidth={4} />
+                                                </div>
+                                                {feature}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <button
+                                disabled={loadingPlan === 'free' || isCurrentPlan('free')}
+                                onClick={() => !user ? openSignIn() : navigate('/dashboard')}
+                                className='group relative cursor-pointer w-full py-4 bg-white/5 border border-white/10 flex justify-center items-center gap-2 rounded-2xl overflow-hidden disabled:opacity-60 disabled:cursor-default transition-all duration-300'
+                            >
+                                <div className='absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out'></div>
+                                <div className='relative z-10 font-medium text-zinc-300 group-hover:text-black transition-colors duration-500'>
+                                    {isCurrentPlan('free') ? 'Your current plan' : 'Get started for free'}
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Pro Plan */}
+                        <div className={`flex flex-col p-8 rounded-[32px] border h-full justify-between gap-10 relative transition-all duration-300 ${isCurrentPlan('pro') ? 'border-indigo-500 border-2 shadow-[0_0_20px_rgba(99,102,241,0.3)] bg-gradient-to-b from-indigo-950/30 via-zinc-900/60 to-zinc-900/80' : 'border-indigo-500/40 bg-gradient-to-b from-indigo-950/20 via-zinc-900/40 to-zinc-900/60 shadow-[0_0_40px_rgba(99,102,241,0.25)] hover:border-indigo-400/60'}`}>
+                            <div>
+                                <div className='flex items-center justify-between mb-2'>
+                                    <h3 className='text-2xl font-medium text-white'>Pro</h3>
+                                    <span className='bg-indigo-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase flex items-center gap-1 shadow-[0_0_10px_rgba(99,102,241,0.5)]'>
+                                        <span className='text-xs'>🔥</span> Popular
+                                    </span>
+                                </div>
+                                <div className='mb-6 flex flex-col'>
+                                    <span className='text-[45px] font-medium leading-tight text-white'>₹49</span>
+                                    <p className='text-sm text-zinc-300'>Per month · For serious learners</p>
+                                </div>
+
+                                <div className='space-y-4 mb-4'>
+                                    <p className='font-medium text-zinc-200'>Everything in Free, plus:</p>
+                                    <ul className='space-y-3'>
+                                        {PRO_FEATURES.map((feature, i) => (
+                                            <li key={i} className='flex items-center gap-3 text-sm text-zinc-300'>
+                                                <div className='bg-indigo-500/20 min-w-5 h-5 flex items-center justify-center rounded text-indigo-300 border border-indigo-500/20'>
+                                                    <Check size={10} strokeWidth={4} />
+                                                </div>
+                                                {feature}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <button
+                                disabled={loadingPlan === 'pro' || isCurrentPlan('pro')}
+                                onClick={() => handleCheckout('pro')}
+                                className='group relative cursor-pointer w-full py-4 bg-indigo-600 border border-indigo-500/40 flex justify-center items-center gap-2 rounded-2xl overflow-hidden disabled:opacity-60 disabled:cursor-default transition-all duration-300 hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]'
+                            >
+                                <div className='absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out'></div>
+                                <div className='relative z-10 font-medium text-white group-hover:text-black transition-colors duration-500'>
+                                    {getButtonLabel('pro')}
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Ultra Plan */}
+                        <div className={`flex flex-col p-8 rounded-[32px] h-full justify-between gap-10 bg-gradient-to-b from-[#22252d] to-[#171920] border transition-all duration-300 hover:border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.6)] ${isCurrentPlan('ultra') ? 'ring-2 ring-indigo-500 border-indigo-500 shadow-[0_0_25px_rgba(99,102,241,0.2)]' : 'border-white/[0.08]'}`}>
+                            <div>
+                                <div className='flex items-center justify-between mb-4'>
+                                    <h3 className='text-2xl font-medium text-white'>Ultra</h3>
+                                    {isCurrentPlan('ultra') && (
+                                        <span className='bg-white text-black text-[10px] font-bold px-2.5 py-1 rounded-full uppercase'>Current</span>
+                                    )}
+                                </div>
+                                <div className='mb-6 flex flex-col'>
+                                    <span className='text-[45px] font-medium leading-tight text-white'>₹99</span>
+                                    <p className='text-sm text-zinc-400'>Per month · For power learners</p>
+                                </div>
+
+                                <div className='space-y-4 mb-4'>
+                                    <p className='font-medium text-white'>Everything in Pro, plus:</p>
+                                    <ul className='space-y-3'>
+                                        {ULTRA_FEATURES.map((feature, i) => (
+                                            <li key={i} className='flex items-center gap-3 text-sm text-zinc-300'>
+                                                <div className='bg-white text-black min-w-5 h-5 flex items-center justify-center rounded'>
+                                                    <Check size={10} strokeWidth={4} />
+                                                </div>
+                                                {feature}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <button
+                                disabled={loadingPlan === 'ultra' || isCurrentPlan('ultra')}
+                                onClick={() => handleCheckout('ultra')}
+                                className='group relative cursor-pointer w-full py-4 bg-white text-black flex justify-center items-center gap-2 rounded-2xl overflow-hidden disabled:opacity-60 disabled:cursor-default transition-all duration-300'
+                            >
+                                <div className='absolute inset-0 bg-zinc-200 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out'></div>
+                                <div className='relative z-10 font-medium transition-colors duration-500'>
+                                    {getButtonLabel('ultra')}
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
     );

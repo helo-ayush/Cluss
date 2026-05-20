@@ -31,7 +31,7 @@ export default function InteractiveBackground({ children }) {
         this.vy = 0;
         this.size = RADIUS;
         this.targetSize = RADIUS;
-        this.color = '#e5e5e5';
+        this.color = 'rgba(255, 255, 255, 0.08)';
       }
 
       update() {
@@ -47,10 +47,10 @@ export default function InteractiveBackground({ children }) {
           this.vx -= pushX;
           this.vy -= pushY;
           this.targetSize = RADIUS * 2.5;
-          this.color = `rgba(0, 0, 0, ${0.2 + force * 0.4})`;
+          this.color = `rgba(99, 102, 241, ${0.25 + force * 0.45})`;
         } else {
           this.targetSize = RADIUS;
-          this.color = '#e5e5e5';
+          this.color = 'rgba(255, 255, 255, 0.08)';
         }
 
         const springK = 0.05;
@@ -122,7 +122,7 @@ export default function InteractiveBackground({ children }) {
   }, []);
 
   return (
-    <div ref={containerRef} className="relative h-full w-full bg-white overflow-hidden">
+    <div ref={containerRef} className="relative h-full w-full bg-[#1b1d25] overflow-hidden">
       <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
       <div className="relative z-10 h-full pointer-events-none">
         <div className="pointer-events-auto h-full">

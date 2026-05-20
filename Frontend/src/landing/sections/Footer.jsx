@@ -59,18 +59,20 @@ export default function Footer() {
   }, [navigate, scrollToTarget]);
 
   return (
-    <footer id="contact" className="w-full bg-[#e5e9eb] px-6 py-16 font-sans text-gray-900 md:px-12">
+    <footer id="contact" className="relative w-full bg-gradient-to-b from-[#1e2028] to-[#1b1d25] px-6 py-16 font-sans text-white md:px-12">
+      {/* Gradient top edge */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
       <div className="mx-auto max-w-7xl">
         <div className="mb-20 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <h4 className="mb-6 font-semibold">Company:</h4>
+            <h4 className="mb-6 font-semibold text-white">Company</h4>
             <ul className="space-y-3">
               {companyLinks.map((link) => (
                 <li key={link.label}>
                   <button
                     type="button"
                     onClick={() => handleNavigateOrScroll(link.target)}
-                    className="block text-left text-[15px] transition-colors duration-200 hover:text-gray-500"
+                    className="block text-left text-[15px] text-zinc-400 transition-colors duration-200 hover:text-white"
                   >
                     {link.label}
                   </button>
@@ -80,14 +82,14 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="mb-6 font-semibold">Features:</h4>
+            <h4 className="mb-6 font-semibold text-white">Features</h4>
             <ul className="space-y-3">
               {featuresLinks.map((link) => (
                 <li key={link.label}>
                   <button
                     type="button"
                     onClick={() => handleNavigateOrScroll(link.target)}
-                    className="block text-left text-[15px] transition-colors duration-200 hover:text-gray-500"
+                    className="block text-left text-[15px] text-zinc-400 transition-colors duration-200 hover:text-white"
                   >
                     {link.label}
                   </button>
@@ -97,14 +99,14 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="mb-6 font-semibold">Learning Paths:</h4>
+            <h4 className="mb-6 font-semibold text-white">Learning Paths</h4>
             <ul className="space-y-3">
               {learnLinks.map((link) => (
                 <li key={link.label}>
                   <button
                     type="button"
                     onClick={() => handleNavigateOrScroll(link.target)}
-                    className="block text-left text-[15px] transition-colors duration-200 hover:text-gray-500"
+                    className="block text-left text-[15px] text-zinc-400 transition-colors duration-200 hover:text-white"
                   >
                     {link.label}
                   </button>
@@ -114,26 +116,26 @@ export default function Footer() {
           </div>
 
           <div className="flex flex-col">
-            <h4 className="mb-6 font-semibold">Stay in the loop</h4>
+            <h4 className="mb-6 font-semibold text-white">Stay in the loop</h4>
             <div className="group relative mb-8">
               <input
                 type="email"
                 placeholder="Your email here"
-                className="w-full border-b border-gray-400 bg-transparent py-2 pr-10 text-[15px] focus:border-gray-900 focus:outline-none transition-colors"
+                className="w-full border-b border-zinc-700 bg-transparent py-2 pr-10 text-[15px] text-white focus:border-indigo-500 focus:outline-none transition-colors duration-300"
               />
               <button
                 type="button"
                 onClick={() => handleNavigateOrScroll('pricing')}
-                className="absolute right-0 bottom-2 text-gray-500 transition-colors hover:text-gray-900"
+                className="absolute right-0 bottom-2 text-zinc-400 transition-colors hover:text-indigo-400"
               >
                 <ArrowRight size={20} />
               </button>
             </div>
-            <p className="mb-10 text-xs leading-relaxed text-gray-500">
-              By signing up, you agree to our <Link to="/" className="underline">Privacy Policy</Link>. We respect your data. Unsubscribe anytime.
+            <p className="mb-10 text-xs leading-relaxed text-zinc-500">
+              By signing up, you agree to our <Link to="/" className="underline hover:text-indigo-400 transition-colors">Privacy Policy</Link>. We respect your data. Unsubscribe anytime.
             </p>
 
-            <h4 className="mb-6 font-semibold">Follow us on:</h4>
+            <h4 className="mb-6 font-semibold text-white">Follow us on</h4>
             <div className="flex gap-3">
               {socialLinks.map((social) => (
                 <a
@@ -141,7 +143,7 @@ export default function Footer() {
                   href={social.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-700 transition-all duration-300 hover:border-white hover:bg-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition-all duration-300 hover:border-indigo-500 hover:bg-indigo-500/10 hover:text-indigo-400"
                 >
                   {social.icon}
                 </a>
@@ -150,17 +152,17 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="relative flex flex-col items-center justify-between gap-6 border-t border-gray-300 pt-8 md:flex-row">
+        <div className="relative flex flex-col items-center justify-between gap-6 border-t border-white/10 pt-8 md:flex-row">
           <div className="order-2 flex cursor-pointer items-center gap-2 md:order-1">
-            <span className="text-2xl font-bold tracking-tighter text-[#666666]" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <span className="text-2xl font-bold tracking-tighter text-white/60 transition-colors hover:text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
               cluss
             </span>
           </div>
 
-          <div className="order-3 flex items-center gap-4 text-sm text-gray-500 md:order-2">
+          <div className="order-3 flex items-center gap-4 text-sm text-zinc-500 md:order-2">
             <span>© 2026 Cluss. All rights reserved</span>
-            <div className="mx-1 h-1 w-1 rounded-full bg-black" />
-            <button type="button" onClick={() => handleNavigateOrScroll('home')} className="font-medium text-gray-900">
+            <div className="mx-1 h-1 w-1 rounded-full bg-zinc-700" />
+            <button type="button" onClick={() => handleNavigateOrScroll('home')} className="font-medium text-zinc-400 hover:text-indigo-400 transition-colors">
               Privacy Policy
             </button>
           </div>
@@ -168,7 +170,7 @@ export default function Footer() {
           <button
             type="button"
             onClick={() => handleNavigateOrScroll('home')}
-            className="order-1 flex h-12 w-12 items-center justify-center rounded-full bg-black text-white transition-transform duration-300 hover:scale-110 md:absolute md:right-0 md:-top-6 md:order-3"
+            className="order-1 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 text-white transition-all duration-300 hover:bg-indigo-500 hover:scale-110 shadow-[0_0_15px_rgba(99,102,241,0.4)] md:absolute md:right-0 md:-top-6 md:order-3"
           >
             <ArrowUp size={24} />
           </button>

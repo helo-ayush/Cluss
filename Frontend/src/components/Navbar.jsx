@@ -21,7 +21,7 @@ function CreditRing({ percentage, children }) {
     <div className="relative flex items-center justify-center" style={{ width: radius * 2, height: radius * 2 }}>
       <svg width={radius * 2} height={radius * 2} className="absolute -rotate-90">
         <circle
-          stroke="#e5e7eb"
+          stroke="rgba(255, 255, 255, 0.1)"
           fill="transparent"
           strokeWidth={stroke}
           r={normalizedRadius}
@@ -41,7 +41,7 @@ function CreditRing({ percentage, children }) {
           style={{ transition: 'stroke-dashoffset 0.6s ease, stroke 0.4s ease' }}
         />
       </svg>
-      <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gray-50">
+      <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-zinc-900">
         {children}
       </div>
     </div>
@@ -262,9 +262,9 @@ export default function Navbar() {
       animate={hidden ? 'hidden' : 'visible'}
       transition={{ duration: 0.5, ease: 'easeInOut' }}
       style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 100 }}
-      className="main-navbar rounded-b-[32px] border-b border-white/40 bg-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)] backdrop-blur-2xl"
+      className="main-navbar rounded-b-[32px] border-b border-white/10 bg-[#1b1d25]/80 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-2xl"
     >
-      <div className="mt-1 flex items-center justify-between p-4 text-black md:mx-10 lg:mx-15">
+      <div className="mt-1 flex items-center justify-between p-4 text-white md:mx-10 lg:mx-15">
         <div className="flex items-center -ml-3 sm:-ml-4">
           <div className="flex h-10 w-11 items-center justify-start">
             <AnimatePresence mode="wait">
@@ -277,7 +277,7 @@ export default function Navbar() {
                   whileTap={{ x: -5 }}
                   type="button"
                   onClick={handleBack}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/50 text-slate-600 transition-colors hover:bg-slate-200"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-zinc-300 hover:bg-white/20 transition-colors"
                   title="Go back"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -285,14 +285,14 @@ export default function Navbar() {
               )}
             </AnimatePresence>
           </div>
-          <Link className="text-3xl font-bold tracking-tighter text-gray-800" style={{ fontFamily: 'Outfit, sans-serif' }} to="/">
+          <Link className="text-3xl font-bold tracking-tighter text-white" style={{ fontFamily: 'Outfit, sans-serif' }} to="/">
             cluss
           </Link>
         </div>
 
         <motion.div className="hidden items-center gap-8 md:flex lg:gap-13">
           <Link to="/" onClick={(event) => pathname === '/' && handleLandingScroll(event, 'home')}
-            className="relative font-medium text-gray-900 after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-gray-300 after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100">
+            className="relative font-medium text-zinc-300 hover:text-white transition-colors after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-white/60 after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100">
             Home
           </Link>
 
@@ -312,7 +312,7 @@ export default function Navbar() {
                       key={action.label}
                       href={`#${action.target}`}
                       onClick={(event) => handleLandingScroll(event, action.target)}
-                      className="relative font-medium text-gray-900 after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-gray-300 after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100"
+                      className="relative font-medium text-zinc-300 hover:text-white transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-white/60 after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100"
                     >
                       {action.label}
                     </a>
@@ -320,7 +320,7 @@ export default function Navbar() {
                     <Link
                       key={action.label}
                       to={action.to}
-                      className="relative font-medium text-gray-900 after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-gray-300 after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100"
+                      className="relative font-medium text-zinc-300 hover:text-white transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-white/60 after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100"
                     >
                       {action.label}
                     </Link>
@@ -329,7 +329,7 @@ export default function Navbar() {
                       key={action.label}
                       type="button"
                       onClick={(event) => handleContextAction(event, action)}
-                      className="relative font-medium text-gray-900 after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-gray-300 after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100"
+                      className="relative font-medium text-zinc-300 hover:text-white transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-white/60 after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100"
                     >
                       {action.label}
                     </button>
@@ -343,7 +343,7 @@ export default function Navbar() {
         <div className="flex items-center gap-3 md:hidden">
           <SignedOut>
             <SignInButton mode="modal">
-              <button className="rounded-full bg-[#e5e9eb] px-4 py-2 text-sm font-medium transition-colors duration-300 hover:bg-black hover:text-white">
+              <button className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium transition-colors duration-300 hover:bg-white hover:text-black">
                 Sign In
               </button>
             </SignInButton>
@@ -352,17 +352,17 @@ export default function Navbar() {
             <Link to="/dashboard" onClick={handleDashboardClick}>
               <motion.div
                 animate={wiggleControls}
-                className="rounded-full bg-[#e5e9eb] px-4 py-2 text-sm font-medium transition-colors duration-300 hover:bg-black hover:text-white"
+                className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium transition-colors duration-300 hover:bg-white hover:text-black"
               >
                 Dashboard
               </motion.div>
             </Link>
           </SignedIn>
-          <button onClick={() => setMobileMenuOpen((prev) => !prev)} className="flex items-center justify-center rounded-full p-1 transition hover:bg-[#e5e9eb]" aria-label="Toggle menu">
+          <button onClick={() => setMobileMenuOpen((prev) => !prev)} className="flex items-center justify-center rounded-full p-1 transition hover:bg-white/10 text-white" aria-label="Toggle menu">
             <img
               src="https://cdn.prod.website-files.com/673786754d248974527e65b5/673a401dc37634f53f2462ea_Button%20menu.svg"
               alt="Menu"
-              className="h-8 w-8 rounded-full"
+              className="h-8 w-8 rounded-full invert"
             />
           </button>
         </div>
@@ -370,9 +370,9 @@ export default function Navbar() {
         <div className="hidden items-center gap-4 md:flex">
           <SignedOut>
             <SignInButton mode="modal">
-              <div className="group relative cursor-pointer overflow-hidden rounded-full bg-[#e5e9eb] px-5 py-2.5">
-                <div className="absolute inset-0 translate-y-full bg-black transition-transform duration-500 ease-in-out group-hover:translate-y-0" />
-                <div className="relative z-10 flex gap-2 font-medium transition-colors duration-500 group-hover:text-white">
+              <div className="group relative cursor-pointer overflow-hidden rounded-full border border-white/10 bg-white/[0.08] px-5 py-2.5 text-white">
+                <div className="absolute inset-0 translate-y-full bg-white transition-transform duration-500 ease-in-out group-hover:translate-y-0" />
+                <div className="relative z-10 flex gap-2 font-medium transition-colors duration-500 group-hover:text-black">
                   <div>Sign In</div>
                   <div className="transition duration-500 group-hover:translate-x-1">→</div>
                 </div>
@@ -383,28 +383,30 @@ export default function Navbar() {
             <Link to="/dashboard" onClick={handleDashboardClick}>
               <motion.div
                 animate={wiggleControls}
-                className="group relative cursor-pointer overflow-hidden rounded-full bg-[#e5e9eb] px-5 py-2.5"
+                className="group relative cursor-pointer overflow-hidden rounded-full border border-white/10 bg-white/[0.08] px-5 py-2.5 text-white"
               >
-                <div className="absolute inset-0 translate-y-full bg-black transition-transform duration-500 ease-in-out group-hover:translate-y-0" />
-                <div className="relative z-10 flex gap-2 font-medium transition-colors duration-500 group-hover:text-white">
+                <div className="absolute inset-0 translate-y-full bg-white transition-transform duration-500 ease-in-out group-hover:translate-y-0" />
+                <div className="relative z-10 flex gap-2 font-medium transition-colors duration-500 group-hover:text-black">
                   <div>Dashboard</div>
                   <div className="transition duration-500 group-hover:translate-x-1">→</div>
                 </div>
               </motion.div>
             </Link>
-            <Link to="/dashboard/profile" className="relative" title={creditData ? `${creditData.balance} Credits · +${creditData.allowance}/${creditData.refillInterval === 'weekly' ? 'week' : 'day'}` : 'Profile'}>
-              <CreditRing percentage={creditPercentage}>
-                {avatarId === 'none' ? (
-                  <img
-                    src={user?.imageUrl || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'}
-                    alt="Profile"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <AvatarIcon className="h-5 w-5 text-gray-600" />
-                )}
-              </CreditRing>
-            </Link>
+            {pathname !== '/' && (
+              <Link to="/dashboard/profile" className="relative" title={creditData ? `${creditData.balance} Credits · +${creditData.allowance}/${creditData.refillInterval === 'weekly' ? 'week' : 'day'}` : 'Profile'}>
+                <CreditRing percentage={creditPercentage}>
+                  {avatarId === 'none' ? (
+                    <img
+                      src={user?.imageUrl || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'}
+                      alt="Profile"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <AvatarIcon className="h-5 w-5 text-zinc-300" />
+                  )}
+                </CreditRing>
+              </Link>
+            )}
           </SignedIn>
         </div>
       </div>
@@ -416,17 +418,17 @@ export default function Navbar() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.28 }}
-            className="overflow-hidden border-t border-gray-100 bg-white/95 backdrop-blur-xl md:hidden"
+            className="overflow-hidden border-t border-white/10 bg-[#1b1d25]/95 backdrop-blur-xl md:hidden"
           >
-            <div className="flex flex-col gap-4 px-6 py-4 font-medium">
-              <Link to="/" onClick={() => setMobileMenuOpen(false)} className="border-b border-gray-100 py-2">Home</Link>
+            <div className="flex flex-col gap-4 px-6 py-4 font-medium text-white">
+              <Link to="/" onClick={() => setMobileMenuOpen(false)} className="border-b border-white/10 py-2 hover:text-indigo-400">Home</Link>
               {contextualActions.map((action, index) =>
                 action.type === 'landing' ? (
                   <a
                     key={action.label}
                     href={`#${action.target}`}
                     onClick={(event) => handleLandingScroll(event, action.target)}
-                    className={`py-2 ${index !== contextualActions.length - 1 ? 'border-b border-gray-100' : ''}`}
+                    className={`py-2 hover:text-indigo-400 ${index !== contextualActions.length - 1 ? 'border-b border-white/10' : ''}`}
                   >
                     {action.label}
                   </a>
@@ -435,7 +437,7 @@ export default function Navbar() {
                     key={action.label}
                     to={action.to}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`py-2 ${index !== contextualActions.length - 1 ? 'border-b border-gray-100' : ''}`}
+                    className={`py-2 hover:text-indigo-400 ${index !== contextualActions.length - 1 ? 'border-b border-white/10' : ''}`}
                   >
                     {action.label}
                   </Link>
@@ -444,7 +446,7 @@ export default function Navbar() {
                     key={action.label}
                     type="button"
                     onClick={(event) => handleContextAction(event, action)}
-                    className={`bg-transparent py-2 text-left ${index !== contextualActions.length - 1 ? 'border-b border-gray-100' : ''}`}
+                    className={`bg-transparent py-2 text-left hover:text-indigo-400 ${index !== contextualActions.length - 1 ? 'border-b border-white/10' : ''}`}
                   >
                     {action.label}
                   </button>
