@@ -280,4 +280,32 @@ const courseSchema = new mongoose.Schema({
     days: { type: [daySchema], default: [] }
 }, { timestamps: true });
 
+courseSchema.pre('validate', function() {
+    if (this.modules && Array.isArray(this.modules)) {
+        this.modules.forEach(mod => {
+            if (mod.subtopics && Array.isArray(mod.subtopics)) {
+                mod.subtopics.forEach(sub => {
+                    if (sub.lessonContent && sub.lessonContent.citations) {
+                        let rawCitations = sub.lessonContent.citations;
+                        if (!Array.isArray(rawCitations)) {
+                            rawCitations = [rawCitations];
+                        }
+                        sub.lessonContent.citations = rawCitations.map(cit => {
+                            if (typeof cit === 'string') {
+                                return { label: cit, url: '' };
+                            } else if (cit && typeof cit === 'object') {
+                                return {
+                                    label: String(cit.label || cit.title || cit.name || ''),
+                                    url: String(cit.url || cit.link || '')
+                                };
+                            }
+                            return null;
+                        }).filter(cit => cit && cit.label && cit.label.trim() !== '');
+                    }
+                });
+            }
+        });
+    }
+});
+
 module.exports = mongoose.model('Course', courseSchema);

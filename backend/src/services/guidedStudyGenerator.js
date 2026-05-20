@@ -147,15 +147,70 @@ function sanitizeJsonString(jsonStr) {
 
 function extractJson(text) {
     if (!text) return '';
-    let jsonText = '';
+    
     const firstBrace = text.indexOf('{');
-    const lastBrace = text.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
-        jsonText = text.substring(firstBrace, lastBrace + 1);
-    } else {
-        jsonText = text.replace(/^```json/mi, '').replace(/```$/mi, '').trim();
+    const firstBracket = text.indexOf('[');
+    
+    let startIdx = -1;
+    let openChar = '';
+    let closeChar = '';
+    
+    if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+        startIdx = firstBrace;
+        openChar = '{';
+        closeChar = '}';
+    } else if (firstBracket !== -1) {
+        startIdx = firstBracket;
+        openChar = '[';
+        closeChar = ']';
     }
-    return sanitizeJsonString(jsonText);
+    
+    if (startIdx === -1) {
+        const fallback = text.replace(/^```json/mi, '').replace(/```$/mi, '').trim();
+        return sanitizeJsonString(fallback);
+    }
+    
+    let braceCount = 0;
+    let inString = false;
+    let escaped = false;
+    
+    for (let i = startIdx; i < text.length; i++) {
+        const char = text[i];
+        
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+        
+        if (char === '\\') {
+            escaped = true;
+            continue;
+        }
+        
+        if (char === '"') {
+            inString = !inString;
+            continue;
+        }
+        
+        if (!inString) {
+            if (char === openChar) {
+                braceCount++;
+            } else if (char === closeChar) {
+                braceCount--;
+                if (braceCount === 0) {
+                    const jsonCandidate = text.substring(startIdx, i + 1);
+                    return sanitizeJsonString(jsonCandidate);
+                }
+            }
+        }
+    }
+    
+    const lastBrace = text.lastIndexOf(closeChar);
+    if (lastBrace !== -1 && lastBrace >= startIdx) {
+        return sanitizeJsonString(text.substring(startIdx, lastBrace + 1));
+    }
+    
+    return '';
 }
 
 function sanitizeStudyConfig(requestedConfig = {}, userPlan = 'free') {
@@ -284,6 +339,27 @@ async function generateGuidedSubtopicContent({ courseTitle, topic, moduleTitle, 
     
     const isProject = subtopicType === 'mini-project';
 
+    const lengthPref = config.explanationLength || 'standard';
+    let blockCountRange = '5-6';
+    let depthInstructions = '';
+
+    if (lengthPref === 'short') {
+        blockCountRange = '3-4';
+        depthInstructions = `1. Keep the explanations crisp, clear, and direct. Focus on key definitions and core concepts without unnecessary details or deep background.
+2. Structure the content into exactly 3-4 distinct blocks to keep the lesson concise.
+3. Be highly focused—teach the fundamentals quickly.`;
+    } else if (lengthPref === 'deep') {
+        blockCountRange = '7-9';
+        depthInstructions = `1. Explain everything with extreme comprehensive depth and length. Focus on high-quality, exhaustive, and rigorous explanations. Detail all background, core theories, implementation strategies, advanced nuances, and edge cases.
+2. Structure the content into 7-9 distinct blocks (covering multiple concepts, solved problems, diagrams, code blocks, callouts, and practice) to leave no stone unturned.
+3. Break concepts down step-by-step in multiple successive concept blocks for total mastery.`;
+    } else {
+        blockCountRange = '5-6';
+        depthInstructions = `1. Explain concepts thoroughly and clearly with a well-balanced, detail-oriented approach. Provide good depth without overwhelming the student.
+2. Structure the content into 5-6 distinct blocks (concepts, examples, diagram, callout, practice) to ensure solid coverage.
+3. Break notes into clear, focused blocks. Use multiple "concept", "example", and "callout" blocks to build understanding step-by-step.`;
+    }
+
     const prompt = `
 You are creating a comprehensive, highly visual, notes-first guided lesson for the study plan "${courseTitle}" on the overall topic "${topic}".
 
@@ -304,11 +380,20 @@ Requirements for Mini-Project Blueprint:
    - "summary": How to verify/test the project and the expected final outcome.
 3. The goal is to give the student a complete roadmap to successfully build this on their own, acting as a structured guide rather than a test.
 ` : `
-Requirements for Depth and Completeness:
-1. Explain everything comprehensively. Focus on high-quality, structured explanations. Be deep but efficient—avoid fluff that might hit token limits.
-2. Structure the content into 4-6 distinct blocks (concepts, examples, etc).
-2. Teach like a patient big brother explaining to a beginner: start from basics, use simple words, then slowly introduce jargon. Provide "why this matters" context.
-3. Break notes into clear, focused blocks. Use multiple "concept", "example", and "callout" blocks to build understanding step-by-step.
+Requirements for Depth and Completeness (Scale: ${lengthPref.toUpperCase()}):
+${depthInstructions}
+4. Teach like a patient big brother explaining to a beginner: start from basics, use simple words, then slowly introduce jargon. Provide "why this matters" context.
+
+INTEGRATE SOLVED PROBLEMS & APPLICATION QUESTIONS (CRITICAL):
+1. Wherever a topic features formulas, equations, mathematical rules, logic (e.g. logic programming like PSLP, Horn clauses, resolution, unification), algorithms, or technical rules:
+   - DO NOT just stick to dry theory and definitions.
+   - You MUST explicitly include mathematical, logical, or theoretical questions with complete, step-by-step solved solutions inside one or more blocks (type: "example" or type: "practice").
+   - For every question, include:
+     - Clear Question/Problem Statement (e.g., "Problem: Calculate the result of...").
+     - The underlying formula, theorem, or logic rule being applied.
+     - Step-by-step execution: plugging in values, derivation steps, logical reasoning, and final calculation, so the student learns by seeing exactly how the problem is solved.
+2. For purely theoretical subtopics, construct hypothetical "what-if" conceptual or scenario-based questions (e.g. "What happens if variable X is changed to Y?") and explain the step-by-step analytical solution/deduction.
+3. Show all math formulas and equations clearly using standard text/markdown syntax so they are beautifully formatted and readable.
 `}
 
 Requirements for Visual & Rich Formatting (CRITICAL):
@@ -416,6 +501,24 @@ Expected format:
         parsed.lessonContent.notesVersion = 2;
         parsed.lessonContent.generatedForLevel = config.level;
         parsed.lessonContent.pdfTitle = parsed.lessonContent.pdfTitle || `${subtopicTitle} Notes`;
+
+        // Sanitize citations to prevent Mongoose validation failures
+        if (parsed.lessonContent.citations && Array.isArray(parsed.lessonContent.citations)) {
+            parsed.lessonContent.citations = parsed.lessonContent.citations.map(cit => {
+                if (typeof cit === 'string') {
+                    return { label: cit, url: '' };
+                } else if (cit && typeof cit === 'object') {
+                    return {
+                        label: cit.label || cit.title || cit.name || '',
+                        url: cit.url || cit.link || ''
+                    };
+                }
+                return { label: '', url: '' };
+            }).filter(cit => cit.label && cit.label.trim() !== '');
+        } else {
+            parsed.lessonContent.citations = [];
+        }
+
         return parsed;
     } catch (err) {
         console.error('JSON Parse Error. Raw text:', rawText);

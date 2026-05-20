@@ -923,7 +923,7 @@ export default function GuidedStudyPlanHub() {
         fetchCourse();
       }, 4000);
       return () => clearInterval(timer);
-    } else if (subtopic?.generationStatus === 'ready') {
+    } else {
       setGenerating(false);
     }
   }, [subtopic?.generationStatus, fetchCourse]);
