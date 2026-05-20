@@ -3,14 +3,159 @@ const { getStudyControlLimits, getModelForPlan } = require('../config/creditConf
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+function sanitizeJsonString(jsonStr) {
+    let result = '';
+    let i = 0;
+    let inString = false;
+    
+    while (i < jsonStr.length) {
+        const char = jsonStr[i];
+        
+        if (char === '"') {
+            let backslashCount = 0;
+            let j = i - 1;
+            while (j >= 0 && jsonStr[j] === '\\') {
+                backslashCount++;
+                j--;
+            }
+            
+            if (backslashCount % 2 !== 0) {
+                result += char;
+                i++;
+                continue;
+            }
+            
+            let left = jsonStr.slice(0, i).trim();
+            let right = jsonStr.slice(i + 1).trim();
+            
+            let isBoundary = false;
+            
+            if (!inString) {
+                if (left.endsWith('{') || left.endsWith(',') || left.endsWith(':') || left.endsWith('[')) {
+                    isBoundary = true;
+                }
+            } else {
+                if (right.startsWith('}')) {
+                    if (/^\}\s*(,|\}|\]|$)/.test(right)) {
+                        isBoundary = true;
+                    }
+                } else if (right.startsWith(']')) {
+                    if (/^\]\s*(,|\}|\]|$)/.test(right)) {
+                        isBoundary = true;
+                    }
+                } else if (right.startsWith(':')) {
+                    isBoundary = true;
+                } else if (right.startsWith(',')) {
+                    let afterComma = right.slice(1).trim();
+                    if (afterComma.startsWith('}') || afterComma.startsWith(']')) {
+                        isBoundary = true;
+                    } else if (afterComma.startsWith('"')) {
+                        let nextQuoteIdx = afterComma.indexOf('"', 1);
+                        if (nextQuoteIdx !== -1) {
+                            let afterNextQuote = afterComma.slice(nextQuoteIdx + 1).trim();
+                            if (afterNextQuote.startsWith(':') || afterNextQuote.startsWith(',') || afterNextQuote.startsWith(']') || afterNextQuote.startsWith('}')) {
+                                isBoundary = true;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (isBoundary) {
+                result += char;
+                inString = !inString;
+                i++;
+            } else {
+                result += '\\"';
+                i++;
+            }
+        } else if (char === '\\' && inString) {
+            if (i + 1 < jsonStr.length) {
+                const nextChar = jsonStr[i + 1];
+                if (nextChar === '"' || nextChar === '\\' || nextChar === '/') {
+                    result += '\\' + nextChar;
+                    i += 2;
+                } else if (nextChar === 'n') {
+                    const remaining = jsonStr.slice(i + 1);
+                    if (/^(node|newline|neq|nabla|neg|new)\b/.test(remaining)) {
+                        result += '\\\\n';
+                        i += 2;
+                    } else {
+                        result += '\\n';
+                        i += 2;
+                    }
+                } else if (nextChar === 't') {
+                    const remaining = jsonStr.slice(i + 1);
+                    if (/^(times|theta|tan|text|tilde|tau|triangle|top|tfrac|to|therefore|tiny|tr|transpose)\b/.test(remaining)) {
+                        result += '\\\\t';
+                        i += 2;
+                    } else {
+                        result += '\\t';
+                        i += 2;
+                    }
+                } else if (nextChar === 'b') {
+                    const remaining = jsonStr.slice(i + 1);
+                    if (/^(beta|begin|bar|mathbf|box|binom|bullet|bmod|bigcap|bigcup|biguplus|bigotimes|bigoplus|bigodot|backslash)\b/.test(remaining)) {
+                        result += '\\\\b';
+                        i += 2;
+                    } else {
+                        result += '\\b';
+                        i += 2;
+                    }
+                } else if (nextChar === 'f') {
+                    const remaining = jsonStr.slice(i + 1);
+                    if (/^(frac|forall|flat|frown|footnotesize)\b/.test(remaining)) {
+                        result += '\\\\f';
+                        i += 2;
+                    } else {
+                        result += '\\f';
+                        i += 2;
+                    }
+                } else if (nextChar === 'r') {
+                    const remaining = jsonStr.slice(i + 1);
+                    if (/^(right|rho|rangle|real|rightarrow|rbrace|rfloor|rceil|rvert|rVert)\b/.test(remaining)) {
+                        result += '\\\\r';
+                        i += 2;
+                    } else {
+                        result += '\\r';
+                        i += 2;
+                    }
+                } else if (nextChar === 'u') {
+                    const remaining = jsonStr.slice(i + 2, i + 6);
+                    if (/^[0-9a-fA-F]{4}$/.test(remaining)) {
+                        result += '\\u' + remaining;
+                        i += 6;
+                    } else {
+                        result += '\\\\u';
+                        i += 2;
+                    }
+                } else {
+                    result += '\\\\';
+                    i++;
+                }
+            } else {
+                result += '\\\\';
+                i++;
+            }
+        } else {
+            result += char;
+            i++;
+        }
+    }
+    return result;
+}
+
 function extractJson(text) {
     if (!text) return '';
+    let jsonText = '';
     const firstBrace = text.indexOf('{');
     const lastBrace = text.lastIndexOf('}');
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
-        return text.substring(firstBrace, lastBrace + 1);
+        jsonText = text.substring(firstBrace, lastBrace + 1);
+    } else {
+        jsonText = text.replace(/^```json/mi, '').replace(/```$/mi, '').trim();
     }
-    return text.replace(/^```json/mi, '').replace(/```$/mi, '').trim();
+    return sanitizeJsonString(jsonText);
 }
 
 function sanitizeStudyConfig(requestedConfig = {}, userPlan = 'free') {
