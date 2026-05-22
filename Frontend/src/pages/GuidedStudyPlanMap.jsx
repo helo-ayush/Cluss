@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { SignInButton, useUser } from '@clerk/clerk-react';
+import { useUser } from '@clerk/clerk-react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowRight,
@@ -881,7 +881,13 @@ export default function GuidedStudyPlanMap() {
   }, [navigate]);
 
   const fetchCourse = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      if (isLoaded && !isSignedIn) {
+        redirectToLibrary('Please sign in to access guided study plans.');
+      }
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE}/api/study-plans/${courseId}?clerkId=${user.id}`);
       const data = await res.json();
@@ -897,7 +903,7 @@ export default function GuidedStudyPlanMap() {
     } finally {
       setLoading(false);
     }
-  }, [courseId, user?.id, redirectToLibrary]);
+  }, [courseId, user?.id, isLoaded, isSignedIn, redirectToLibrary]);
 
   useEffect(() => {
     fetchCourse();
@@ -978,28 +984,6 @@ export default function GuidedStudyPlanMap() {
       setSaving(false);
     }
   };
-
-
-  if (isLoaded && !isSignedIn) {
-    return (
-      <DashboardShell title="Sign in required" showCreate={false} disableDefaultPadding>
-        <div className="flex min-h-screen items-center justify-center px-6 bg-[#050505]">
-          <div className="max-w-xl rounded-[2.4rem] border border-white/10 bg-[#111111] px-8 py-10 text-center shadow-[0_20px_60px_rgba(0,0,0,0.4)] w-full">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-indigo-500/10 text-indigo-400">
-              <Lock className="h-7 w-7" />
-            </div>
-            <h1 className="mt-6 font-serif text-4xl font-semibold text-white">Sign in to continue</h1>
-            <p className="mt-4 text-sm leading-7 text-slate-400">You must be logged in to view this study plan. If you are the creator, please sign in.</p>
-            <div className="mt-6">
-              <SignInButton mode="modal">
-                <button type="button" className="w-full rounded-full bg-white px-6 py-3 text-sm font-black text-black transition hover:bg-zinc-200">Sign in</button>
-              </SignInButton>
-            </div>
-          </div>
-        </div>
-      </DashboardShell>
-    );
-  }
 
   /* ── Skeleton while fetching ─────────────────────────────────────────── */
   if (loading || !isLoaded || !course) {

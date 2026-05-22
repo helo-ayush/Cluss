@@ -449,6 +449,7 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
 
 
 
+
   // Drag pan
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;
@@ -570,9 +571,9 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
           ref={canvasRef}
           className="flex-1 relative overflow-hidden h-[450px] cursor-grab active:cursor-grabbing select-none"
           style={{
-            backgroundColor: isDark ? '#08080a' : '#f8fafc',
+            backgroundColor: isDark ? '#101114' : '#f8fafc',
             backgroundImage: isDark
-              ? 'linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)'
+              ? 'linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px)'
               : 'linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px)',
             backgroundSize: '24px 24px'
           }}

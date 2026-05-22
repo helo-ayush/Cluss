@@ -399,6 +399,10 @@ INTEGRATE SOLVED PROBLEMS & APPLICATION QUESTIONS (CRITICAL):
 Requirements for Visual & Rich Formatting (CRITICAL):
 1. USE MERMAID DIAGRAMS: Wherever a concept has a flow, hierarchy, architecture, or relationship, include a Mermaid diagram in the block's \`body\` field.
    - Use \`\`\`mermaid ... \`\`\` syntax.
+   - For every diagram block, the \`body\` MUST include a short plain-English explanation around the diagram:
+     1. Before the diagram, briefly explain each important element/node that appears in it.
+     2. After the diagram, explain what the whole diagram is trying to show and how the student should read it.
+     3. Do not leave the diagram standing alone; the text must make it easy to understand without guessing.
    - Types: DO NOT USE mindmap. Stick strictly to flowcharts (graph TD) and sequenceDiagram.
    - CRITICAL: In flowcharts, ALWAYS wrap node labels in double quotes. Example: \`A["You (The User)"]\` instead of \`A[You (The User)]\`.
    - CRITICAL: In sequenceDiagrams, ALWAYS wrap participant names in double quotes if they contain hyphens, dots, or spaces. Example: \`"create-next-app"\` instead of \`create-next-app\`.
@@ -406,6 +410,14 @@ Requirements for Visual & Rich Formatting (CRITICAL):
    - Diagrams must be syntactically valid.
    
    MANDATORY RULES FOR HIGH-QUALITY CONCEPT MAP DIAGRAMS:
+   First, decide the exact teaching question the diagram answers, such as "How does Bayes theorem transform prior belief into posterior probability?" or "How does data move through a request pipeline?" The graph must make that answer obvious without needing the surrounding paragraph.
+   Prefer diagrams that reveal structure, not vocabulary lists. Use the best pattern for the topic:
+   - Process: input -> transformation -> output -> feedback.
+   - Cause/effect: condition -> mechanism -> consequence.
+   - Classification: parent concept -> types -> distinguishing properties.
+   - Formula reasoning: known values -> formula step -> substitution -> result interpretation.
+   - System architecture: actor -> boundary -> component -> data/state change.
+   Add one concrete example node when it improves understanding, and make the final node a clear takeaway/result instead of another vague concept.
    a) NEVER use single-letter or abstract placeholder node IDs as labels (e.g., A, B, C). Every node MUST have a descriptive, human-readable label that explains the concept it represents.
       - BAD:  \`A["Relations"] --> B["Reflexive"]\`
       - GOOD: \`DEF["Relation: A subset of A×B"] --> REF["Reflexive: aRa for every element a in A"]\`
