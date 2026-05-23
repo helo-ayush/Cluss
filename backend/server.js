@@ -12,6 +12,7 @@ const leaderboardRoutes = require('./src/routes/leaderboard');
 const tutorChatRoutes = require('./src/routes/tutorChat');
 const paymentRoutes = require('./src/routes/payment');
 const flashcardRoutes = require('./src/routes/flashcards');
+const publicCourseRoutes = require('./src/routes/publicCourses');
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/tutor-chat', tutorChatRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/flashcards', flashcardRoutes);
+app.use('/api/public-courses', publicCourseRoutes);
 app.use('/api/schedule', require('./src/routes/schedule'));
 
 app.use((err, req, res, next) => {

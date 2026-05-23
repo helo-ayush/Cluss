@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Course = require('../models/Course');
+const PublishedCourse = require('../models/PublishedCourse');
 const ChatSession = require('../models/ChatSession');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { checkCredits } = require('../middleware/creditManager');
@@ -65,7 +66,7 @@ router.get('/sessions/:sessionId', async (req, res) => {
  */
 router.post('/', checkCredits('tutorChat'), async (req, res) => {
     try {
-        const { clerkId, courseId, moduleIndex, subtopicIndex, message, history, contextBlock, explainMode, sessionId, linkedCourseId } = req.body;
+        const { clerkId, courseId, publicCourseId, moduleIndex, subtopicIndex, message, history, contextBlock, explainMode, sessionId, linkedCourseId } = req.body;
 
         if (!clerkId || !message) {
             return res.status(400).json({ success: false, message: 'clerkId and message are required' });
@@ -77,16 +78,56 @@ router.post('/', checkCredits('tutorChat'), async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
+        if (publicCourseId && user.plan === 'free') {
+            return res.status(403).json({
+                success: false,
+                message: 'AI tutor chat for public courses is available on Pro and Ultra plans.'
+            });
+        }
+
         const course = courseId ? await Course.findById(courseId) : null;
         if (courseId && !course) {
             return res.status(404).json({ success: false, message: 'Course not found' });
+        }
+
+        const publicCourse = publicCourseId ? await PublishedCourse.findById(publicCourseId).lean() : null;
+        if (publicCourseId && !publicCourse) {
+            return res.status(404).json({ success: false, message: 'Published course not found' });
         }
 
         let transcript = '';
         let topicTitle = '';
         let videoId = '';
 
-        if (!course) {
+        if (publicCourse) {
+            const mod = publicCourse.modules?.[moduleIndex];
+            const subtopic = mod?.subtopics?.[subtopicIndex];
+            const lesson = subtopic?.lessonContent || {};
+            if (contextBlock?.body || contextBlock?.title || contextBlock?.code) {
+                transcript = [
+                    `Selected block title: ${contextBlock.title || 'Selected lesson block'}`,
+                    contextBlock.body || '',
+                    contextBlock.code ? `Code:\n${contextBlock.code}` : '',
+                    contextBlock.blockSummary ? `Block summary: ${contextBlock.blockSummary}` : '',
+                    lesson.summary ? `Lesson summary: ${lesson.summary}` : '',
+                    Array.isArray(lesson.keyPoints) ? `Key points:\n${lesson.keyPoints.join('\n')}` : ''
+                ].filter(Boolean).join('\n\n');
+            } else {
+                const blockText = Array.isArray(lesson.blocks)
+                    ? lesson.blocks.map((block) => `${block.title}\n${block.body}\n${block.code || ''}`).join('\n\n')
+                    : '';
+                transcript = [
+                    blockText,
+                    lesson.overview,
+                    lesson.explanation,
+                    lesson.example,
+                    lesson.summary,
+                    Array.isArray(lesson.keyPoints) ? lesson.keyPoints.join('\n') : '',
+                    subtopic?.tutorContextSummary || ''
+                ].filter(Boolean).join('\n\n');
+            }
+            topicTitle = subtopic?.subtopic_title || publicCourse.title || 'this public course';
+        } else if (!course) {
             topicTitle = 'general study support';
             transcript = [
                 'The student opened the global dashboard tutor, not a specific lesson.',

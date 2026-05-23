@@ -1,576 +1,483 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useUser, useClerk } from '@clerk/clerk-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Flame, Book, Brain, X, CreditCard, TrendingDown, TrendingUp, Cpu } from 'lucide-react';
-import { AVATARS } from '../utils/avatars';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useClerk, useUser } from '@clerk/clerk-react';
+import { motion } from 'motion/react';
+import {
+  ArrowUpRight,
+  BarChart3,
+  Bookmark,
+  BookOpen,
+  Cpu,
+  CreditCard,
+  Eye,
+  Heart,
+  LineChart,
+  Loader2,
+  LogOut,
+  Medal,
+  PlayCircle,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  Trophy,
+  Users,
+} from 'lucide-react';
 import DashboardShell from '../components/dashboard/DashboardShell';
 import { useUsage } from '../contexts/UsageContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
-const BADGES = [
-  { id: 'sorting_hat', name: "First Steps", description: "Complete your first topic.", image: '/badges/sorting_hat.png' },
-  { id: 'seeker', name: "Seeker", description: "Master 10 topics.", image: '/badges/seeker.png' },
-  { id: 'prefect', name: "Prefect", description: "Maintain a 10-day learning streak.", image: '/badges/prefect.png' },
-  { id: 'head_boy_girl', name: "Head Boy / Head Girl", description: "Maintain a 30-day learning streak.", image: '/badges/head_boy.png' },
-  { id: 'auror', name: "Auror in Training", description: "Create 5 different study plans.", image: '/badges/auror.png' },
-  { id: 'triwizard', name: "Triwizard Champion", description: "Maintain a 7-day learning streak.", image: '/badges/triwizard.png' },
-  { id: 'master_of_death', name: "Master of Death", description: "Unlock all other badges.", image: '/badges/master_of_death.png' },
+const emptyAnalytics = {
+  followers: 0,
+  following: 0,
+  publishedCourses: 0,
+  totals: { views: 0, likes: 0, bookmarks: 0, readStarts: 0, completions: 0 },
+  rankings: { followers: 1, views: 1, influence: 1, totalCreators: 1 },
+  charts: [],
+  topCourses: [],
+  continueReading: [],
+};
+
+const costRows = [
+  ['Generate Course Map', 5, 15],
+  ['Import YouTube Playlist', 5, 15],
+  ['Generate Lesson Notes', 10, 30],
+  ['Regenerate Notes', 10, 30],
+  ['Practice Grading', 5, 15],
+  ['Explain / Simplify / Quiz', 2, 6],
+  ['Tutor Chat Message', 1, 3],
 ];
 
-function ActivityBars({ activityData }) {
-  if (!activityData || activityData.length === 0) return <div className="text-sm text-zinc-500 mt-4">No activity data available yet.</div>;
-  const last7 = activityData.slice(-7);
-  const maxVal = Math.max(...last7.map(d => d.subtopicsCompleted), 1);
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-  return (
-    <div className="flex items-end gap-3 h-32 mt-4">
-      {last7.map((day, i) => {
-        const pct = (day.subtopicsCompleted / maxVal) * 100;
-        const todayStr = new Date().toISOString().slice(0, 10);
-        const isToday = day.date === todayStr;
-        const dateObj = new Date(day.date + 'T00:00:00');
-        const dayLabel = days[(dateObj.getDay() + 6) % 7];
-        return (
-          <motion.div key={i} whileHover={{ y: -4 }} className="flex-1 flex flex-col items-center gap-2 group/bar cursor-default">
-            {day.subtopicsCompleted > 0 ? (
-              <span className={`text-[10px] font-black transition-colors ${isToday ? 'text-white' : 'text-zinc-500 group-hover/bar:text-white'}`}>
-                {day.subtopicsCompleted}
-              </span>
-            ) : (
-              <span className="text-[10px] font-black opacity-0">0</span>
-            )}
-            <div className="w-full relative rounded-md overflow-hidden bg-white/[0.04] h-24 border border-white/[0.02] transition-colors group-hover/bar:bg-white/[0.08]">
-              <motion.div className={`absolute bottom-0 left-0 right-0 rounded-t-md transition-colors ${isToday ? 'bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]' : 'bg-zinc-600 group-hover/bar:bg-zinc-400'}`}
-                initial={{ height: 0 }} animate={{ height: `${Math.max(pct, day.subtopicsCompleted > 0 ? 10 : 0)}%` }}
-                transition={{ duration: 0.7, delay: i * 0.07, ease: 'easeOut' }}
-              />
-            </div>
-            <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${isToday ? 'text-white' : 'text-zinc-500 group-hover/bar:text-zinc-300'}`}>
-              {dayLabel}
-            </span>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
+function formatNumber(value) {
+  const number = Number(value) || 0;
+  if (number >= 1000000) return `${(number / 1000000).toFixed(1)}M`;
+  if (number >= 1000) return `${(number / 1000).toFixed(1)}K`;
+  return String(number);
 }
 
-function MiniCalendar({ activityData }) {
-  const [date, setDate] = useState(new Date());
-  const today = new Date();
-  const year = date.getFullYear(), month = date.getMonth();
-  const monthName = date.toLocaleString('default', { month: 'long' });
-  const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+function compactDate(value) {
+  return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 
-  const activityByDate = {};
-  if (activityData) {
-    activityData.forEach(d => { activityByDate[d.date] = d.subtopicsCompleted > 0; });
-  }
-
+function SmallStat({ icon: Icon, label, value, detail }) {
   return (
-    <div className="mt-4">
-      <div className="flex items-center justify-between mb-6 border-b border-white/10 pb-4">
-        <span className="text-sm font-black text-white">{monthName} {year}</span>
-        <div className="flex gap-2">
-          <button onClick={() => setDate(new Date(year, month - 1))} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-white">
-            <span className="material-symbols-outlined text-sm">chevron_left</span>
-          </button>
-          <button onClick={() => setDate(new Date(year, month + 1))} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-white">
-            <span className="material-symbols-outlined text-sm">chevron_right</span>
-          </button>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#111111] p-6 shadow-[0_20px_70px_rgba(0,0,0,0.35)]"
+    >
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <div className="flex items-start justify-between gap-5">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-500">{label}</p>
+          <p className="mt-4 text-5xl font-black tracking-[-0.06em] text-white">{formatNumber(value)}</p>
+        </div>
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-zinc-200">
+          <Icon className="h-6 w-6" />
         </div>
       </div>
-      <div className="grid grid-cols-7 gap-2 text-center">
-        {['M','T','W','T','F','S','S'].map((d, i) => <span key={`${d}-${i}`} className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{d}</span>)}
-        {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="h-8" />)}
-        {Array.from({ length: daysInMonth }, (_, i) => {
-          const d = i + 1;
-          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-          const active = activityByDate[dateStr];
-          const isT = today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
-          return (
-            <motion.div 
-              key={d} 
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: i * 0.01 }}
-              whileHover={{ scale: 1.15, zIndex: 10 }}
-              className={`h-8 w-8 mx-auto flex items-center justify-center rounded-full text-[11px] font-black transition-colors cursor-pointer border ${
-                isT ? 'bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.4)] hover:shadow-[0_0_25px_rgba(255,255,255,0.7)]' : active ? 'bg-white/15 text-white border-white/20 hover:bg-white hover:text-black' : 'text-zinc-500 border-transparent hover:border-white/20 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              {d}
-            </motion.div>
-          );
-        })}
+      <p className="mt-6 text-sm font-bold leading-6 text-zinc-500">{detail}</p>
+    </motion.div>
+  );
+}
+
+function RankCard({ icon: Icon, title, rank, total, description }) {
+  const percentile = total > 1 ? Math.max(1, Math.round(((total - rank + 1) / total) * 100)) : 100;
+  return (
+    <div className="rounded-[2rem] border border-white/10 bg-[#111111] p-6 shadow-[0_20px_70px_rgba(0,0,0,0.32)]">
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">{title}</p>
+          <div className="mt-2 flex items-end gap-2">
+            <span className="text-4xl font-black tracking-[-0.04em] text-white">#{rank}</span>
+            <span className="pb-1 text-sm font-bold text-zinc-600">of {total}</span>
+          </div>
+        </div>
       </div>
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.08]">
+        <div className="h-full rounded-full bg-white" style={{ width: `${percentile}%` }} />
+      </div>
+      <p className="mt-4 text-sm font-semibold leading-6 text-zinc-500">{description}</p>
     </div>
   );
 }
 
-const Profile = () => {
+function AnalyticsChart({ title, subtitle, data, metric, color, icon: Icon }) {
+  const max = Math.max(...data.map((item) => Number(item[metric]) || 0), 1);
+  const points = data.map((item, index) => {
+    const x = data.length <= 1 ? 0 : (index / (data.length - 1)) * 100;
+    const y = 100 - ((Number(item[metric]) || 0) / max) * 82 - 8;
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <section className="rounded-[2.4rem] border border-white/10 bg-[#111111] p-7 shadow-[0_20px_70px_rgba(0,0,0,0.34)]">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-zinc-500" />
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">{subtitle}</p>
+          </div>
+          <h2 className="mt-2 text-3xl font-black tracking-[-0.03em] text-white">{title}</h2>
+        </div>
+        <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-black text-zinc-400">30 days</span>
+      </div>
+
+      <div className="mt-7 h-60">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full overflow-visible">
+          {[20, 40, 60, 80].map((line) => (
+            <line key={line} x1="0" x2="100" y1={line} y2={line} stroke="rgba(255,255,255,0.08)" strokeWidth="0.35" />
+          ))}
+          <polyline points={points} fill="none" stroke={color} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          {data.map((item, index) => {
+            const x = data.length <= 1 ? 0 : (index / (data.length - 1)) * 100;
+            const y = 100 - ((Number(item[metric]) || 0) / max) * 82 - 8;
+            return <circle key={`${item.date}-${metric}`} cx={x} cy={y} r="1.6" fill={color} vectorEffect="non-scaling-stroke" />;
+          })}
+        </svg>
+      </div>
+
+      <div className="mt-5 grid grid-cols-6 gap-2 text-[10px] font-black uppercase tracking-wide text-zinc-600">
+        {data.filter((_, index) => index % Math.ceil(Math.max(data.length, 1) / 6) === 0).slice(0, 6).map((item) => (
+          <span key={`${metric}-${item.date}`} className="truncate">{compactDate(item.date)}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CreditBalance({ usageData }) {
+  if (!usageData) return null;
+  const daysLeft = usageData.billingCycleEnd
+    ? Math.max(0, Math.ceil((new Date(usageData.billingCycleEnd) - new Date()) / (1000 * 60 * 60 * 24)))
+    : null;
+
+  return (
+    <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#151515] p-7 shadow-[0_26px_80px_rgba(0,0,0,0.45)] md:p-10">
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(99,102,241,0.09),transparent_38%),radial-gradient(circle_at_20%_0%,rgba(255,255,255,0.08),transparent_28%)]" />
+      <div className="relative flex flex-col gap-7 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-6">
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-white/10 bg-white/[0.06] text-white shadow-[0_16px_40px_rgba(0,0,0,0.25)]">
+            <CreditCard className="h-9 w-9" />
+          </div>
+          <div>
+            <p className="text-[12px] font-black uppercase tracking-[0.28em] text-zinc-500">Credit Balance</p>
+            <p className="mt-2 text-6xl font-black leading-none tracking-[-0.06em] text-white">{formatNumber(usageData.balance)}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <span className="inline-flex min-h-12 items-center rounded-full border border-white/15 bg-white/[0.06] px-6 text-sm font-black uppercase tracking-wide text-white">
+            {usageData.plan} plan
+          </span>
+          <span className="inline-flex min-h-12 items-center rounded-full border border-indigo-200/15 bg-indigo-200/[0.06] px-6 text-sm font-black uppercase tracking-wide text-zinc-200">
+            +{usageData.allowance} credits / {usageData.plan === 'free' ? 'week' : 'day'}
+          </span>
+          {daysLeft !== null && (
+            <span className="inline-flex min-h-12 items-center rounded-full bg-white px-6 text-sm font-black uppercase tracking-wide text-black">
+              {daysLeft} days left
+            </span>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CostLedger() {
+  return (
+    <section className="rounded-[2.8rem] border border-white/10 bg-[#111111] p-7 shadow-[0_24px_80px_rgba(0,0,0,0.42)] md:p-10">
+      <h2 className="text-3xl font-black tracking-[-0.03em] text-white">Cost Ledger</h2>
+      <p className="mt-4 flex items-center gap-2 text-sm font-bold text-zinc-600">
+        <Cpu className="h-4 w-4" />
+        Advanced AI models consume higher credits for superior reasoning.
+      </p>
+      <div className="mt-8 overflow-x-auto">
+        <table className="w-full min-w-[40rem]">
+          <thead>
+            <tr className="border-b border-white/10">
+              <th className="px-4 py-4 text-left text-[11px] font-black uppercase tracking-[0.2em] text-zinc-600">Action</th>
+              <th className="px-4 py-4 text-center text-[11px] font-black uppercase tracking-[0.2em] text-zinc-600">Standard AI</th>
+              <th className="rounded-t-2xl bg-white/[0.06] px-4 py-4 text-center text-[11px] font-black uppercase tracking-[0.2em] text-white">Advanced AI</th>
+            </tr>
+          </thead>
+          <tbody>
+            {costRows.map(([action, standard, advanced]) => (
+              <tr key={action} className="border-b border-white/[0.06]">
+                <td className="px-4 py-5 text-sm font-black text-zinc-300">{action}</td>
+                <td className="px-4 py-5 text-center text-lg font-black text-zinc-600">{standard}</td>
+                <td className="bg-white/[0.06] px-4 py-5 text-center text-lg font-black text-white">{advanced}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function RecentActivity({ transactions, txPage, txTotalPages, setTxPage }) {
+  return (
+    <section className="flex min-h-[36rem] flex-col rounded-[2.8rem] border border-white/10 bg-[#111111] p-7 shadow-[0_24px_80px_rgba(0,0,0,0.42)] md:p-10">
+      <h2 className="text-3xl font-black tracking-[-0.03em] text-white">Recent Activity</h2>
+      <div className="mt-8 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 custom-scroll">
+        {transactions.length ? transactions.map((tx) => {
+          const spend = tx.type === 'spend';
+          return (
+            <div key={tx._id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-[1.4rem] border border-white/10 bg-white/[0.035] p-5">
+              <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${spend ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                {spend ? <TrendingDown className="h-5 w-5" /> : <TrendingUp className="h-5 w-5" />}
+              </div>
+              <div className="min-w-0">
+                <p className="line-clamp-2 text-sm font-black text-white">{tx.description}</p>
+                <p className="mt-1 text-xs font-bold text-zinc-600">{new Date(tx.createdAt).toLocaleString()}</p>
+              </div>
+              <span className={`text-2xl font-black ${spend ? 'text-red-400' : 'text-emerald-400'}`}>
+                {spend ? '' : '+'}{tx.amount}
+              </span>
+            </div>
+          );
+        }) : (
+          <div className="flex h-full min-h-60 items-center justify-center rounded-2xl border border-dashed border-white/10 text-center text-sm font-bold text-zinc-600">
+            No credit activity yet.
+          </div>
+        )}
+      </div>
+      {txTotalPages > 1 && (
+        <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">
+          <button type="button" onClick={() => setTxPage((page) => Math.max(1, page - 1))} disabled={txPage <= 1} className="rounded-full border border-white/10 px-5 py-2 text-sm font-black text-white disabled:opacity-30">
+            Prev
+          </button>
+          <span className="text-xs font-black text-zinc-600">{txPage} / {txTotalPages}</span>
+          <button type="button" onClick={() => setTxPage((page) => Math.min(txTotalPages, page + 1))} disabled={txPage >= txTotalPages} className="rounded-full border border-white/10 px-5 py-2 text-sm font-black text-white disabled:opacity-30">
+            Next
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CourseRow({ course, index }) {
+  return (
+    <Link to={`/courses/${course.slug}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 transition hover:-translate-y-0.5 hover:bg-white/[0.06]">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sm font-black text-black">{index + 1}</div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-black text-white">{course.title}</p>
+        <p className="mt-1 text-xs font-bold text-zinc-600">{formatNumber(course.metrics?.views)} views · {formatNumber(course.metrics?.likes)} likes</p>
+      </div>
+      <ArrowUpRight className="h-4 w-4 text-zinc-500" />
+    </Link>
+  );
+}
+
+function ContinueRow({ item }) {
+  return (
+    <Link to={`/courses/${item.slug}?m=${item.moduleIndex || 0}&s=${item.subtopicIndex || 0}`} className="block rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition hover:-translate-y-0.5 hover:bg-white/[0.06]">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black text-white">{item.title}</p>
+          <p className="mt-1 text-xs font-bold text-zinc-600">{item.percent || 0}% completed</p>
+        </div>
+        <PlayCircle className="h-5 w-5 shrink-0 text-zinc-500" />
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.08]">
+        <div className="h-full rounded-full bg-white" style={{ width: `${item.percent || 0}%` }} />
+      </div>
+    </Link>
+  );
+}
+
+export default function Profile() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const navigate = useNavigate();
   const { usageData } = useUsage();
-  const [selectedAvatar, setSelectedAvatar] = useState('none');
-  
-  const [stats, setStats] = useState(() => {
-    if (!user) return { totalCourses: 0, completedSubtopics: 0, totalSubtopics: 0 };
-    const cached = localStorage.getItem(`cluss_stats_${user.id}`);
-    return cached ? JSON.parse(cached) : { totalCourses: 0, completedSubtopics: 0, totalSubtopics: 0 };
-  });
-  
-  const [activityMeta, setActivityMeta] = useState(() => {
-    if (!user) return { streak: 0, totalThisWeek: 0 };
-    const cached = localStorage.getItem(`cluss_actMeta_${user.id}`);
-    return cached ? JSON.parse(cached) : { streak: 0, totalThisWeek: 0 };
-  });
-  
-  const [activityData, setActivityData] = useState(() => {
-    if (!user) return [];
-    const cached = localStorage.getItem(`cluss_actData_${user.id}`);
-    return cached ? JSON.parse(cached) : [];
-  });
-  
-  const [loading, setLoading] = useState(false);
-  const [newlyUnlockedBadges, setNewlyUnlockedBadges] = useState([]);
+  const [analytics, setAnalytics] = useState(emptyAnalytics);
   const [transactions, setTransactions] = useState([]);
   const [txPage, setTxPage] = useState(1);
   const [txTotalPages, setTxTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!user) return;
-    const currentUnlocked = BADGES.filter(badge => {
-      if (badge.id === 'sorting_hat') return stats.completedSubtopics >= 1;
-      if (badge.id === 'seeker') return stats.completedSubtopics >= 10;
-      if (badge.id === 'prefect') return activityMeta.streak >= 10;
-      if (badge.id === 'head_boy_girl') return activityMeta.streak >= 30;
-      if (badge.id === 'auror') return stats.totalCourses >= 5;
-      if (badge.id === 'triwizard') return activityMeta.streak >= 7;
-      if (badge.id === 'master_of_death') return (stats.completedSubtopics >= 10 && activityMeta.streak >= 30 && stats.totalCourses >= 5);
-      return false;
-    }).map(b => b.id);
-
-    const cachedUnlocked = JSON.parse(localStorage.getItem(`cluss_unlocked_${user.id}`) || '[]');
-    
-    const newly = currentUnlocked.filter(id => !cachedUnlocked.includes(id));
-    if (newly.length > 0) {
-      if (cachedUnlocked.length > 0) {
-        const fullBadges = BADGES.filter(b => newly.includes(b.id));
-        setNewlyUnlockedBadges(fullBadges);
-        setTimeout(() => setNewlyUnlockedBadges([]), 5000);
-      }
-      localStorage.setItem(`cluss_unlocked_${user.id}`, JSON.stringify(currentUnlocked));
-    }
-  }, [stats, activityMeta, user]);
-
-  const fetchData = useCallback(async () => {
-    if (!user) return;
+  const fetchAnalytics = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    setError('');
     try {
-      setLoading(true);
-      const timestamp = Date.now();
-      const [courseRes, activityRes, avatarRes] = await Promise.all([
-        fetch(`${API_BASE}/api/study-plans/user/${user.id}?t=${timestamp}`),
-        fetch(`${API_BASE}/api/activity/${user.id}?days=30&t=${timestamp}`),
-        fetch(`${API_BASE}/api/user/${user.id}/avatar?t=${timestamp}`)
-      ]);
-      
-      const courseData = await courseRes.json();
-      const activityDataRes = await activityRes.json();
-      const avatarData = await avatarRes.json();
-
-      if (courseData.success) {
-         setStats(courseData.stats);
-         localStorage.setItem(`cluss_stats_${user.id}`, JSON.stringify(courseData.stats));
-      }
-      if (activityDataRes.success) {
-        setActivityData(activityDataRes.activity);
-        setActivityMeta({ streak: activityDataRes.streak, totalThisWeek: activityDataRes.totalThisWeek });
-        localStorage.setItem(`cluss_actData_${user.id}`, JSON.stringify(activityDataRes.activity));
-        localStorage.setItem(`cluss_actMeta_${user.id}`, JSON.stringify({ streak: activityDataRes.streak, totalThisWeek: activityDataRes.totalThisWeek }));
-      }
-      if (avatarData.success && avatarData.avatar) {
-        setSelectedAvatar(avatarData.avatar);
-        localStorage.setItem(`cluss_avatar_${user.id}`, avatarData.avatar);
-      }
-    } catch (error) {
-      console.error("Error fetching profile data:", error);
+      const params = new URLSearchParams({ days: '30' });
+      const res = await fetch(`${API_BASE}/api/public-courses/profile/${user.id}/analytics?${params.toString()}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'Could not load profile analytics.');
+      setAnalytics(data.profile || emptyAnalytics);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
     const fetchTransactions = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/user/${user.id}/transactions?page=${txPage}&limit=20`);
-        const txData = await res.json();
-        if (txData.success) {
-          setTransactions(txData.transactions);
-          setTxTotalPages(txData.totalPages);
+        const data = await res.json();
+        if (data.success) {
+          setTransactions(data.transactions || []);
+          setTxTotalPages(data.totalPages || 1);
         }
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+      }
     };
     fetchTransactions();
-  }, [user, txPage]);
+  }, [txPage, user?.id]);
 
-  const handleAvatarSelect = async (avatarId) => {
-    setSelectedAvatar(avatarId);
-    if (user?.id) localStorage.setItem(`cluss_avatar_${user.id}`, avatarId);
-    
-    try {
-      await fetch(`${API_BASE}/api/user/${user.id}/avatar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatar: avatarId })
-      });
-      window.dispatchEvent(new Event('avatarChanged'));
-    } catch (err) { console.error("Error saving avatar:", err); }
-  };
+  const chartData = analytics.charts?.length ? analytics.charts : Array.from({ length: 30 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (29 - index));
+    return { date: date.toISOString().slice(0, 10), views: 0, followers: 0 };
+  });
 
-  const handleSignOut = () => {
-    signOut(() => navigate('/'));
-  };
+  const engagementRate = useMemo(() => {
+    const views = analytics.totals?.views || 0;
+    const interactions = (analytics.totals?.likes || 0) + (analytics.totals?.bookmarks || 0);
+    return views ? Math.round((interactions / views) * 100) : 0;
+  }, [analytics]);
 
   if (!user) return null;
 
-  const selectedAvatarData = AVATARS.find(a => a.id === selectedAvatar) || AVATARS[0];
-  const isNone = selectedAvatar === 'none';
-
   return (
-    <DashboardShell title="Profile" eyebrow="Settings & Identity">
-      <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* ══ PREMIUM HEADER ══ */}
-        <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#111111] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent shadow-[0_30px_100px_rgba(0,0,0,0.35)] p-8 md:p-12">
-          <div className="absolute -left-16 top-0 h-80 w-80 rounded-full bg-white/[0.04] blur-[100px] pointer-events-none" />
-          <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-zinc-500/[0.04] blur-[100px] pointer-events-none" />
-          
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-              <div className="relative group">
-                <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-white/20 to-transparent opacity-50 blur-md transition-opacity duration-500 group-hover:opacity-100" />
-                <div className="relative w-32 h-32 rounded-full overflow-hidden border border-white/10 shadow-2xl bg-[#16181d] flex items-center justify-center">
-                  {isNone ? (
-                    <img src={user.imageUrl || "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <img src={selectedAvatarData.image} alt={selectedAvatarData.name} className="w-full h-full object-cover" />
-                  )}
+    <DashboardShell title="Profile" eyebrow="Creator Studio">
+      <div className="mx-auto max-w-[112rem] space-y-6 pb-8">
+        <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#111111] p-7 shadow-[0_28px_90px_rgba(0,0,0,0.45)] md:p-10">
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(34,211,238,0.08),transparent_30%)]" />
+          <div className="relative grid gap-8 xl:grid-cols-[minmax(0,1fr)_29rem] xl:items-center">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-zinc-300">Creator profile</span>
+                <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100">Worldwide rank #{analytics.rankings?.influence || 1}</span>
+              </div>
+
+              <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-center">
+                <img src={user.imageUrl} alt={user.fullName || 'Profile'} className="h-28 w-28 rounded-[2rem] border-4 border-white/10 object-cover shadow-[0_18px_50px_rgba(0,0,0,0.35)]" />
+                <div className="min-w-0">
+                  <h1 className="break-words text-5xl font-black leading-none tracking-[-0.055em] text-white md:text-7xl">
+                    {user.fullName || user.username || 'Creator'}
+                  </h1>
+                  <p className="mt-3 text-sm font-bold text-zinc-500">{user.primaryEmailAddress?.emailAddress}</p>
                 </div>
               </div>
-              <div className="text-center md:text-left mt-2 md:mt-4">
-                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">{user.fullName || 'Wizard'}</h1>
-                <p className="text-zinc-400 font-medium tracking-wide mt-2">{user.primaryEmailAddress?.emailAddress}</p>
-              </div>
             </div>
-            
-            <button 
-              onClick={handleSignOut}
-              className="relative overflow-hidden rounded-full bg-white/[0.05] border border-white/10 px-8 py-3.5 transition-all duration-300 hover:bg-white hover:text-black group"
-            >
-              <span className="relative z-10 text-sm font-black uppercase tracking-wider text-white transition-colors duration-300 group-hover:text-black">
-                Sign Out
-              </span>
-            </button>
+
+            <div className="rounded-[2rem] border border-white/10 bg-black/35 p-6">
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-500">Learners following you</p>
+              <div className="mt-4 flex items-end gap-4">
+                <span className="text-8xl font-black leading-none tracking-[-0.07em] text-white">{formatNumber(analytics.followers)}</span>
+                <span className="pb-3 text-sm font-black uppercase tracking-[0.18em] text-zinc-500">followers</span>
+              </div>
+              <p className="mt-5 text-sm font-semibold leading-6 text-zinc-500">
+                Every follower is someone who wants more of your public courses. Keep publishing useful paths.
+              </p>
+              <button
+                type="button"
+                onClick={() => signOut(() => navigate('/'))}
+                className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-black transition hover:bg-zinc-200"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </button>
+            </div>
           </div>
         </section>
 
-        {/* ══ CREDIT BALANCE (HIGH-CONTRAST MONOCHROME) ══ */}
-        {usageData && (
-          <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-8 shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/30 group">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
-            
-            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-6">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
-                  <CreditCard className="h-7 w-7 text-white" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">Credit Balance</p>
-                  <p className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">
-                    {usageData.balance}
-                    {usageData.plan === 'free' && (
-                      <span className="text-xl font-bold text-zinc-600"> / {usageData.allowance}</span>
-                    )}
-                  </p>
-                </div>
-              </div>
+        <CreditBalance usageData={usageData} />
 
-              <div className="flex flex-wrap items-center justify-center md:justify-end gap-3">
-                <div className="rounded-full border border-white/10 bg-white/[0.05] px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-white backdrop-blur-md">
-                  {usageData.plan} Plan
-                </div>
-                <div className="rounded-full border border-zinc-700 bg-zinc-900 px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-zinc-300">
-                  {usageData.plan === 'free'
-                    ? `🔄 Resets to ${usageData.allowance} weekly`
-                    : `⚡ +${usageData.allowance} credits / day`
-                  }
-                </div>
-                {usageData.plan !== 'free' && (
-                  <div className="rounded-full border border-white/20 bg-white px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-black flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[13px]">timer</span>
-                    {usageData.billingCycleEnd
-                      ? `${Math.max(0, Math.ceil((new Date(usageData.billingCycleEnd) - new Date()) / (1000 * 60 * 60 * 24)))} Days Left`
-                      : 'No Expiry'
-                    }
+        {error && <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-5 py-4 text-sm font-bold text-rose-200">{error}</div>}
+
+        {loading ? (
+          <div className="flex min-h-96 items-center justify-center rounded-[2rem] border border-white/10 bg-[#111111]">
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
+          </div>
+        ) : (
+          <>
+            <section id="profile-stats" className="scroll-mt-28 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <SmallStat icon={Users} label="Following" value={analytics.following} detail="Creators you are learning from." />
+              <SmallStat icon={Eye} label="Views" value={analytics.totals?.views} detail={`${formatNumber(analytics.totals?.readStarts)} public reading starts.`} />
+              <SmallStat icon={Heart} label="Likes" value={analytics.totals?.likes} detail={`${engagementRate}% engagement from views.`} />
+              <SmallStat icon={BookOpen} label="Courses" value={analytics.publishedCourses} detail={`${formatNumber(analytics.totals?.completions)} completions tracked.`} />
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-3">
+              <RankCard icon={Trophy} title="Follower rank" rank={analytics.rankings?.followers || 1} total={analytics.rankings?.totalCreators || 1} description="Your follower position among public course creators." />
+              <RankCard icon={BarChart3} title="Views rank" rank={analytics.rankings?.views || 1} total={analytics.rankings?.totalCreators || 1} description="A competitive view of your public course reach." />
+              <RankCard icon={Medal} title="Influence rank" rank={analytics.rankings?.influence || 1} total={analytics.rankings?.totalCreators || 1} description="Weighted by followers, views, likes, saves, and completions." />
+            </section>
+
+            <section id="profile-graphs" className="scroll-mt-28 grid gap-6 xl:grid-cols-2">
+              <AnalyticsChart title="Views over time" subtitle="YouTube-style reach" data={chartData} metric="views" color="#60a5fa" icon={LineChart} />
+              <AnalyticsChart title="Followers per day" subtitle="Audience growth" data={chartData} metric="followers" color="#34d399" icon={Users} />
+            </section>
+
+            <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+              <div className="rounded-[2.4rem] border border-white/10 bg-[#111111] p-7 shadow-[0_20px_70px_rgba(0,0,0,0.34)]">
+                <div className="mb-5 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Public performance</p>
+                    <h2 className="mt-2 text-3xl font-black tracking-[-0.03em] text-white">Top courses</h2>
                   </div>
-                )}
+                  <Link to="/courses" className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black text-black">
+                    Explore <ArrowUpRight className="h-4 w-4" />
+                  </Link>
+                </div>
+                <div className="space-y-3">
+                  {analytics.topCourses?.length ? analytics.topCourses.map((course, index) => (
+                    <CourseRow key={course._id} course={course} index={index} />
+                  )) : (
+                    <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.025] p-8 text-center">
+                      <Sparkles className="mx-auto h-8 w-8 text-zinc-500" />
+                      <p className="mt-3 text-sm font-bold text-zinc-500">Publish a guided course to start collecting public analytics.</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </section>
+
+              <div className="rounded-[2.4rem] border border-white/10 bg-[#111111] p-7 shadow-[0_20px_70px_rgba(0,0,0,0.34)]">
+                <div className="mb-5 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Your reading</p>
+                    <h2 className="mt-2 text-3xl font-black tracking-[-0.03em] text-white">Continue learning</h2>
+                  </div>
+                  <Bookmark className="h-5 w-5 text-zinc-500" />
+                </div>
+                <div className="space-y-3">
+                  {analytics.continueReading?.length ? analytics.continueReading.map((item) => (
+                    <ContinueRow key={`${item.courseId}-${item.lastReadAt}`} item={item} />
+                  )) : (
+                    <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.025] p-8 text-center">
+                      <PlayCircle className="mx-auto h-8 w-8 text-zinc-500" />
+                      <p className="mt-3 text-sm font-bold text-zinc-500">Courses you read from the public library will appear here.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section id="profile-activity" className="scroll-mt-28 grid gap-6 xl:grid-cols-[1.45fr_1fr]">
+              <CostLedger />
+              <RecentActivity transactions={transactions} txPage={txPage} txTotalPages={txTotalPages} setTxPage={setTxPage} />
+            </section>
+          </>
         )}
-
-        {/* ══ SPLIT VIEW: STATS & CALENDAR ══ */}
-        <div className="grid grid-cols-1 xl:grid-cols-[22rem_1fr] gap-8">
-          
-          <div className="flex flex-col gap-5">
-            {[
-              { icon: Flame, value: activityMeta.streak, label: "Daily Streak" },
-              { icon: Book, value: stats.totalCourses, label: "Plans Built" },
-              { icon: Brain, value: stats.completedSubtopics, label: "Topics Learned" }
-            ].map((stat, idx) => (
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: idx * 0.1, ease: 'easeOut' }}
-                whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.02)' }}
-                key={idx} 
-                className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#161616] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-6 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex items-center gap-6 group hover:border-white/30 transition-colors cursor-default"
-              >
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-white transition-all duration-300 group-hover:scale-110 group-hover:bg-white group-hover:text-black">
-                  <stat.icon className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-3xl font-black text-white">{loading ? '-' : stat.value}</p>
-                  <p className="text-[11px] font-black text-zinc-500 uppercase tracking-widest mt-1">{stat.label}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              whileHover={{ scale: 1.01 }}
-              className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-colors hover:border-white/20"
-            >
-              <h3 className="text-xl font-black tracking-tight text-white mb-2">Momentum</h3>
-              <p className="text-xs font-semibold text-zinc-500">Lessons past 7 days</p>
-              <ActivityBars activityData={activityData} />
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              whileHover={{ scale: 1.01 }}
-              className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-colors hover:border-white/20"
-            >
-              <h3 className="text-xl font-black tracking-tight text-white mb-2">Heatmap</h3>
-              <MiniCalendar activityData={activityData} />
-            </motion.div>
-          </div>
-        </div>
-
-        {/* ══ AVATARS & BADGES ══ */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Avatar Selection */}
-          <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-8 shadow-xl">
-            <h2 className="text-2xl font-black tracking-tight text-white mb-8">Identity</h2>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-              {AVATARS.map((avatar) => {
-                const isSelected = selectedAvatar === avatar.id;
-                return (
-                  <button
-                    key={avatar.id}
-                    onClick={() => handleAvatarSelect(avatar.id)}
-                    className={`relative p-4 rounded-[1.5rem] flex flex-col items-center gap-4 transition-all duration-300 border ${
-                      isSelected 
-                        ? 'bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.3)] scale-105' 
-                        : 'bg-white/[0.02] text-zinc-400 hover:bg-white/[0.08] hover:text-white border-white/10 hover:border-white/20'
-                    }`}
-                  >
-                    {avatar.id === 'none' ? (
-                       <avatar.icon className="w-10 h-10" />
-                    ) : (
-                       <div className={`w-12 h-12 rounded-full overflow-hidden ${isSelected ? 'border border-black/10' : 'border border-white/10'}`}>
-                         <img src={avatar.image} alt={avatar.name} className="w-full h-full object-cover" />
-                       </div>
-                    )}
-                    <span className="text-[10px] font-black uppercase tracking-widest">{avatar.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Badges Selection */}
-          <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#141414] bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-8 shadow-xl">
-            <h2 className="text-2xl font-black tracking-tight text-white mb-8">Achievements</h2>
-            <div className="custom-scroll max-h-[340px] overflow-y-auto pr-4 grid grid-cols-1 gap-4">
-              {BADGES.map((badge, index) => {
-                let unlocked = false;
-                if (badge.id === 'sorting_hat') unlocked = stats.completedSubtopics >= 1;
-                if (badge.id === 'seeker') unlocked = stats.completedSubtopics >= 10;
-                if (badge.id === 'prefect') unlocked = activityMeta.streak >= 10;
-                if (badge.id === 'head_boy_girl') unlocked = activityMeta.streak >= 30;
-                if (badge.id === 'auror') unlocked = stats.totalCourses >= 5;
-                if (badge.id === 'triwizard') unlocked = activityMeta.streak >= 7;
-                if (badge.id === 'master_of_death') unlocked = (stats.completedSubtopics >= 10 && activityMeta.streak >= 30 && stats.totalCourses >= 5);
-                
-                return (
-                  <motion.div
-                    key={badge.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.05 * index }}
-                    className={`p-5 rounded-[1.5rem] border ${
-                      unlocked 
-                        ? 'bg-gradient-to-r from-white/10 to-transparent border-white/20' 
-                        : 'bg-[#16181d] border-white/5 opacity-50 grayscale'
-                    } flex items-center gap-5 transition-all duration-300 hover:border-white/30`}
-                  >
-                    <div className={`w-14 h-14 shrink-0 rounded-[1.2rem] flex items-center justify-center p-2 border ${unlocked ? 'border-white/10 bg-black/50 shadow-inner' : 'border-transparent bg-transparent'}`}>
-                      <img src={badge.image} alt={badge.name} className="w-full h-full object-contain" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className={`font-black text-sm tracking-wide ${unlocked ? 'text-white' : 'text-zinc-500'}`}>{badge.name}</h3>
-                        {unlocked && <span className="px-2 py-0.5 rounded-full bg-white text-black text-[9px] font-black uppercase tracking-widest">Unlocked</span>}
-                      </div>
-                      <p className="text-xs font-medium text-zinc-400">{badge.description}</p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </section>
-        </div>
-
-        {/* ══ COSTS & LEDGER ══ */}
-        <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-8">
-          
-          <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#111111] p-8 shadow-xl">
-            <h2 className="text-2xl font-black tracking-tight text-white mb-2">Cost Ledger</h2>
-            <p className="text-xs font-semibold text-zinc-500 flex items-center gap-2 mb-8">
-              <Cpu className="w-4 h-4" /> Advanced AI models consume higher credits for superior reasoning.
-            </p>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left py-4 px-4 font-black text-zinc-500 text-[10px] uppercase tracking-widest">Action</th>
-                    <th className="text-center py-4 px-4 font-black text-zinc-500 text-[10px] uppercase tracking-widest">Standard AI</th>
-                    <th className="text-center py-4 px-4 font-black text-white text-[10px] uppercase tracking-widest bg-white/5 rounded-t-xl">Advanced AI</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    ['Generate Course Map', 5, 15],
-                    ['Import YouTube Playlist', 5, 15],
-                    ['Generate Lesson Notes', 10, 30],
-                    ['Regenerate Notes', 10, 30],
-                    ['Practice Grading', 5, 15],
-                    ['Explain / Simplify / Quiz', 2, 6],
-                    ['Tutor Chat Message', 1, 3],
-                  ].map(([action, standard, advanced], i) => (
-                    <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                      <td className="py-4 px-4 font-bold text-sm text-zinc-300">{action}</td>
-                      <td className="py-4 px-4 text-center font-bold text-zinc-500">{standard}</td>
-                      <td className="py-4 px-4 text-center font-black text-white bg-white/5">{advanced}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="relative overflow-hidden rounded-[2.8rem] border border-white/10 bg-[#111111] p-8 shadow-xl flex flex-col">
-            <h2 className="text-2xl font-black tracking-tight text-white mb-6">Recent Activity</h2>
-            
-            {transactions.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center rounded-2xl border border-dashed border-white/10 p-6 text-center text-xs font-semibold text-zinc-500">
-                No transactions yet. Start learning to see history!
-              </div>
-            ) : (
-              <div className="relative flex-1">
-                <div className="absolute inset-0 custom-scroll overflow-y-auto pr-2 space-y-3">
-                  {transactions.map((tx, i) => (
-                    <div key={tx._id || i} className="flex items-center justify-between p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[1rem] ${tx.type === 'spend' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                          {tx.type === 'spend' ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-white tracking-wide">{tx.description}</p>
-                          <p className="text-[10px] font-semibold text-zinc-500 mt-1">{new Date(tx.createdAt).toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <span className={`text-base font-black ${tx.type === 'spend' ? 'text-red-500' : 'text-emerald-500'}`}>
-                        {tx.type === 'spend' ? '' : '+'}{tx.amount}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {txTotalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-6 border-t border-white/10">
-                <button onClick={() => setTxPage(p => Math.max(1, p - 1))} disabled={txPage <= 1} className="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-white disabled:opacity-30 hover:bg-white/10">
-                  Prev
-                </button>
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{txPage} / {txTotalPages}</span>
-                <button onClick={() => setTxPage(p => Math.min(txTotalPages, p + 1))} disabled={txPage >= txTotalPages} className="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-white disabled:opacity-30 hover:bg-white/10">
-                  Next
-                </button>
-              </div>
-            )}
-          </section>
-        </div>
-
       </div>
-      
-      {/* Badge Unlock Popup */}
-      <AnimatePresence>
-        {newlyUnlockedBadges.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-3"
-          >
-            {newlyUnlockedBadges.map(badge => (
-              <div key={badge.id} className="bg-black text-white p-4 rounded-2xl shadow-2xl border border-white/20 flex items-center gap-4">
-                <div className="w-12 h-12 shrink-0 rounded-full border border-white/10 bg-[#111] flex items-center justify-center overflow-hidden p-1">
-                  <img src={badge.image} alt={badge.name} className="w-full h-full object-contain" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-0.5">Badge Unlocked!</p>
-                  <p className="font-bold text-lg tracking-tight">{badge.name}</p>
-                </div>
-                <button onClick={() => setNewlyUnlockedBadges(prev => prev.filter(b => b.id !== badge.id))} className="ml-4 text-zinc-500 hover:text-white transition">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </DashboardShell>
   );
-};
-
-export default Profile;
+}

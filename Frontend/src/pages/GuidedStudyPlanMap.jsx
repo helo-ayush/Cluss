@@ -12,6 +12,7 @@ import {
   Crown,
   FileSearch,
   Gauge,
+  Globe2,
   Layers3,
   LayoutDashboard,
   Loader2,
@@ -122,7 +123,7 @@ function MetricTile({ label, value, detail, accent = '#f5f5f5', delay = 0 }) {
   );
 }
 
-function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathStats, onOpenSettings }) {
+function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathStats, onOpenSettings, onPublish, publishing, canPublish }) {
   const continueUrl = currentRef
     ? `/dashboard/guided/study-plan/${course._id}/learn/${currentRef.moduleIndex}/${currentRef.subtopicIndex}`
     : `/dashboard/guided/study-plan/${course._id}`;
@@ -202,6 +203,16 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathS
             >
               <SlidersHorizontal className="h-4 w-4" />
               Defaults
+            </button>
+            <button
+              type="button"
+              onClick={onPublish}
+              disabled={publishing || !canPublish}
+              title={canPublish ? 'Publish this generated course' : 'Generate at least one lesson before publishing'}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-200/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:-translate-y-0.5 hover:bg-cyan-200/15 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe2 className="h-4 w-4" />}
+              {publishing ? 'Publishing' : 'Publish'}
             </button>
           </div>
         </div>
@@ -872,6 +883,7 @@ export default function GuidedStudyPlanMap() {
   const [filter, setFilter] = useState('all');
   const [toast, setToast] = useState(null); // { message, type }
   const [isTuning, setIsTuning] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const redirectToLibrary = useCallback((message) => {
     navigate('/dashboard/guided', {
@@ -985,6 +997,33 @@ export default function GuidedStudyPlanMap() {
     }
   };
 
+  const handlePublish = async () => {
+    if (!user?.id || !course?._id) return;
+    setPublishing(true);
+    setToast(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/public-courses/publish/${course._id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clerkId: user.id,
+          creatorName: user.fullName || user.username || user.primaryEmailAddress?.emailAddress || 'Creator',
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'Could not publish this course.');
+      setToast({
+        type: 'success',
+        message: data.alreadyPublished ? 'This course is already published.' : 'Course published to the public library.',
+        href: `/courses/${data.course.slug}`,
+      });
+    } catch (error) {
+      setToast({ type: 'error', message: error.message });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   /* ── Skeleton while fetching ─────────────────────────────────────────── */
   if (loading || !isLoaded || !course) {
     return (
@@ -1064,6 +1103,23 @@ export default function GuidedStudyPlanMap() {
 
   return (
     <DashboardShell title={course.course_title} eyebrow="Guided Plan">
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            className={`fixed left-1/2 top-6 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border px-5 py-3 text-sm font-semibold backdrop-blur-md shadow-xl ${
+              toast.type === 'success'
+                ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200'
+                : 'border-red-400/20 bg-red-500/10 text-red-200'
+            }`}
+          >
+            <span>{toast.message}</span>
+            {toast.href && <Link to={toast.href} className="rounded-full bg-white px-3 py-1 text-xs font-black text-black">View</Link>}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="mx-auto max-w-[104rem] flex flex-col gap-6">
         <div className="order-1">
           <CommandDeck
@@ -1073,6 +1129,9 @@ export default function GuidedStudyPlanMap() {
             currentSubtopic={currentSubtopic}
             pathStats={pathStats}
             onOpenSettings={() => setShowStudyControls((value) => !value)}
+            onPublish={handlePublish}
+            publishing={publishing}
+            canPublish={pathStats.ready > 0}
           />
         </div>
 

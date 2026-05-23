@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardTopbar from './DashboardTopbar';
 import { useUsage } from '../../contexts/UsageContext';
 
 export default function DashboardShell({ title, eyebrow, showCreate = true, contentClassName = '', disableDefaultPadding = false, children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('cluss_sidebar_collapsed') === 'true';
+  });
   const { usageData } = useUsage();
+
+  useEffect(() => {
+    window.localStorage.setItem('cluss_sidebar_collapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   return (
     <div className="min-h-screen overflow-x-clip bg-[#050505] text-white">
@@ -16,10 +24,22 @@ export default function DashboardShell({ title, eyebrow, showCreate = true, cont
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0,rgba(0,0,0,0.34)_70%)]" />
       </div>
 
-      <DashboardSidebar mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+      <DashboardSidebar
+        collapsed={sidebarCollapsed}
+        setCollapsed={setSidebarCollapsed}
+        mobileMenuOpen={mobileMenuOpen}
+        setMobileMenuOpen={setMobileMenuOpen}
+      />
 
-      <div className="relative z-10 min-h-screen lg:pl-[5.25rem]">
-        <DashboardTopbar title={title} eyebrow={eyebrow} usageData={usageData} showCreate={showCreate} onMenuClick={() => setMobileMenuOpen(true)} />
+      <div className={`relative z-10 min-h-screen transition-[padding-left] duration-300 ${sidebarCollapsed ? 'lg:pl-[5.5rem]' : 'lg:pl-[15.5rem]'}`}>
+        <DashboardTopbar
+          title={title}
+          eyebrow={eyebrow}
+          usageData={usageData}
+          showCreate={showCreate}
+          sidebarCollapsed={sidebarCollapsed}
+          onMenuClick={() => setMobileMenuOpen(true)}
+        />
         <main className={`${disableDefaultPadding ? '' : 'px-4 pb-12 pt-20 sm:px-6 lg:px-8'} ${contentClassName}`}>
           {children}
         </main>

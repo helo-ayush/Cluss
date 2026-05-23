@@ -1,93 +1,71 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { SignedIn, useUser } from '@clerk/clerk-react';
-import { Menu, PanelsTopLeft, MessageCircle, Sparkles } from 'lucide-react';
+import { Menu, MessageCircle, Plus } from 'lucide-react';
 
-const topLinks = [
-  { label: 'Home', to: '/dashboard', icon: PanelsTopLeft, match: (path) => path === '/dashboard' },
-  { label: 'AI Chat', to: '/dashboard/chat', icon: MessageCircle, match: (path) => path.startsWith('/dashboard/chat') },
-  { label: 'Progress', to: '/dashboard/progress', icon: Sparkles, match: (path) => path.startsWith('/dashboard/progress') },
-];
-
-export default function DashboardTopbar({ title, usageData, onMenuClick }) {
+export default function DashboardTopbar({ title, eyebrow, usageData, onMenuClick, sidebarCollapsed }) {
   const { user } = useUser();
-  const { pathname } = useLocation();
-  const plan = usageData?.plan || 'free';
   const initial = (user?.firstName || user?.fullName || user?.primaryEmailAddress?.emailAddress || 'L').charAt(0).toUpperCase();
+  const displayName = user?.fullName || user?.username || 'Learner';
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-40 bg-black/25 px-4 py-3 md:py-4 backdrop-blur-3xl border-b border-white/10 sm:px-6 lg:left-[5.25rem] lg:px-8 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
-      <div className="flex items-center justify-between gap-4">
-        {/* Left: Mobile Ham / Desktop Nav */}
-        <div className="flex items-center gap-3">
+    <header
+      className={`font-nunito pointer-events-none fixed right-0 top-0 z-40 px-3 py-2 transition-[left] duration-300 sm:px-5 lg:px-7 ${
+        sidebarCollapsed ? 'lg:left-[5.5rem]' : 'lg:left-[15.5rem]'
+      } left-0`}
+    >
+      <div className="pointer-events-auto flex min-h-[4.7rem] items-center justify-between gap-2 rounded-full border border-white/[0.08] bg-[#1b1b1b]/94 px-3 shadow-[0_18px_60px_rgba(0,0,0,0.38)] backdrop-blur-2xl sm:gap-4 sm:px-5">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
           <button
             type="button"
             onClick={onMenuClick}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-zinc-300 transition hover:bg-white hover:text-black md:hidden backdrop-blur-md"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[#1b1b1b] text-zinc-300 transition hover:bg-white hover:text-black lg:hidden"
             title="Menu"
           >
             <Menu className="h-5 w-5" />
           </button>
-          
-          {/* Mobile AI Chat Button */}
-          {(() => {
-            const chatActive = pathname.startsWith('/dashboard/chat');
-            return (
-              <Link 
-                to="/dashboard/chat" 
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition md:hidden backdrop-blur-md ${
-                  chatActive 
-                    ? 'border-white/20 bg-white text-black' 
-                    : 'border-white/10 bg-white/[0.03] text-zinc-300 hover:bg-white hover:text-black'
-                }`}
-                title="AI Chat"
-              >
-                <MessageCircle className="h-5 w-5" />
-              </Link>
-            );
-          })()}
-          
-          <nav className="hidden items-center gap-3 md:flex">
-            {topLinks.map((item) => {
-              const active = item.match(pathname);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-black transition backdrop-blur-md ${
-                    active ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.15)]' : 'bg-white/[0.04] border border-white/5 text-zinc-300 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Center: Mobile Title */}
-        <div className="min-w-0 md:hidden flex-1 text-center">
-          <h1 className="truncate text-lg font-black text-white">{title}</h1>
-        </div>
-
-        {/* Right: Profile & Actions */}
-        <div className="flex min-w-0 items-center gap-3 md:gap-4">
-          
-          {/* Universal Credits Capsule */}
-          <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.04] border border-white/10 px-3 py-1.5 backdrop-blur-md">
-            <Sparkles className="h-3 w-3 text-[#A3FF4F]" />
-            <span className="text-[11px] font-black text-white">{usageData?.balance || 0} left</span>
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-medium tracking-[-0.06em] text-white sm:text-3xl md:text-4xl">
+              {title}
+            </h1>
           </div>
+        </div>
 
+        <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-3">
+          <div className="flex h-14 items-center gap-1 rounded-full border border-white/10 bg-[#1b1b1b] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <Link
+              to="/create/guided"
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-[#efff55] text-black shadow-[0_0_22px_rgba(239,255,85,0.18)] transition hover:scale-105 max-[430px]:h-10 max-[430px]:w-10"
+              title="Create"
+            >
+              <Plus className="h-6 w-6 max-[430px]:h-5 max-[430px]:w-5" />
+            </Link>
+            <Link
+              to="/dashboard/chat"
+              className="flex h-12 w-12 items-center justify-center rounded-full text-zinc-300 transition hover:bg-white hover:text-black max-[430px]:h-10 max-[430px]:w-10"
+              title="AI Chat"
+            >
+              <MessageCircle className="h-5 w-5 max-[430px]:h-4 max-[430px]:w-4" />
+            </Link>
+          </div>
           <SignedIn>
-            <Link to="/dashboard/profile" className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.05] ring-1 ring-white/10 transition hover:ring-white/20 backdrop-blur-md">
-              {user?.imageUrl ? (
-                <img src={user?.imageUrl} alt="Profile" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-sm font-black text-white">{initial}</span>
-              )}
+            <Link
+              to="/dashboard/profile"
+              className="flex min-h-14 w-14 items-center justify-center gap-2 rounded-full border border-white/10 bg-[#1b1b1b] py-1 pl-1.5 pr-1.5 transition hover:border-white/20 hover:bg-[#222222] sm:w-[11.5rem] sm:justify-start sm:pl-4 md:w-[12.5rem]"
+            >
+              <div className="hidden min-w-0 flex-1 text-left sm:block">
+                <p className="truncate text-sm font-medium leading-tight text-white" title={displayName}>{displayName}</p>
+                <p className="mt-0.5 truncate text-[11px] font-semibold leading-tight text-zinc-500">
+                  {usageData?.balance || 0} credits
+                </p>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/[0.06]">
+                {user?.imageUrl ? (
+                  <img src={user.imageUrl} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-sm font-black text-white">{initial}</span>
+                )}
+              </div>
             </Link>
           </SignedIn>
         </div>

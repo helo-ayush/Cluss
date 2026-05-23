@@ -11,6 +11,10 @@ import PlaylistCourseMap from './pages/PlaylistCourseMap';
 import PlaylistLearnHub from './pages/PlaylistLearnHub';
 import PlanLibraryPage from './pages/PlanLibraryPage';
 import Profile from './pages/Profile';
+import PublicCoursesPage from './pages/PublicCoursesPage';
+import PublicCourseReader from './pages/PublicCourseReader';
+import BookmarksPage from './pages/BookmarksPage';
+import CreatorProfilePage from './pages/CreatorProfilePage';
 
 
 export default function App() {
@@ -30,6 +34,10 @@ export default function App() {
         <Route path="/playlist/:courseId" element={<PlaylistCourseMap />} />
         <Route path="/playlist/:courseId/day/:dayIndex" element={<PlaylistLearnHub />} />
         <Route path="/dashboard/profile" element={<Profile />} />
+        <Route path="/dashboard/bookmarks" element={<BookmarksPage />} />
+        <Route path="/courses" element={<PublicCoursesPage />} />
+        <Route path="/courses/:slug" element={<PublicCourseReader />} />
+        <Route path="/creators/:creatorClerkId" element={<CreatorProfilePage />} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
