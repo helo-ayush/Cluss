@@ -529,7 +529,7 @@ const undoGuidedBlockRewrite = async (req, res) => {
 const submitGuidedAssessment = async (req, res) => {
     try {
         const { courseId, subtopicId } = req.params;
-        const { submission, confidence = '', studentNotes = '', practiceIndex = 0 } = req.body;
+        const { submission, confidence = '', studentNotes = '', practiceIndex = 0, imageAnswers = {} } = req.body;
 
         const course = await Course.findById(courseId);
         if (!course || course.sourceType !== 'guided-topic') {
@@ -545,31 +545,96 @@ const submitGuidedAssessment = async (req, res) => {
         if (!practice) {
             return res.status(404).json({ success: false, message: 'Practice sheet not found' });
         }
-        if (practice.state.attemptsUsed > 0) {
-            return res.status(400).json({ success: false, message: 'This practice sheet is already submitted.' });
-        }
 
         const user = await User.findById(course.userId);
         await maybeRefillCredits(user);
-        assertCredits(user, 'assessmentGrading'); // will be 0
+        assertCredits(user, 'assessmentGrading');
 
-        const { gradeGuidedSubmission } = require('../services/guidedStudyGenerator');
+        const { gradeGuidedSubmission, generatePerQuestionExplanations, evaluateImageAnswer } = require('../services/guidedStudyGenerator');
+
+        // Process any image answers (written/math questions with image uploads)
+        const processedSubmission = { ...submission };
+        const imageEvalResults = {};
+        if (Object.keys(imageAnswers).length > 0 && (user.plan !== 'free' || process.env.NODE_ENV === 'development')) {
+            for (const [qIndex, base64Image] of Object.entries(imageAnswers)) {
+                if (!base64Image) continue;
+                try {
+                    assertCredits(user, 'imageAnswerGrade');
+                    const bundle = practice.bundle;
+                    // Find the question for context
+                    const flatQuestions = [
+                        ...(bundle.mcqs || []).map(q => ({ ...q, type: 'mcq' })),
+                        ...(bundle.written || []).map(q => ({ ...q, type: 'written' })),
+                        ...(bundle.math || []).map(q => ({ ...q, type: 'math' })),
+                        ...(bundle.code || []).map(q => ({ ...q, type: 'code' })),
+                    ];
+                    const q = flatQuestions[parseInt(qIndex)];
+                    const evalResult = await evaluateImageAnswer({
+                        base64Image,
+                        questionText: q?.question || q?.prompt || '',
+                        rubric: q?.rubric || [],
+                        userPlan: user.plan
+                    });
+                    imageEvalResults[qIndex] = evalResult;
+                    // Merge extracted text into submission so grading uses it
+                    if (evalResult.isReadable && evalResult.extractedText) {
+                        if (!processedSubmission.writtenAnswers) processedSubmission.writtenAnswers = {};
+                        processedSubmission.writtenAnswers[qIndex] = evalResult.extractedText;
+                    }
+                    await spendCredits(user, 'imageAnswerGrade');
+                } catch (imgErr) {
+                    console.error(`Image eval error for q${qIndex}:`, imgErr.message);
+                }
+            }
+        }
+
         const gradeResult = await gradeGuidedSubmission({
             topic: course.course_query || course.course_title,
             moduleTitle: ref.module.module_title,
             subtopicTitle: ref.subtopic.subtopic_title,
             lessonContent: ref.subtopic.lessonContent,
             assessmentBundle: practice.bundle,
-            submission: submission || {}
+            submission: processedSubmission || {}
         });
+
+        // Build flat questions list for per-question explanations
+        const bundle = practice.bundle;
+        const flatQuestions = [
+            ...(bundle.mcqs || []).map(q => ({ ...q, type: 'mcq', correctAnswer: q.correctAnswer })),
+            ...(bundle.written || []).map(q => ({ ...q, type: 'written' })),
+            ...(bundle.math || []).map(q => ({ ...q, type: 'math' })),
+            ...(bundle.code || []).map(q => ({ ...q, type: 'code' })),
+        ];
+        const studentAnswersList = flatQuestions.map((_, i) => ({
+            value: processedSubmission?.mcqAnswers?.[i] || processedSubmission?.writtenAnswers?.[i] || processedSubmission?.codeAnswers?.[i] || ''
+        }));
+        const gradingResultsList = flatQuestions.map((q, i) => ({
+            correct: q.type === 'mcq' ? q.correctAnswer === (processedSubmission?.mcqAnswers?.[i] || '') : null
+        }));
+
+        let perQuestionFeedback = [];
+        try {
+            perQuestionFeedback = await generatePerQuestionExplanations({
+                questions: flatQuestions,
+                studentAnswers: studentAnswersList,
+                gradingResults: gradingResultsList,
+                topic: course.course_query || course.course_title,
+                subtopicTitle: ref.subtopic.subtopic_title,
+                userPlan: user.plan
+            });
+        } catch (explainErr) {
+            console.error('Per-question explanation error (non-fatal):', explainErr.message);
+        }
 
         practice.state.attemptsUsed += 1;
         practice.state.lastScore = gradeResult.score || 0;
         practice.state.passed = !!gradeResult.passed;
         practice.state.confidence = confidence || '';
         practice.state.feedback = gradeResult;
-        practice.state.lastSubmission = submission || {};
+        practice.state.lastSubmission = processedSubmission || {};
         practice.state.completedAt = new Date();
+        practice.state.perQuestionFeedback = perQuestionFeedback;
+        practice.state.imageEvalResults = imageEvalResults;
 
         ref.subtopic.studentNotes = studentNotes || ref.subtopic.studentNotes || '';
         ref.subtopic.mistakeLog = gradeResult.mistakes || [];
@@ -581,6 +646,8 @@ const submitGuidedAssessment = async (req, res) => {
             success: true,
             passed: gradeResult.passed,
             feedback: gradeResult,
+            perQuestionFeedback,
+            imageEvalResults,
             course: serializeStudyPlan(course),
             subtopic: ref.subtopic
         });
@@ -599,6 +666,7 @@ const submitGuidedAssessment = async (req, res) => {
 const generateSubtopicPractice = async (req, res) => {
     try {
         const { courseId, subtopicId } = req.params;
+        const { difficulty = 'medium', questionTypes = ['mcqs', 'written'], timeLimit = 15 } = req.body || {};
 
         const course = await Course.findById(courseId);
         if (!course || course.sourceType !== 'guided-topic') {
@@ -618,23 +686,34 @@ const generateSubtopicPractice = async (req, res) => {
         const lessonContext = ref.subtopic.lessonContent.blocks.map(b => b.title + ': ' + b.body).join('\n\n');
         const appliedConfig = ref.subtopic.appliedConfig || {};
 
+        // Wipe all previous practices — clean slate for new test system
+        ref.subtopic.practices = [];
+
         const practiceBundle = await generatePracticeSheet({
             courseTitle: course.course_title,
             moduleTitle: ref.module.module_title,
             subtopicTitle: ref.subtopic.subtopic_title,
             lessonContext,
             config: appliedConfig,
-            userPlan: user.plan || 'free'
+            userPlan: user.plan || 'free',
+            difficulty,
+            questionTypes,
+            timeLimit
         });
 
         ref.subtopic.practices.push({
             bundle: practiceBundle,
+            config: { difficulty, timeLimit, questionTypes },
             state: {
                 attemptsUsed: 0,
                 passed: false,
                 lastScore: 0,
                 feedback: null,
-                lastSubmission: null
+                lastSubmission: null,
+                startedAt: null,
+                completedAt: null,
+                perQuestionFeedback: [],
+                imageEvalResults: {}
             },
             generatedAt: new Date()
         });
@@ -644,6 +723,7 @@ const generateSubtopicPractice = async (req, res) => {
 
         return res.json({
             success: true,
+            practiceIndex: ref.subtopic.practices.length - 1,
             course: serializeStudyPlan(course),
             subtopic: ref.subtopic
         });

@@ -6,6 +6,7 @@ import DashboardProgressPage from './pages/DashboardProgressPage';
 import GuidedCreatePage from './pages/GuidedCreatePage';
 import GuidedStudyPlanMap from './pages/GuidedStudyPlanMap';
 import GuidedStudyPlanHub from './pages/GuidedStudyPlanHub';
+import GuidedPracticeTestPage from './pages/GuidedPracticeTestPage';
 import PlaylistCreatePage from './pages/PlaylistCreatePage';
 import PlaylistCourseMap from './pages/PlaylistCourseMap';
 import PlaylistLearnHub from './pages/PlaylistLearnHub';
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/create/playlist" element={<PlaylistCreatePage />} />
         <Route path="/dashboard/guided/study-plan/:courseId" element={<GuidedStudyPlanMap />} />
         <Route path="/dashboard/guided/study-plan/:courseId/learn/:moduleIndex/:subtopicIndex" element={<GuidedStudyPlanHub />} />
+        <Route path="/dashboard/guided/study-plan/:courseId/learn/:moduleIndex/:subtopicIndex/practice" element={<GuidedPracticeTestPage />} />
         <Route path="/playlist/:courseId" element={<PlaylistCourseMap />} />
         <Route path="/playlist/:courseId/day/:dayIndex" element={<PlaylistLearnHub />} />
         <Route path="/dashboard/profile" element={<Profile />} />

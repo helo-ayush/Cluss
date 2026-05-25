@@ -479,186 +479,183 @@ function NoteBlock({ block, active, busy, onSelect, onAction, onAsk, onChatTrigg
   );
 }
 
-function PracticeDrawer({
-  open,
-  onClose,
-  subtopic,
-  mcqAnswers,
-  setMcqAnswers,
-  writtenAnswers,
-  setWrittenAnswers,
-  codeAnswers,
-  setCodeAnswers,
-  submitting,
-  onSubmit,
-  plan,
-  generatingPractice,
-  onGeneratePractice,
-  currentPracticeIndex,
-  setCurrentPracticeIndex,
-}) {
-  const practices = subtopic?.practices || [];
-  const currentPractice = practices[currentPracticeIndex];
-  const bundle = currentPractice?.bundle || {};
-  const feedback = currentPractice?.state?.feedback;
-  const isSubmitted = (currentPractice?.state?.attemptsUsed || 0) > 0;
-  const hasTasks = practices.length > 0 && ((bundle.mcqs?.length || 0) + (bundle.written?.length || 0) + (bundle.code?.length || 0) > 0);
+function PreTestModal({ open, onClose, courseId, subtopicRef, plan, navigate, moduleIndex, subtopicIndex }) {
+  const [timeLimit, setTimeLimit] = useState(15);
+  const [difficulty, setDifficulty] = useState('medium');
+  const [questionTypes, setQuestionTypes] = useState(['mcqs', 'written']);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState('');
+  const isPro = plan && plan !== 'free';
+
+  const toggleType = (type) => {
+    setQuestionTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
+  const estimatedCount = {
+    easy:   { 10: 6,  15: 8,  30: 12, 0: 15 },
+    medium: { 10: 7,  15: 10, 30: 15, 0: 20 },
+    hard:   { 10: 8,  15: 12, 30: 18, 0: 25 },
+  }[difficulty]?.[timeLimit] ?? 10;
+
+  const generationCost = getCostForAction(plan, 'practiceGeneration');
+  const gradingCost = getCostForAction(plan, 'assessmentGrading');
+
+  const handleStart = async () => {
+    if (questionTypes.length === 0) { setError('Select at least one question type.'); return; }
+    setGenerating(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/study-plans/${courseId}/subtopics/${subtopicRef}/practice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ difficulty, questionTypes, timeLimit }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || data.message || 'Could not generate practice.');
+      const pi = data.practiceIndex ?? 0;
+      navigate(`/dashboard/guided/study-plan/${courseId}/learn/${moduleIndex}/${subtopicIndex}/practice?pi=${pi}&tl=${timeLimit}`);
+    } catch (err) {
+      setError(err.message);
+      setGenerating(false);
+    }
+  };
+
+  if (!open) return null;
+
+  const timeLimitOptions = [{ label: '10 min', value: 10 }, { label: '15 min', value: 15 }, { label: '30 min', value: 30 }, { label: 'No limit', value: 0 }];
+  const difficultyOptions = [{ label: 'Easy', value: 'easy', color: '#4ade80' }, { label: 'Medium', value: 'medium', color: '#fbbf24' }, { label: 'Hard', value: 'hard', color: '#f87171' }];
+  const typeOptions = [
+    { key: 'mcqs', label: 'MCQ', icon: '⊙', pro: false },
+    { key: 'written', label: 'Written', icon: '✎', pro: false },
+    { key: 'math', label: 'Math', icon: '∑', pro: true },
+    { key: 'code', label: 'Code', icon: '</>', pro: true },
+  ];
 
   return (
     <AnimatePresence>
-      {open && (
+      <motion.div
+        className="fixed inset-0 z-[1200] flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
         <motion.div
-          className="fixed inset-0 z-[1200] flex justify-end course-modal-backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
+          className="relative w-full max-w-md rounded-[2rem] border border-white/[0.08] bg-[#141414] shadow-[0_40px_120px_rgba(0,0,0,0.6)] overflow-hidden"
+          initial={{ scale: 0.92, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.92, opacity: 0, y: 20 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 22 }}
+          onClick={e => e.stopPropagation()}
         >
-          <motion.aside
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', stiffness: 190, damping: 24 }}
-            className="flex h-full w-full max-w-3xl flex-col overflow-hidden bg-[#1b1b1b] shadow-[0_0_100px_rgba(0,0,0,0.5)] sm:rounded-l-[2.4rem] border-l border-white/[0.06]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-5 py-5 md:px-7">
+          {/* Top accent line */}
+          <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#efff55] to-transparent" />
+
+          <div className="p-6 md:p-8">
+            <div className="flex items-start justify-between mb-6">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efff55]">Practice drawer</p>
-                <div className="mt-2 flex items-center gap-4">
-                  <h2 className="font-serif text-3xl font-semibold text-white">Show what stuck</h2>
-                  {practices.length > 0 && (
-                    <div className="flex items-center gap-2 rounded-full border border-white/[0.06] bg-[#161616] px-3 py-1">
-                      <button onClick={() => setCurrentPracticeIndex(Math.max(0, currentPracticeIndex - 1))} disabled={currentPracticeIndex === 0} className="p-1 rounded-full hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition">
-                        <ArrowLeft className="h-3 w-3 text-slate-300" />
-                      </button>
-                      <span className="text-xs font-semibold text-slate-300">Sheet {currentPracticeIndex + 1} of {practices.length}</span>
-                      <button onClick={() => setCurrentPracticeIndex(Math.min(practices.length - 1, currentPracticeIndex + 1))} disabled={currentPracticeIndex === practices.length - 1} className="p-1 rounded-full hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition">
-                        <ArrowRight className="h-3 w-3 text-slate-300" />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efff55]">Practice Test</p>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight text-white">Configure your test</h2>
               </div>
-              <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.06] bg-[#161616] text-slate-400 hover:text-white transition">
-                <X className="h-5 w-5" />
+              <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.06] bg-white/[0.03] text-zinc-400 hover:text-white transition">
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="modal-scroll min-h-0 flex-1 space-y-6 px-5 py-6 md:px-7">
-              {practices.length === 0 && (
-                <div className="rounded-[1.8rem] border border-white/[0.06] bg-[#1b1b1b] p-8 text-center shadow-sm">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#efff55]/5 text-[#efff55] border border-[#efff55]/10">
-                    <ClipboardList className="h-7 w-7" />
-                  </div>
-                  <h3 className="mt-5 font-serif text-2xl font-semibold text-white">Ready to test yourself?</h3>
-                  <p className="mx-auto mt-3 max-w-sm text-sm leading-7 text-slate-400">Generate a focused practice sheet based strictly on what you've learned so far in this lesson.</p>
-                  <button type="button" onClick={onGeneratePractice} disabled={generatingPractice} className="mx-auto mt-6 flex items-center justify-center gap-2 rounded-full bg-[#efff55] px-5 py-3 text-sm font-bold text-black transition hover:bg-[#efff55]/90 hover:shadow-[0_0_15px_rgba(239,255,85,0.2)] disabled:opacity-50 min-w-[200px]">
-                    {generatingPractice ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    {generatingPractice ? 'Generating...' : 'Generate Practice Sheet'}
-                    <CreditCost cost={getCostForAction(plan, 'practiceGeneration')} className="ml-1.5" />
+            {/* Time Limit */}
+            <div className="mb-5">
+              <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">Time Limit</p>
+              <div className="grid grid-cols-4 gap-2">
+                {timeLimitOptions.map(opt => (
+                  <button key={opt.value} onClick={() => setTimeLimit(opt.value)}
+                    className={`rounded-[1rem] border py-2.5 text-xs font-bold transition ${
+                      timeLimit === opt.value
+                        ? 'border-[#efff55]/60 bg-[#efff55]/10 text-[#efff55]'
+                        : 'border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:border-white/20 hover:text-white'
+                    }`}>
+                    {opt.label}
                   </button>
-                </div>
-              )}
-
-              {practices.length > 0 && !hasTasks && (
-                <div className="rounded-[1.8rem] border border-black/5 bg-white/80 p-6 text-sm leading-7 text-slate-500">
-                  This practice sheet does not have tasks.
-                </div>
-              )}
-
-              {(bundle.mcqs || []).map((mcq, index) => (
-                <section key={`mcq-${index}`} className="rounded-[1.8rem] border border-white/[0.06] bg-[#1b1b1b] p-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">MCQ {index + 1}</p>
-                  <h3 className="mt-3 text-lg font-bold leading-7 text-white">{mcq.question}</h3>
-                  <div className="mt-4 grid gap-3">
-                    {(mcq.options || []).map((option, optionIndex) => (
-                      <button
-                        type="button"
-                        key={`${index}-${optionIndex}`}
-                        disabled={isSubmitted}
-                        onClick={() => setMcqAnswers((prev) => ({ ...prev, [index]: option }))}
-                        className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition duration-300 ${
-                          mcqAnswers[index] === option
-                            ? 'border-[#efff55]/40 bg-[#efff55]/10 text-[#efff55]'
-                            : 'border-white/[0.06] bg-[#161616] text-slate-300 hover:bg-[#1c1c1c] hover:border-white/[0.12]'
-                        }`}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              ))}
-
-              {(bundle.written || []).map((question, index) => (
-                <section key={`written-${index}`} className="rounded-[1.8rem] border border-white/[0.06] bg-[#1b1b1b] p-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Written {index + 1}</p>
-                  <h3 className="mt-3 text-lg font-bold leading-7 text-white">{question.question}</h3>
-                  {!!question.rubric?.length && (
-                    <div className="mt-3 rounded-2xl bg-[#161616] border border-white/[0.06] px-4 py-3 text-sm leading-6 text-slate-400">
-                      Look for: {question.rubric.join(', ')}
-                    </div>
-                  )}
-                  <textarea
-                    value={writtenAnswers[index] || ''}
-                    disabled={isSubmitted}
-                    onChange={(event) => setWrittenAnswers((prev) => ({ ...prev, [index]: event.target.value }))}
-                    placeholder="Write your answer here..."
-                    className="mt-4 min-h-32 w-full resize-y rounded-2xl border border-white/[0.06] bg-[#161616] px-4 py-3 text-sm text-slate-200 outline-none focus:border-[#efff55]/30 focus:bg-[#161616]/90 transition duration-300"
-                  />
-                </section>
-              ))}
-
-              {(bundle.code || []).map((task, index) => (
-                <section key={`code-${index}`} className="rounded-[1.8rem] border border-white/[0.06] bg-[#1b1b1b] p-5">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Code {index + 1}</p>
-                    {task.language && <span className="rounded-full bg-[#161616] border border-white/[0.06] px-3 py-1 text-xs font-semibold text-slate-300">{task.language}</span>}
-                  </div>
-                  <h3 className="mt-3 text-lg font-bold leading-7 text-white">{task.prompt}</h3>
-                  {task.starterCode && (
-                    <div className="mt-4 overflow-hidden rounded-2xl">
-                      <MarkdownRenderer content={`\`\`\`${task.language || ''}\n${task.starterCode}\n\`\`\``} />
-                    </div>
-                  )}
-                  <textarea
-                    value={codeAnswers[index] || ''}
-                    disabled={isSubmitted}
-                    onChange={(event) => setCodeAnswers((prev) => ({ ...prev, [index]: event.target.value }))}
-                    placeholder="Paste or write your solution here..."
-                    className="mt-4 min-h-40 w-full resize-y rounded-2xl border border-white/[0.06] bg-[#0a0b10] px-4 py-3 font-mono text-sm text-slate-100 outline-none focus:border-[#efff55]/30 transition duration-300"
-                  />
-                </section>
-              ))}
-
-              {feedback && (
-                <section className="rounded-[1.8rem] border border-[#efff55]/20 bg-[#efff55]/5 p-5 text-white shadow-[0_0_20px_rgba(239,255,85,0.01)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efff55]">Latest feedback</p>
-                  <h3 className="mt-3 text-2xl font-bold text-white">{feedback.score || 0}%</h3>
-                  <div className="mt-3 text-sm leading-7 text-zinc-300">
-                    <MarkdownRenderer content={feedback.coaching || feedback.overallFeedback || feedback.summary || ''} />
-                  </div>
-                </section>
-              )}
+                ))}
+              </div>
             </div>
 
-            <div className="border-t border-white/[0.06] bg-[#1b1b1b] px-5 py-4 md:px-7">
-              {practices.length > 0 && !isSubmitted ? (
-                <button type="button" disabled={submitting || !hasTasks} onClick={onSubmit} className="flex items-center justify-center gap-2 rounded-full bg-[#efff55] px-5 py-3 text-sm font-bold text-black transition hover:bg-[#efff55]/90 hover:shadow-[0_0_15px_rgba(239,255,85,0.2)] disabled:opacity-50 w-full">
-                  {submitting ? 'Checking your work...' : 'Submit practice'}
-                </button>
-              ) : practices.length > 0 && isSubmitted ? (
-                <button type="button" disabled={generatingPractice} onClick={onGeneratePractice} className="flex items-center justify-center gap-2 rounded-full border border-white/20 bg-transparent px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10 w-full">
-                  {generatingPractice ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-                  {generatingPractice ? 'Generating...' : 'Generate New Practice Sheet'}
-                  <CreditCost cost={getCostForAction(plan, 'practiceGeneration')} className="ml-2 font-bold text-white" />
-                </button>
-              ) : null}
+            {/* Difficulty */}
+            <div className="mb-5">
+              <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">Difficulty</p>
+              <div className="grid grid-cols-3 gap-2">
+                {difficultyOptions.map(opt => (
+                  <button key={opt.value} onClick={() => setDifficulty(opt.value)}
+                    className={`rounded-[1rem] border py-2.5 text-xs font-bold transition ${
+                      difficulty === opt.value
+                        ? 'border-white/20 text-white'
+                        : 'border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:border-white/20 hover:text-white'
+                    }`}
+                    style={difficulty === opt.value ? { borderColor: opt.color + '60', background: opt.color + '15', color: opt.color } : {}}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </motion.aside>
+
+            {/* Question Types */}
+            <div className="mb-6">
+              <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">Question Types</p>
+              <div className="grid grid-cols-2 gap-2">
+                {typeOptions.map(opt => {
+                  const locked = opt.pro && !isPro;
+                  const active = questionTypes.includes(opt.key) && !locked;
+                  return (
+                    <button key={opt.key}
+                      onClick={() => !locked && toggleType(opt.key)}
+                      disabled={locked}
+                      className={`relative flex items-center gap-2.5 rounded-[1rem] border px-3.5 py-3 text-sm font-semibold transition ${
+                        locked ? 'border-white/[0.04] bg-white/[0.01] text-zinc-600 cursor-not-allowed'
+                        : active ? 'border-[#efff55]/40 bg-[#efff55]/8 text-white'
+                        : 'border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:border-white/20 hover:text-white'
+                      }`}>
+                      <span className="text-base">{opt.icon}</span>
+                      <span>{opt.label}</span>
+                      {locked && (
+                        <span className="ml-auto rounded-full bg-[#efff55]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#efff55]">
+                          PRO
+                        </span>
+                      )}
+                      {active && !locked && (
+                        <span className="ml-auto h-2 w-2 rounded-full bg-[#efff55]" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Estimate */}
+            <div className="mb-5 flex items-center justify-between rounded-[1.2rem] border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+              <span className="text-xs text-zinc-500">AI will generate ~{estimatedCount} questions</span>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="text-zinc-500">Test: <span className="text-white font-semibold">⚡{generationCost}</span></span>
+                <span className="text-zinc-500">Grade: <span className="text-white font-semibold">⚡{gradingCost}</span></span>
+              </div>
+            </div>
+
+            {error && <p className="mb-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs text-rose-300">{error}</p>}
+
+            <div className="flex gap-3">
+              <button onClick={onClose} className="flex-1 rounded-full border border-white/[0.06] bg-white/[0.02] py-3 text-sm font-semibold text-zinc-400 hover:text-white transition">
+                Cancel
+              </button>
+              <button onClick={handleStart} disabled={generating}
+                className="flex flex-[2] items-center justify-center gap-2 rounded-full bg-[#efff55] py-3 text-sm font-bold text-black transition hover:bg-[#efff55]/90 hover:shadow-[0_0_20px_rgba(239,255,85,0.2)] disabled:opacity-60">
+                {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {generating ? 'Generating test...' : 'Start Test →'}
+              </button>
+            </div>
+          </div>
         </motion.div>
-      )}
+      </motion.div>
     </AnimatePresence>
   );
 }
@@ -792,17 +789,9 @@ export default function GuidedStudyPlanHub() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [rewritingBlockId, setRewritingBlockId] = useState('');
-  const [practiceOpen, setPracticeOpen] = useState(false);
+  const [practiceModalOpen, setPracticeModalOpen] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState(null);
   const [pageError, setPageError] = useState('');
-  const [mcqAnswers, setMcqAnswers] = useState({});
-  const [writtenAnswers, setWrittenAnswers] = useState({});
-  const [codeAnswers, setCodeAnswers] = useState({});
-  const [confidence, setConfidence] = useState('');
-  const [studentNotes, setStudentNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [generatingPractice, setGeneratingPractice] = useState(false);
-  const [currentPracticeIndex, setCurrentPracticeIndex] = useState(0);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [externalPrompt, setExternalPrompt] = useState(null);
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
@@ -838,7 +827,6 @@ export default function GuidedStudyPlanHub() {
         return;
       }
       setCourse(data.course);
-      setStudentNotes(nextSubtopic?.studentNotes || '');
     } catch (error) {
       redirectToLibrary(error.message || 'Could not open that lesson.');
     } finally {
@@ -850,37 +838,7 @@ export default function GuidedStudyPlanHub() {
     fetchCourse();
   }, [fetchCourse]);
 
-  useEffect(() => {
-    setConfidence('');
-  }, [courseId, moduleIndex, subtopicIndex]);
 
-  useEffect(() => {
-    const module = course?.modules?.[numericModuleIndex];
-    const subtopic = module?.subtopics?.[numericSubtopicIndex];
-    const practices = subtopic?.practices || [];
-    const currentPractice = practices[currentPracticeIndex];
-    const submission = currentPractice?.state?.lastSubmission || {};
-
-    setMcqAnswers(submission.mcqAnswers || {});
-    setWrittenAnswers(submission.writtenAnswers || {});
-    setCodeAnswers(submission.codeAnswers || {});
-  }, [currentPracticeIndex, course, numericModuleIndex, numericSubtopicIndex]);
-
-
-
-  useEffect(() => {
-    if (practiceOpen) {
-      document.body.classList.add('practice-drawer-open');
-      document.documentElement.classList.add('practice-drawer-open');
-    } else {
-      document.body.classList.remove('practice-drawer-open');
-      document.documentElement.classList.remove('practice-drawer-open');
-    }
-    return () => {
-      document.body.classList.remove('practice-drawer-open');
-      document.documentElement.classList.remove('practice-drawer-open');
-    };
-  }, [practiceOpen]);
 
 
   const module = course?.modules?.[numericModuleIndex];
@@ -1015,50 +973,6 @@ export default function GuidedStudyPlanHub() {
   };
 
 
-  const submitPractice = async () => {
-    setSubmitting(true);
-    setPageError('');
-    try {
-      const submission = {
-        mcqAnswers,
-        writtenAnswers,
-        codeAnswers,
-      };
-      const res = await fetch(`${API_BASE}/api/study-plans/${courseId}/subtopics/${currentRef}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submission, confidence, studentNotes, practiceIndex: currentPracticeIndex }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || data.message || 'Could not review your practice.');
-      replaceCourseFromResponse(data);
-    } catch (error) {
-      setPageError(error.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const generatePractice = async () => {
-    setGeneratingPractice(true);
-    setPageError('');
-    try {
-      const res = await fetch(`${API_BASE}/api/study-plans/${courseId}/subtopics/${currentRef}/practice`, {
-        method: 'POST',
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || data.message || 'Could not generate practice.');
-      replaceCourseFromResponse(data);
-      if (data.subtopic?.practices) {
-        setCurrentPracticeIndex(data.subtopic.practices.length - 1);
-      }
-      fetchUsage();
-    } catch (error) {
-      setPageError(error.message);
-    } finally {
-      setGeneratingPractice(false);
-    }
-  };
 
   const downloadPdf = async () => {
     if (!pdfRef.current) return;
@@ -1243,12 +1157,12 @@ export default function GuidedStudyPlanHub() {
           generating={generating}
           loadingMessage={loadingMessage}
           moduleProgress={moduleProgress}
-          practiceCount={practiceCount}
+          practiceCount={subtopic?.practices?.length || 0}
           usageData={usageData}
           generateLesson={generateLesson}
           downloadPdf={downloadPdf}
           pdfBusy={pdfBusy}
-          setPracticeOpen={setPracticeOpen}
+          setPracticeOpen={setPracticeModalOpen}
           goPrev={goPrev}
           goNext={goNext}
           prevUnlockedRef={prevUnlockedRef}
@@ -1296,7 +1210,7 @@ export default function GuidedStudyPlanHub() {
                       {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                       PDF
                     </button>
-                    <button type="button" onClick={() => setPracticeOpen(true)} className="flex items-center gap-2 rounded-full bg-[#efff55] px-4 py-3 text-sm font-bold text-black transition hover:bg-[#efff55]/90 hover:shadow-[0_0_15px_rgba(239,255,85,0.15)]">
+                    <button type="button" onClick={() => setPracticeModalOpen(true)} className="flex items-center gap-2 rounded-full bg-[#efff55] px-4 py-3 text-sm font-bold text-black transition hover:bg-[#efff55]/90 hover:shadow-[0_0_15px_rgba(239,255,85,0.15)]">
                       <ClipboardList className="h-4 w-4" />
                       Practice
                     </button>
@@ -1367,23 +1281,15 @@ export default function GuidedStudyPlanHub() {
         </div>
       </div>
 
-      <PracticeDrawer
-        open={practiceOpen}
-        onClose={() => setPracticeOpen(false)}
-        subtopic={subtopic}
-        mcqAnswers={mcqAnswers}
-        setMcqAnswers={setMcqAnswers}
-        writtenAnswers={writtenAnswers}
-        setWrittenAnswers={setWrittenAnswers}
-        codeAnswers={codeAnswers}
-        setCodeAnswers={setCodeAnswers}
-        submitting={submitting}
-        onSubmit={submitPractice}
-        generatingPractice={generatingPractice}
-        onGeneratePractice={generatePractice}
-        currentPracticeIndex={currentPracticeIndex}
-        setCurrentPracticeIndex={setCurrentPracticeIndex}
+      <PreTestModal
+        open={practiceModalOpen}
+        onClose={() => setPracticeModalOpen(false)}
+        courseId={courseId}
+        subtopicRef={currentRef}
         plan={usageData?.plan}
+        navigate={navigate}
+        moduleIndex={numericModuleIndex}
+        subtopicIndex={numericSubtopicIndex}
       />
 
       <div ref={pdfRef} style={{ display: 'none', background: '#fff', padding: '40px', color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif', width: '760px' }}>

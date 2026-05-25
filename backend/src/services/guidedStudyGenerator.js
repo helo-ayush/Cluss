@@ -550,23 +550,75 @@ Expected format:
     }
 }
 
-async function generatePracticeSheet({ courseTitle, moduleTitle, subtopicTitle, lessonContext, config, userPlan = 'free' }) {
+async function generatePracticeSheet({ courseTitle, moduleTitle, subtopicTitle, lessonContext, config, userPlan = 'free', difficulty = 'medium', questionTypes = ['mcqs', 'written'], timeLimit = 15 }) {
+    // AI-determined question count based on time and difficulty
+    const countMap = {
+        easy:   { 10: 6,  15: 8,  30: 12, 0: 15 },
+        medium: { 10: 7,  15: 10, 30: 15, 0: 20 },
+        hard:   { 10: 8,  15: 12, 30: 18, 0: 25 },
+    };
+    const timeBucket = [10, 15, 30].includes(timeLimit) ? timeLimit : 0;
+    const totalCount = (countMap[difficulty] || countMap.medium)[timeBucket];
+
+    const includesMcq = questionTypes.includes('mcqs');
+    const includesWritten = questionTypes.includes('written');
+    const includesCode = questionTypes.includes('code') && (userPlan !== 'free');
+    const includesMath = questionTypes.includes('math') && (userPlan !== 'free');
+
+    // Distribute question count across enabled types
+    let mcqCount = 0, writtenCount = 0, codeCount = 0, mathCount = 0;
+    const enabledTypes = [includesMcq, includesWritten, includesCode, includesMath].filter(Boolean).length;
+    if (enabledTypes === 0) { mcqCount = totalCount; } // fallback
+    else {
+        if (includesMcq) mcqCount = Math.ceil(totalCount * 0.5);
+        const remaining = totalCount - mcqCount;
+        if (includesWritten && includesCode && includesMath) {
+            writtenCount = Math.floor(remaining / 3);
+            codeCount = Math.floor(remaining / 3);
+            mathCount = remaining - writtenCount - codeCount;
+        } else if (includesWritten && includesCode) {
+            writtenCount = Math.ceil(remaining / 2);
+            codeCount = remaining - writtenCount;
+        } else if (includesWritten && includesMath) {
+            writtenCount = Math.ceil(remaining / 2);
+            mathCount = remaining - writtenCount;
+        } else if (includesWritten) {
+            writtenCount = remaining;
+        } else if (includesCode) {
+            codeCount = remaining;
+        } else if (includesMath) {
+            mathCount = remaining;
+        }
+    }
+
     const prompt = `
-You are generating a highly targeted practice sheet for the study plan "${courseTitle}".
+You are generating a timed practice test for the study plan "${courseTitle}".
 
 Module: "${moduleTitle}"
 Subtopic: "${subtopicTitle}"
+Difficulty: ${difficulty}
+Time limit: ${timeLimit === 0 ? 'unlimited' : timeLimit + ' minutes'}
 
-Syllabus Context (what the student has learned so far):
+Lesson context (what the student has studied):
 ${lessonContext}
 
-Requirements:
-1. Generate practice questions strictly based on the provided syllabus context. DO NOT ask about concepts that are not covered in the context.
-2. If the topic is introductory (like "What is a DBMS?"), ask conceptual questions, not advanced coding or syntax questions.
-3. Generate ${config.mcqCount || 3} MCQs with correct answers and explanations.
-4. Generate ${config.writtenCount || 1} written questions with rubric bullet points.
-5. If code is enabled (${config.codeEnabled ? 'yes' : 'no'}), generate ${config.codeCount || 0} code tasks ONLY if the context naturally supports coding. Otherwise omit them.
-6. Output ONLY valid JSON. Do not use markdown blocks like \`\`\`json. Return the raw JSON directly.
+Generate EXACTLY the following question counts (do not deviate):
+- MCQ questions: ${mcqCount}
+- Written/essay questions: ${writtenCount}
+- Code questions: ${codeCount}
+- Math/calculation questions: ${mathCount}
+
+Difficulty calibration:
+- easy: test basic recall and definitions
+- medium: test understanding and application
+- hard: test analysis, multi-step reasoning, and synthesis
+
+Rules:
+1. All questions must be strictly based on the lesson context above.
+2. Written questions need image_upload: true since student may upload handwritten answer.
+3. Math questions need image_upload: true since student may upload handwritten calculations.
+4. MCQ must have exactly 4 options and one correct answer.
+5. Output ONLY valid JSON, no markdown blocks.
 
 Expected format:
 {
@@ -582,7 +634,8 @@ Expected format:
   "written": [
     {
       "question": "string",
-      "rubric": ["string"]
+      "rubric": ["string"],
+      "image_upload": true
     }
   ],
   "code": [
@@ -590,23 +643,24 @@ Expected format:
       "prompt": "string",
       "language": "string",
       "starterCode": "string",
-      "rubric": ["string"]
+      "rubric": ["string"],
+      "image_upload": false
+    }
+  ],
+  "math": [
+    {
+      "question": "string",
+      "rubric": ["string"],
+      "image_upload": true
     }
   ]
 }
 `;
 
-    const apiConfig = {};
-    if (config && config.webGroundingEnabled) {
-        apiConfig.tools = [{ googleSearch: {} }];
-    } else {
-        apiConfig.responseMimeType = 'application/json';
-    }
-
     const response = await ai.models.generateContent({
         model: getModelForPlan(userPlan),
         contents: prompt,
-        config: apiConfig
+        config: { responseMimeType: 'application/json' }
     });
 
     const rawText = typeof response.text === 'function' ? await response.text() : (response.text || '');
@@ -814,6 +868,112 @@ Output strictly valid JSON matching this structure:
     return JSON.parse(extractJson(rawText));
 }
 
+async function generatePerQuestionExplanations({ questions, studentAnswers, gradingResults, topic, subtopicTitle, userPlan = 'free' }) {
+    const questionSummaries = questions.map((q, i) => {
+        const answer = studentAnswers[i];
+        const result = gradingResults[i];
+        return `Q${i + 1} [${q.type}]: ${q.question}\nStudent answer: ${answer?.value || answer?.text || '(not answered)'}\nCorrect: ${result?.correct ? 'yes' : 'no'}\nCorrect answer: ${q.correctAnswer || '(subjective — see rubric)'}\nRubric: ${(q.rubric || []).join(', ')}`;
+    }).join('\n\n');
+
+    const prompt = `
+You are a friendly, expert tutor reviewing a student's practice test.
+
+Topic: "${topic}"
+Subtopic: "${subtopicTitle}"
+
+Here are all the questions, the student's answers, and whether they got it right:
+${questionSummaries}
+
+For EACH question, write:
+1. A short explanation of the correct answer (2-4 sentences)
+2. What the student did well (if anything)
+3. One concrete tip to improve
+
+Be encouraging but honest. Use simple language.
+
+Output ONLY valid JSON — an array with one entry per question:
+[
+  {
+    "questionIndex": 0,
+    "correct": true,
+    "explanation": "string (the correct answer explanation)",
+    "whatWentWell": "string",
+    "improvementTip": "string"
+  }
+]
+`;
+
+    const response = await ai.models.generateContent({
+        model: getModelForPlan(userPlan),
+        contents: prompt,
+        config: { responseMimeType: 'application/json' }
+    });
+
+    const rawText = typeof response.text === 'function' ? await response.text() : (response.text || '');
+    try {
+        return JSON.parse(extractJson(rawText));
+    } catch {
+        return [];
+    }
+}
+
+async function evaluateImageAnswer({ base64Image, questionText, rubric = [], userPlan = 'free' }) {
+    try {
+        const prompt = `
+You are evaluating a student's handwritten answer image for a practice test question.
+
+Question: ${questionText}
+Rubric points to check: ${rubric.join(', ') || 'general correctness and understanding'}
+
+Look at the uploaded image and:
+1. Extract/transcribe the handwritten text you can see
+2. Evaluate how well it answers the question based on the rubric
+3. Give a score from 0-100
+
+If the image is too blurry, illegible, or does not contain a relevant answer, set isReadable to false.
+
+Output ONLY valid JSON:
+{
+  "isReadable": true,
+  "extractedText": "string (what you could read from the image)",
+  "score": 75,
+  "feedback": "string (brief evaluation)",
+  "evaluationNote": "string (any notes about image quality or readability)"
+}
+`;
+
+        const response = await ai.models.generateContent({
+            model: getModelForPlan(userPlan),
+            contents: [
+                {
+                    role: 'user',
+                    parts: [
+                        { text: prompt },
+                        {
+                            inlineData: {
+                                mimeType: 'image/jpeg',
+                                data: base64Image
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        const rawText = typeof response.text === 'function' ? await response.text() : (response.text || '');
+        return JSON.parse(extractJson(rawText));
+    } catch (err) {
+        console.error('evaluateImageAnswer error:', err.message);
+        return {
+            isReadable: false,
+            extractedText: '',
+            score: 0,
+            feedback: 'Could not evaluate image.',
+            evaluationNote: 'Image evaluation failed: ' + err.message
+        };
+    }
+}
+
 module.exports = {
     sanitizeStudyConfig,
     generateGuidedScaffold,
@@ -821,5 +981,7 @@ module.exports = {
     generatePracticeSheet,
     rewriteGuidedLessonBlock,
     gradeGuidedSubmission,
-    generateSyllabusDiff
+    generateSyllabusDiff,
+    generatePerQuestionExplanations,
+    evaluateImageAnswer
 };

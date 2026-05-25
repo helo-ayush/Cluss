@@ -25,8 +25,9 @@ const ACTION_COSTS = {
     blockRewrite: { standard: 2, advanced: 6 },
     quickBlockQuiz: { standard: 2, advanced: 6 },
     tutorChat: { standard: 1, advanced: 3 },
-    practiceGeneration: { standard: 5, advanced: 15 },
-    assessmentGrading: { standard: 0, advanced: 0 },
+    practiceGeneration: { standard: 5, advanced: 20 },
+    assessmentGrading: { standard: 5, advanced: 10 },
+    imageAnswerGrade: { standard: 0, advanced: 5 },
     playlistCheckpointGeneration: { standard: 5, advanced: 15 },
     playlistCheckpointGrading: { standard: 5, advanced: 15 },
 };
@@ -40,8 +41,9 @@ const ACTION_LABELS = {
     blockRewrite: 'Block rewrite',
     quickBlockQuiz: 'Quick block quiz',
     tutorChat: 'Tutor chat message',
-    practiceGeneration: 'Generated practice sheet',
-    assessmentGrading: 'Practice grading',
+    practiceGeneration: 'Generated practice test',
+    assessmentGrading: 'Practice test grading + AI explanations',
+    imageAnswerGrade: 'Image answer evaluation',
     playlistCheckpointGeneration: 'Playlist checkpoint generation',
     playlistCheckpointGrading: 'Playlist checkpoint grading',
 };
