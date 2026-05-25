@@ -25,7 +25,7 @@ export default function DashboardTopbar({ title, eyebrow, usageData, onMenuClick
             <Menu className="h-5 w-5" />
           </button>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-medium tracking-[-0.06em] text-white sm:text-3xl md:text-4xl">
+            <h1 className="truncate text-xl font-medium tracking-[-0.06em] text-white sm:text-2xl md:text-3xl">
               {title}
             </h1>
           </div>

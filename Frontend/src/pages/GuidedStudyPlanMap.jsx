@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
   ArrowLeft,
   BookOpen,
+  Check,
   CheckCircle,
   ChevronRight,
   CirclePlay,
@@ -74,28 +75,25 @@ function StudyPulsePanel({ progress, currentModule, currentSubtopic }) {
   const safeProgress = clampProgress(progress);
 
   return (
-    <div className="relative overflow-hidden rounded-[1.65rem] border border-white/10 bg-[#181a21] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:col-span-2 lg:col-span-2 xl:col-span-2">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/40 to-transparent" />
+    <div className="relative overflow-hidden rounded-[1.65rem] border border-white/[0.06] bg-[#1b1b1b] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] sm:col-span-2 lg:col-span-2 xl:col-span-2">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#efff55]/10 to-transparent" />
       <div className="flex items-start justify-between gap-5">
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-100/70">Study pulse</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#efff55]/80">Study pulse</p>
           <h2 className="mt-3 text-4xl font-black leading-none text-white">{safeProgress}%</h2>
           <p className="mt-3 line-clamp-2 text-sm font-semibold leading-6 text-zinc-500">
             {currentSubtopic?.subtopic_title || currentModule?.module_title || 'Plan is ready when you are.'}
           </p>
         </div>
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-200/20 bg-cyan-200/10 text-cyan-100">
-          <Gauge className="h-6 w-6" />
-        </div>
       </div>
       <div className="mt-6">
-        <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-zinc-600">
+        <div className="mb-2 flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-600">
           <span>Overall</span>
           <span>{safeProgress}/100</span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-cyan-200 via-white to-amber-200 transition-all duration-700"
+            className="h-full rounded-full bg-gradient-to-r from-[#efff55] to-white transition-all duration-700"
             style={{ width: `${safeProgress}%` }}
           />
         </div>
@@ -112,10 +110,10 @@ function MetricTile({ label, value, detail, accent = '#f5f5f5', delay = 0 }) {
       viewport={{ once: true, margin: '-80px' }}
       transition={{ delay, duration: 0.45 }}
       whileHover={{ y: -3, scale: 1.01 }}
-      className="group relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-white/[0.045] p-4 shadow-[0_18px_54px_rgba(0,0,0,0.22)]"
+      className="group relative overflow-hidden rounded-[1.35rem] border border-white/[0.06] bg-[#1b1b1b]/40 p-4 transition-all duration-300 hover:border-[#efff55]/30 shadow-[0_18px_54px_rgba(0,0,0,0.22)]"
     >
       <div className="relative">
-        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">{label}</p>
+        <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-500">{label}</p>
         <p className="mt-2 text-3xl font-black text-white">{value}</p>
       </div>
       <p className="relative mt-2 text-xs font-semibold leading-5 text-zinc-500">{detail}</p>
@@ -130,9 +128,9 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathS
   const moduleProgress = moduleCompletion(currentModule);
 
   return (
-    <section className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-[#12141c] shadow-[0_24px_90px_rgba(0,0,0,0.38)]">
-      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.085),transparent_38%),linear-gradient(180deg,rgba(20,184,166,0.08),transparent_45%),linear-gradient(115deg,transparent_0%,rgba(245,158,11,0.08)_68%,transparent_100%)]" />
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+    <section className="relative overflow-hidden rounded-[2.4rem] border border-white/[0.06] bg-[#1b1b1b] shadow-[0_24px_90px_rgba(0,0,0,0.38)]">
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.02),transparent_38%),linear-gradient(180deg,rgba(239,255,85,0.02),transparent_45%)]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
       <div className="relative grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_24rem] lg:p-8 xl:grid-cols-[minmax(0,1fr)_31rem]">
 
@@ -141,15 +139,15 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathS
           {/* Badges + Title */}
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <Link to="/dashboard/guided" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/[0.1] hover:text-white">
+              <Link to="/dashboard/guided" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.04] px-4 py-2 text-xs font-medium text-zinc-300 transition hover:bg-white/[0.08] hover:text-white">
                 <ArrowLeft className="h-4 w-4" />
                 Library
               </Link>
-              <span className="inline-flex items-center rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100">
+              <span className="inline-flex items-center rounded-full border border-[#efff55]/20 bg-[#efff55]/5 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.18em] text-[#efff55]">
                 Guided command center
               </span>
               {course.studyConfig?.miniProjectsEnabled && (
-                <span className="inline-flex items-center rounded-full border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-amber-200">
+                <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-400">
                   Checkpoints on
                 </span>
               )}
@@ -165,22 +163,19 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathS
           </div>
 
           {/* Up Next card */}
-          <div className="w-full max-w-[32rem] overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Up next</p>
-            <div className="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-black">
-                <CirclePlay className="h-5 w-5" />
-              </div>
+          <div className="w-full max-w-[32rem] overflow-hidden rounded-[1.5rem] border border-white/[0.06] bg-white/[0.025] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.01)]">
+            <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-500">Up next</p>
+            <div className="mt-3 min-w-0">
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-zinc-400">
                   {currentModule ? `Module ${currentRef.moduleIndex + 1}: ${currentModule.module_title}` : 'No active module'}
                 </p>
-                <h2 className="mt-1 break-words text-xl font-black leading-snug text-white line-clamp-2">
+                <h2 className="mt-1 break-words text-xl font-bold leading-snug text-white line-clamp-2">
                   {currentSubtopic?.subtopic_title || 'Your plan is ready'}
                 </h2>
                 <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-cyan-200 via-white to-amber-200 transition-all duration-700"
+                    className="h-full rounded-full bg-gradient-to-r from-[#efff55] to-white transition-all duration-700"
                     style={{ width: `${moduleProgress}%` }}
                   />
                 </div>
@@ -192,14 +187,14 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathS
           <div className="flex flex-wrap gap-3">
             <Link
               to={continueUrl}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-zinc-200"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#efff55] px-5 py-3 text-sm font-bold text-black hover:bg-[#efff55]/90 transition hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(239,255,85,0.15)] duration-300"
             >
               Continue <ArrowRight className="h-4 w-4" />
             </Link>
             <button
               type="button"
               onClick={onOpenSettings}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-black text-zinc-200 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.04] px-5 py-3 text-sm font-medium text-zinc-200 transition hover:-translate-y-0.5 hover:bg-white/[0.08]"
             >
               <SlidersHorizontal className="h-4 w-4" />
               Defaults
@@ -209,7 +204,7 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathS
               onClick={onPublish}
               disabled={publishing || !canPublish}
               title={canPublish ? 'Publish this generated course' : 'Generate at least one lesson before publishing'}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-200/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:-translate-y-0.5 hover:bg-cyan-200/15 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe2 className="h-4 w-4" />}
               {publishing ? 'Publishing' : 'Publish'}
@@ -221,10 +216,10 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathS
         <div className="flex flex-col gap-4 lg:items-end">
           <StudyPulsePanel progress={course.progress || 0} currentModule={currentModule} currentSubtopic={currentSubtopic} />
           <div className="grid w-full grid-cols-2 gap-3">
-            <MetricTile label="Modules" value={(course.modules || []).length} detail="Major sections" accent="#b9f9ff" />
-            <MetricTile label="Lessons" value={pathStats.total} detail="Learning units" accent="#ffffff" delay={0.04} />
-            <MetricTile label="Done" value={(course.modules || []).flatMap((module) => module.subtopics || []).filter((item) => item.status === 'completed').length} detail="Completed units" accent="#6ee7b7" delay={0.08} />
-            <MetricTile label="Gates" value={(course.modules || []).flatMap((module) => module.subtopics || []).filter((item) => item.subtopic_type === 'mini-project').length} detail="Mini projects" accent="#fde68a" delay={0.12} />
+            <MetricTile label="Modules" value={(course.modules || []).length} detail="Major sections" />
+            <MetricTile label="Lessons" value={pathStats.total} detail="Learning units" delay={0.04} />
+            <MetricTile label="Done" value={(course.modules || []).flatMap((module) => module.subtopics || []).filter((item) => item.status === 'completed').length} detail="Completed units" delay={0.08} />
+            <MetricTile label="Gates" value={(course.modules || []).flatMap((module) => module.subtopics || []).filter((item) => item.subtopic_type === 'mini-project').length} detail="Mini projects" delay={0.12} />
           </div>
         </div>
 
@@ -243,16 +238,16 @@ function SettingsPanel({ open, configDraft, setConfigDraft, plan, saving, onSave
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.22 }}
-          className="rounded-[2rem] border border-white/10 bg-[#12141c] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.3)] sm:p-6 lg:p-7"
+          className="rounded-[2rem] border border-white/[0.06] bg-[#1b1b1b] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.3)] sm:p-6 lg:p-7"
         >
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.03] text-white">
                 <Settings2 className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">Lesson defaults</p>
-                <h2 className="mt-1 text-2xl font-black text-white">Study controls</h2>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Lesson defaults</p>
+                <h2 className="mt-1 text-2xl font-bold text-white">Study controls</h2>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -260,7 +255,7 @@ function SettingsPanel({ open, configDraft, setConfigDraft, plan, saving, onSave
                 type="button"
                 onClick={onSave}
                 disabled={saving}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-black text-black transition hover:bg-zinc-200 disabled:opacity-40"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black transition hover:bg-zinc-200 disabled:opacity-40"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                 {saving ? 'Saving' : 'Save'}
@@ -283,13 +278,12 @@ function SettingsPanel({ open, configDraft, setConfigDraft, plan, saving, onSave
 
 function ModuleHealthPanel({ modules, currentRef }) {
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-[2rem] border border-white/10 bg-[#0d0e10] p-4 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+    <section className="flex min-h-0 flex-1 flex-col rounded-[2rem] border border-white/[0.06] bg-[#1b1b1b] p-4 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
       <div className="mb-4 flex shrink-0 items-center justify-between gap-3 px-1">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">Module stack</p>
-          <h2 className="mt-1 text-xl font-black text-white">Plan health</h2>
+          <h2 className="text-xl font-bold text-white">Plan health</h2>
         </div>
-        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-black text-zinc-500">{(modules || []).length}</span>
+        <span className="rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1 text-[10px] font-semibold text-zinc-400">{(modules || []).length}</span>
       </div>
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 custom-scroll">
@@ -304,24 +298,24 @@ function ModuleHealthPanel({ modules, currentRef }) {
               onClick={() => scrollToElement(`module-section-${index}`)}
               className={`group w-full rounded-[1.15rem] border px-3 py-2.5 text-left transition hover:-translate-y-0.5 ${
                 active
-                  ? 'border-cyan-200/30 bg-cyan-200/10'
-                  : 'border-white/[0.08] bg-white/[0.03] hover:border-white/[0.16] hover:bg-white/[0.055]'
+                  ? 'border-[#efff55]/20 bg-[#efff55]/5 shadow-[0_0_15px_rgba(239,255,85,0.03)]'
+                  : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]'
               }`}
             >
               <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-black ${active ? 'bg-cyan-100 text-black' : 'bg-black/35 text-zinc-300'}`}>
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-bold border border-white/[0.04] ${active ? 'bg-[#efff55] text-black shadow-sm' : 'bg-black/35 text-zinc-300'}`}>
                   {index + 1}
                 </div>
                 <div className="min-w-0">
-                  <p className={`truncate text-xs font-black ${active ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{module.module_title}</p>
+                  <p className={`truncate text-xs font-semibold ${active ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{module.module_title}</p>
                   <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.08]">
                     <div
-                      className={`h-full rounded-full transition-all duration-700 ${active ? 'bg-cyan-100' : progress === 100 ? 'bg-emerald-300' : 'bg-white/40'}`}
+                      className={`h-full rounded-full transition-all duration-700 ${active ? 'bg-[#efff55]' : progress === 100 ? 'bg-[#efff55]' : 'bg-white/40'}`}
                       style={{ width: `${progress}%` }}
                     />
                   </div>
                 </div>
-                <span className="text-[11px] font-black text-zinc-500">{progress}%</span>
+                <span className="text-[11px] font-semibold text-zinc-500">{progress}%</span>
               </div>
             </button>
           );
@@ -341,36 +335,30 @@ function PathToolbar({ query, setQuery, filter, setFilter, visibleCount, totalCo
   ];
 
   return (
-    <div className="flex flex-col gap-4 border-b border-white/10 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex items-center gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
-          <Map className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">Learning path</p>
-          <h2 className="mt-1 text-2xl font-black text-white">Syllabus board</h2>
-        </div>
+    <div className="flex flex-col gap-4 border-b border-white/[0.06] px-5 py-5 sm:flex-row sm:items-center sm:justify-between bg-black/10 flex-wrap">
+      <div>
+        <h2 className="text-2xl font-bold text-white">Syllabus board</h2>
       </div>
 
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-        <div className="flex min-h-12 items-center gap-3 rounded-full border border-white/10 bg-black/30 px-4 focus-within:border-cyan-200/30">
+      <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+        <div className="flex min-h-12 items-center gap-3 rounded-full border border-white/[0.06] bg-black/30 px-4 focus-within:border-[#efff55]/30 w-full sm:w-60">
           <Search className="h-4 w-4 text-zinc-500" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search lessons"
-            className="w-full min-w-0 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-zinc-600 sm:w-60"
+            className="w-full min-w-0 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-zinc-600"
           />
         </div>
 
-        <div className="flex gap-1 overflow-x-auto rounded-full border border-white/10 bg-black/25 p-1 custom-scroll-x">
+        <div className="flex gap-1 overflow-x-auto rounded-full border border-white/[0.06] bg-black/25 p-1 custom-scroll-x max-w-full">
           {filters.map((item) => (
             <button
               key={item.key}
               type="button"
               onClick={() => setFilter(item.key)}
-              className={`shrink-0 rounded-full px-4 py-2 text-xs font-black transition ${
-                filter === item.key ? 'bg-white text-black' : 'text-zinc-400 hover:bg-white/[0.06] hover:text-white'
+              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition ${
+                filter === item.key ? 'bg-[#efff55] text-black shadow-md' : 'text-zinc-400 hover:bg-white/[0.04] hover:text-white'
               }`}
             >
               {item.label}
@@ -378,7 +366,7 @@ function PathToolbar({ query, setQuery, filter, setFilter, visibleCount, totalCo
           ))}
         </div>
 
-        <span className="text-xs font-bold text-zinc-600">{visibleCount}/{totalCount}</span>
+        <span className="text-xs font-bold text-zinc-600 ml-auto sm:ml-0">{visibleCount}/{totalCount}</span>
       </div>
     </div>
   );
@@ -390,7 +378,7 @@ function SubtopicRow({ courseId, moduleIndex, subtopicIndex, subtopic, isCurrent
   const locked = subtopic.status === 'locked';
   const miniProject = subtopic.subtopic_type === 'mini-project';
   const ready = subtopic.generationStatus === 'ready';
-  const Icon = locked ? Lock : completed ? CheckCircle : miniProject ? Crown : CirclePlay;
+  const Icon = locked ? Lock : completed ? Check : miniProject ? Crown : CirclePlay;
 
   return (
     <motion.button
@@ -402,61 +390,69 @@ function SubtopicRow({ courseId, moduleIndex, subtopicIndex, subtopic, isCurrent
       transition={{ duration: 0.18 }}
       className={`group w-full overflow-hidden rounded-[1.35rem] border px-4 py-4 text-left transition sm:px-5 ${
         locked
-          ? 'cursor-not-allowed border-white/10 bg-white/[0.04]'
+          ? 'cursor-not-allowed border-white/[0.04] bg-white/[0.01]'
           : isCurrent
-            ? 'border-cyan-200/40 bg-cyan-200/10 shadow-[0_0_28px_rgba(103,232,249,0.08)]'
+            ? 'border-[#efff55]/20 bg-[#efff55]/5 shadow-[0_0_28px_rgba(239,255,85,0.03)]'
             : completed
-              ? 'border-emerald-300/20 bg-emerald-300/[0.055] hover:border-emerald-300/35'
-              : 'border-white/10 bg-white/[0.055] hover:border-white/20 hover:bg-white/[0.08]'
+              ? 'border-zinc-800 bg-[#161616]/40 hover:border-zinc-700'
+              : miniProject
+                ? 'border-[#efff55]/15 bg-[#efff55]/[0.01] hover:border-[#efff55]/25 hover:bg-[#efff55]/[0.03]'
+                : 'border-white/[0.06] bg-white/[0.025] hover:border-white/15 hover:bg-white/[0.04]'
       }`}
     >
       <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
         <div className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${
           locked
-            ? 'border-white/5 bg-white/[0.03] text-zinc-600'
+            ? 'border-white/5 bg-white/[0.02] text-zinc-600'
             : isCurrent
-              ? 'border-cyan-100/40 bg-cyan-100 text-black'
+              ? 'border-[#efff55]/20 bg-[#efff55] text-black shadow-sm'
               : completed
-                ? 'border-emerald-300/30 bg-emerald-300/12 text-emerald-200'
+                ? 'border-zinc-800 bg-zinc-900/50 text-[#efff55]'
                 : miniProject
-                  ? 'border-amber-300/25 bg-amber-300/10 text-amber-200'
-                  : 'border-white/10 bg-black/30 text-white'
+                  ? 'border-[#efff55]/20 bg-[#efff55]/5 text-[#efff55]'
+                  : 'border-white/10 bg-black/35 text-white'
         }`}>
           <Icon className="h-5 w-5" />
         </div>
 
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
+            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] ${
               locked
                 ? 'border-white/5 text-zinc-600'
                 : isCurrent
-                  ? 'border-cyan-100/30 bg-cyan-100/10 text-cyan-100'
+                  ? 'border-[#efff55]/20 bg-[#efff55]/10 text-[#efff55]'
                   : completed
-                    ? 'border-emerald-300/25 bg-emerald-300/10 text-emerald-200'
-                    : 'border-white/10 bg-white/[0.04] text-zinc-300'
+                    ? 'border-zinc-800 bg-zinc-900/40 text-zinc-500'
+                    : miniProject
+                      ? 'border-[#efff55]/20 bg-[#efff55]/5 text-[#efff55]'
+                      : 'border-white/10 bg-white/[0.03] text-zinc-400'
             }`}>
               {statusCopy[subtopic.status] || 'Ready'}
             </span>
             {miniProject && (
-              <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-amber-200">
-                Gate
+              <span className={`rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] ${
+                completed
+                  ? 'border-zinc-800 bg-zinc-900/40 text-zinc-500'
+                  : 'border-[#efff55]/30 bg-[#efff55]/10 text-[#efff55]'
+              }`}>
+                Project Gate
               </span>
             )}
             {!locked && (
-              <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+              <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-500">
                 {ready ? 'Ready' : 'Generate'}
               </span>
             )}
           </div>
 
-          <h3 className={`mt-3 text-lg font-black leading-snug ${locked ? 'text-zinc-500' : 'text-white'}`}>
+          <h3 className={`mt-3 text-lg font-bold leading-snug ${locked ? 'text-zinc-500' : 'text-white'}`}>
             {String(subtopicIndex + 1).padStart(2, '0')} - {subtopic.subtopic_title}
           </h3>
         </div>
 
         <div className="flex items-center justify-between gap-3 sm:justify-end">
-          <span className={`text-xs font-black uppercase tracking-[0.18em] ${locked ? 'text-zinc-700' : 'text-zinc-500 group-hover:text-white'}`}>
+          <span className={`text-xs font-semibold uppercase tracking-[0.18em] ${locked ? 'text-zinc-700' : 'text-zinc-500 group-hover:text-white'}`}>
             {locked ? 'Locked' : 'Open'}
           </span>
           <ChevronRight className={`h-5 w-5 ${locked ? 'text-zinc-700' : 'text-zinc-500 group-hover:text-white'}`} />
@@ -468,7 +464,7 @@ function SubtopicRow({ courseId, moduleIndex, subtopicIndex, subtopic, isCurrent
 
 function LearningPath({ course, currentRef, query, setQuery, filter, setFilter, filteredModules, visibleCount, totalCount }) {
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#12141c] shadow-[0_24px_80px_rgba(0,0,0,0.34)]">
+    <section className="overflow-hidden rounded-[2rem] border border-white/[0.06] bg-[#1b1b1b] shadow-[0_24px_80px_rgba(0,0,0,0.34)]">
       <PathToolbar
         query={query}
         setQuery={setQuery}
@@ -482,32 +478,32 @@ function LearningPath({ course, currentRef, query, setQuery, filter, setFilter, 
         {visibleCount === 0 ? (
           <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.025] text-center">
             <FileSearch className="h-8 w-8 text-zinc-600" />
-            <h3 className="mt-4 text-xl font-black text-white">No lessons found</h3>
+            <h3 className="mt-4 text-xl font-bold text-white">No lessons found</h3>
             <p className="mt-2 text-sm text-zinc-500">Adjust the search or filter.</p>
           </div>
         ) : (
           <div className="space-y-8">
             {filteredModules.map(({ module, moduleIndex, subtopics }) => (
-              <div key={module.module_id || moduleIndex} id={`module-section-${moduleIndex}`} className="relative">
-                <div className="mb-4 flex flex-col gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div key={module.module_id || moduleIndex} id={`module-section-${moduleIndex}`} className="relative pb-10 last:pb-2">
+                <div className="mb-6 flex flex-col gap-4 rounded-[1.5rem] border border-white/[0.06] bg-white/[0.02] p-5 sm:flex-row sm:items-center sm:justify-between shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
                   <div className="flex min-w-0 items-center gap-4">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-lg font-black text-black">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-lg font-black text-black shadow-md border border-white/[0.06]">
                       {moduleIndex + 1}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">Module {moduleIndex + 1}</p>
-                      <h3 className="mt-1 truncate text-2xl font-black text-white">{module.module_title}</h3>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Module {moduleIndex + 1}</p>
+                      <h3 className="mt-1 truncate text-2xl font-bold text-white">{module.module_title}</h3>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="h-2 w-32 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full rounded-full bg-gradient-to-r from-cyan-200 via-white to-emerald-200" style={{ width: `${moduleCompletion(module)}%` }} />
+                      <div className="h-full rounded-full bg-gradient-to-r from-[#efff55] to-white" style={{ width: `${moduleCompletion(module)}%` }} />
                     </div>
-                    <span className="text-sm font-black text-zinc-500">{moduleCompletion(module)}%</span>
+                    <span className="text-sm font-semibold text-zinc-500">{moduleCompletion(module)}%</span>
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="ml-3 pl-4 border-l border-white/[0.08] sm:ml-7 sm:pl-6 space-y-3">
                   {subtopics.map(({ subtopic, subtopicIndex }) => (
                     <SubtopicRow
                       key={`${moduleIndex}-${subtopicIndex}`}
@@ -708,21 +704,18 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate, onTun
   }, [diff, modules]);
 
   return (
-    <section id="study-plan-tuner" className="flex min-h-0 flex-col rounded-[2rem] border border-white/10 bg-[#12141c] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+    <section id="study-plan-tuner" className="flex min-h-0 flex-col rounded-[2rem] border border-white/[0.06] bg-[#1b1b1b] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
       <div className="mb-5 flex items-start gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-teal-300/20 bg-teal-300/10 text-teal-100">
-          <WandSparkles className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">AI tuner</p>
-          <h2 className="mt-1 text-xl font-black text-white">Tune syllabus</h2>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">AI tuner</p>
+          <h2 className="mt-1 text-xl font-bold text-white">Tune syllabus</h2>
         </div>
       </div>
 
       <AnimatePresence mode="wait">
         {!diff ? (
           <motion.div key="input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="rounded-[1.25rem] border border-white/10 bg-black/35 p-1.5 transition focus-within:border-teal-200/35">
+            <div className="rounded-[1.25rem] border border-white/[0.06] bg-black/35 p-1.5 transition focus-within:border-[#efff55]/30">
               <textarea
                 value={instruction}
                 onChange={(event) => setInstruction(event.target.value)}
@@ -741,7 +734,7 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate, onTun
               type="button"
               disabled={loading || !instruction.trim()}
               onClick={handleTune}
-              className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-zinc-200 disabled:opacity-40"
+              className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#efff55] px-5 py-3 text-sm font-bold text-black hover:bg-[#efff55]/90 transition hover:shadow-[0_0_15px_rgba(239,255,85,0.15)] disabled:opacity-40 duration-300"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               {loading ? 'Thinking' : 'Generate changes'}
@@ -750,8 +743,8 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate, onTun
           </motion.div>
         ) : (
           <motion.div key="diff" className="flex min-h-0 flex-col" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <div className="mb-3 rounded-[1.25rem] border border-white/10 bg-white/[0.035] px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Summary</p>
+            <div className="mb-3 rounded-[1.25rem] border border-white/[0.06] bg-white/[0.025] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Summary</p>
               <p className="mt-1 text-sm font-semibold leading-6 text-zinc-300">{diff.summary}</p>
             </div>
 
@@ -759,8 +752,8 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate, onTun
               {flatList.map((row, index) => {
                 if (row.type === 'removed_section_header') {
                   return (
-                    <div key={index} className="border-t border-white/10 pt-4 pb-2 px-2 mt-4">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-400">
+                    <div key={index} className="border-t border-white/[0.06] pt-4 pb-2 px-2 mt-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-red-400">
                         {row.title}
                       </p>
                     </div>
@@ -770,7 +763,7 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate, onTun
                 if (row.type === 'module') {
                   return (
                     <div key={index} className="px-2 pb-1 pt-3 flex flex-wrap items-center gap-2">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500">
                         Module {row.moduleIndex + 1}: {row.title}
                       </p>
                       {row.status === 'added' && (
@@ -808,7 +801,7 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate, onTun
                         <Plus className="h-3.5 w-3.5 shrink-0 text-emerald-200" />
                         <span className="text-sm font-semibold text-emerald-100 truncate">{row.title}</span>
                       </div>
-                      <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-300">
+                      <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-emerald-300">
                         {row.subtopicType === 'mini-project' ? 'Project' : 'Lesson'}
                       </span>
                     </div>
@@ -832,7 +825,7 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate, onTun
                 return (
                   <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2.5">
                     <span className="text-sm font-semibold text-zinc-400 truncate">{row.title}</span>
-                    <span className="shrink-0 text-[8px] font-black uppercase text-zinc-600 tracking-wider">
+                    <span className="shrink-0 text-[8px] font-semibold uppercase text-zinc-600 tracking-wider">
                       {row.subtopicType === 'mini-project' ? 'Project' : 'Lesson'}
                     </span>
                   </div>
@@ -847,7 +840,7 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate, onTun
                 type="button"
                 disabled={confirming}
                 onClick={() => handleConfirm(false)}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.05] text-sm font-black text-zinc-300 transition hover:bg-white/[0.09] disabled:opacity-40"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.05] text-sm font-semibold text-zinc-300 transition hover:bg-white/[0.09] disabled:opacity-40"
               >
                 <XCircle className="h-4 w-4" />
                 Reject
@@ -856,7 +849,7 @@ function SyllabusTuner({ courseId, clerkId, plan, modules, onCourseUpdate, onTun
                 type="button"
                 disabled={confirming}
                 onClick={() => handleConfirm(true)}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white text-sm font-black text-black transition hover:bg-zinc-200 disabled:opacity-40"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white text-sm font-bold text-black transition hover:bg-zinc-200 disabled:opacity-40"
               >
                 {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                 Apply
@@ -1043,7 +1036,7 @@ export default function GuidedStudyPlanMap() {
         </AnimatePresence>
         <div className="mx-auto max-w-[104rem] flex flex-col gap-6 animate-pulse">
           {/* Hero skeleton */}
-          <div className="order-1 rounded-[2.4rem] border border-white/[0.06] bg-[#0b0c0e] p-8 md:p-12">
+          <div className="order-1 rounded-[2.4rem] border border-white/[0.06] bg-[#1b1b1b] p-8 md:p-12">
             <div className="grid gap-8 lg:grid-cols-[1fr_24rem]">
               <div className="space-y-5">
                 <div className="flex gap-3">
@@ -1077,7 +1070,7 @@ export default function GuidedStudyPlanMap() {
           <div className="order-3 md:order-4 grid gap-6 xl:grid-cols-[1fr_340px]">
             <div className="space-y-4">
               {[0, 1, 2].map(i => (
-                <div key={i} className="rounded-[2rem] border border-white/[0.06] bg-[#0d0e10] p-6 space-y-3">
+                <div key={i} className="rounded-[2rem] border border-white/[0.06] bg-[#1b1b1b] p-6 space-y-3">
                   <div className="flex items-center gap-4">
                     <div className="h-14 w-14 rounded-2xl bg-white/[0.06]" />
                     <div className="space-y-2 flex-1">
@@ -1099,8 +1092,6 @@ export default function GuidedStudyPlanMap() {
     );
   }
 
-
-
   return (
     <DashboardShell title={course.course_title} eyebrow="Guided Plan">
       <AnimatePresence>
@@ -1116,7 +1107,7 @@ export default function GuidedStudyPlanMap() {
             }`}
           >
             <span>{toast.message}</span>
-            {toast.href && <Link to={toast.href} className="rounded-full bg-white px-3 py-1 text-xs font-black text-black">View</Link>}
+            {toast.href && <Link to={toast.href} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-black">View</Link>}
           </motion.div>
         )}
       </AnimatePresence>
