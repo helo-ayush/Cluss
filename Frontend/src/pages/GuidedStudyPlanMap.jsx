@@ -199,16 +199,6 @@ function CommandDeck({ course, currentRef, currentModule, currentSubtopic, pathS
               <SlidersHorizontal className="h-4 w-4" />
               Defaults
             </button>
-            <button
-              type="button"
-              onClick={onPublish}
-              disabled={publishing || !canPublish}
-              title={canPublish ? 'Publish this generated course' : 'Generate at least one lesson before publishing'}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe2 className="h-4 w-4" />}
-              {publishing ? 'Publishing' : 'Publish'}
-            </button>
           </div>
         </div>
 
