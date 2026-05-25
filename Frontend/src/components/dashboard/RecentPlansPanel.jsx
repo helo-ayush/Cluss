@@ -204,7 +204,7 @@ export default function RecentPlansPanel({ plans, onOpen, onDelete }) {
             to="/dashboard/guided" 
             className="text-xs font-extrabold text-white hover:underline flex items-center gap-1"
           >
-            Open Full System Library <span>-&gt;</span>
+            Open Library <span>-&gt;</span>
           </Link>
         </div>
       </div>

@@ -93,7 +93,7 @@ export default function Dashboard() {
           {/* Left Column: Workstation Table & Active Momentum Highlight */}
           <div className="space-y-6 min-w-0">
             <RecentPlansPanel plans={sortedPlans} onOpen={openPlan} onDelete={setDeleteTarget} />
-            <ProgressWidgets studyPlans={studyPlans} stats={stats} clerkId={user?.id} />
+            <ProgressWidgets studyPlans={studyPlans} stats={stats} clerkId={user?.id} isDashboard={true} />
           </div>
 
           {/* Right Column: AI Focus Timeline Stop & Habits */}
