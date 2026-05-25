@@ -14,7 +14,7 @@ export default function DashboardTopbar({ title, eyebrow, usageData, onMenuClick
         sidebarCollapsed ? 'lg:left-[5.5rem]' : 'lg:left-[15.5rem]'
       } left-0`}
     >
-      <div className="pointer-events-auto flex min-h-[4.7rem] items-center justify-between gap-2 rounded-full border border-white/[0.08] bg-[#1b1b1b]/94 px-3 shadow-[0_18px_60px_rgba(0,0,0,0.38)] backdrop-blur-2xl sm:gap-4 sm:px-5">
+      <div className="pointer-events-auto flex min-h-[4.7rem] items-center justify-between gap-2 rounded-full border border-white/[0.08] bg-[#1b1b1b54] px-3 shadow-[0_18px_60px_rgba(0,0,0,0.38)] backdrop-blur-2xl sm:gap-4 sm:px-5">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
           <button
             type="button"

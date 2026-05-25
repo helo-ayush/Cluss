@@ -15,27 +15,52 @@ async function generateFlashcardsForUser(userId) {
 
         const uniqueCourseIds = new Set();
         recentActivities.forEach(activity => {
-            activity.courses.forEach(c => {
-                if (c.courseId) uniqueCourseIds.add(c.courseId.toString());
-            });
+            if (activity.courses) {
+                activity.courses.forEach(c => {
+                    if (c.courseId) uniqueCourseIds.add(c.courseId.toString());
+                });
+            }
         });
 
-        const courseIdsToFetch = Array.from(uniqueCourseIds).slice(0, 3);
-        if (courseIdsToFetch.length === 0) return [];
+        let courseIdsToFetch = Array.from(uniqueCourseIds).slice(0, 3);
+        
+        // Robust Fallback: If no recent activity found, fetch the user's actual courses directly!
+        if (courseIdsToFetch.length === 0) {
+            console.log(`No recent activity found for user ${userId}. Falling back to fetching courses directly.`);
+            const userCourses = await Course.find({ userId }).sort({ updatedAt: -1 }).limit(3);
+            courseIdsToFetch = userCourses.map(c => c._id.toString());
+        }
+
+        if (courseIdsToFetch.length === 0) {
+            console.log(`No courses found for user ${userId}. Skipping flashcard generation.`);
+            return [];
+        }
 
         // 2. Fetch those courses and extract a lightweight outline
         const courses = await Course.find({ _id: { $in: courseIdsToFetch } });
+        if (courses.length === 0) {
+            console.log(`No matching course documents found in DB for user ${userId}.`);
+            return [];
+        }
         let combinedOutline = '';
-
         courses.forEach(course => {
             combinedOutline += `\nCourse: ${course.course_title}\n`;
-            course.modules.forEach(mod => {
-                combinedOutline += `  Module: ${mod.module_title}\n`;
-                mod.subtopics.forEach(sub => {
-                    combinedOutline += `    - ${sub.subtopic_title}\n`;
+            if (course.modules) {
+                course.modules.forEach(mod => {
+                    combinedOutline += `  Module: ${mod.module_title}\n`;
+                    if (mod.subtopics) {
+                        mod.subtopics.forEach(sub => {
+                            combinedOutline += `    - ${sub.subtopic_title}\n`;
+                        });
+                    }
                 });
-            });
+            }
         });
+
+        if (!combinedOutline.trim()) {
+            console.log(`Generated outline is empty for user ${userId}. Skipping flashcard generation.`);
+            return [];
+        }
 
         // 3. Prompt AI to generate 10 flashcards based on the outline
         const systemPrompt = `You are an expert tutor creating spaced-repetition flashcards.

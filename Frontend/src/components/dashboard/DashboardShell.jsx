@@ -16,13 +16,13 @@ export default function DashboardShell({ title, eyebrow, showCreate = true, cont
   }, [sidebarCollapsed]);
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-[#050505] text-white">
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute -left-32 top-10 h-96 w-96 rounded-full bg-white/[0.055] blur-[120px]" />
-        <div className="absolute right-0 top-24 h-[30rem] w-[30rem] rounded-full bg-zinc-500/[0.08] blur-[150px]" />
-        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-white/[0.035] blur-[130px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0,rgba(0,0,0,0.34)_70%)]" />
-      </div>
+    <div className="font-nunito min-h-screen overflow-x-clip bg-[#080808] text-white">
+
+
+
+
+
+
 
       <DashboardSidebar
         collapsed={sidebarCollapsed}
@@ -40,7 +40,7 @@ export default function DashboardShell({ title, eyebrow, showCreate = true, cont
           sidebarCollapsed={sidebarCollapsed}
           onMenuClick={() => setMobileMenuOpen(true)}
         />
-        <main className={`${disableDefaultPadding ? '' : 'px-4 pb-12 pt-20 sm:px-6 lg:px-8'} ${contentClassName}`}>
+        <main className={`${disableDefaultPadding ? '' : 'px-4 pb-12 pt-[6.5rem] sm:px-6 lg:px-8'} ${contentClassName}`}>
           {children}
         </main>
       </div>
