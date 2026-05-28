@@ -58,6 +58,22 @@ router.get('/sessions/:sessionId', async (req, res) => {
     }
 });
 
+router.delete('/sessions/:sessionId', async (req, res) => {
+    try {
+        const { clerkId } = req.query;
+        const { sessionId } = req.params;
+        if (!clerkId) return res.status(400).json({ success: false, message: 'clerkId is required' });
+
+        const deleted = await ChatSession.findOneAndDelete({ _id: sessionId, clerkId });
+        if (!deleted) return res.status(404).json({ success: false, message: 'Chat not found' });
+
+        return res.json({ success: true });
+    } catch (error) {
+        console.error('Chat session delete error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to delete chat' });
+    }
+});
+
 /**
  * POST /api/tutor-chat
  * AI Tutor Chat.
