@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -916,6 +917,31 @@ function CodeBlock({ className = '', children, ...props }) {
     }
   };
 
+  const SUPPORTED_MONACO_LANGUAGES = [
+    'javascript', 'js', 'typescript', 'ts', 'python', 'py',
+    'html', 'css', 'json', 'cpp', 'c++', 'c', 'java', 'csharp', 'cs',
+    'go', 'rust', 'rs', 'sql', 'yaml', 'yml', 'bash', 'sh', 'shell', 'xml'
+  ];
+
+  const isMonacoSupported = SUPPORTED_MONACO_LANGUAGES.includes(language.toLowerCase());
+
+  const mapLanguageForMonaco = (lang) => {
+    const l = lang.toLowerCase();
+    if (l === 'js') return 'javascript';
+    if (l === 'ts') return 'typescript';
+    if (l === 'py') return 'python';
+    if (l === 'c++') return 'cpp';
+    if (l === 'cs') return 'csharp';
+    if (l === 'rs') return 'rust';
+    if (l === 'yml') return 'yaml';
+    if (l === 'sh' || l === 'bash' || l === 'shell') return 'shell';
+    return l;
+  };
+
+  // Compute number of lines in code to dynamically set editor height
+  const lineCount = code.split('\n').length;
+  const editorHeight = Math.min(Math.max(lineCount * 21 + 16, 80), 450);
+
   return (
     <div className="my-4 overflow-hidden rounded-2xl border border-white/10 bg-[#0d0e10] shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
       <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] px-4 py-2">
@@ -929,11 +955,48 @@ function CodeBlock({ className = '', children, ...props }) {
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
-      <pre className="custom-scroll max-w-full overflow-x-auto p-4 text-[13.5px] leading-7 text-zinc-300">
-        <code className={className} {...props}>
-          {children}
-        </code>
-      </pre>
+
+      {isMonacoSupported ? (
+        <div className="border-t border-white/5 bg-[#1e1e1e]" style={{ height: `${editorHeight}px` }}>
+          <Editor
+            height="100%"
+            language={mapLanguageForMonaco(language)}
+            value={code}
+            theme="vs-dark"
+            loading={
+              <pre className="custom-scroll max-w-full overflow-x-auto p-4 text-[13.5px] leading-7 text-zinc-300 font-mono">
+                <code>{code}</code>
+              </pre>
+            }
+            options={{
+              readOnly: true,
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              fontSize: 13.5,
+              lineNumbers: 'on',
+              folding: true,
+              wordWrap: 'on',
+              scrollbar: {
+                vertical: 'hidden',
+                horizontal: 'hidden',
+                alwaysConsumeMouseWheel: false
+              },
+              alwaysConsumeMouseWheel: false,
+              lineDecorationsWidth: 6,
+              lineNumbersMinChars: 3,
+              readOnlyButton: false,
+              domReadOnly: true,
+              contextmenu: false
+            }}
+          />
+        </div>
+      ) : (
+        <pre className="custom-scroll max-w-full overflow-x-auto p-4 text-[13.5px] leading-7 text-zinc-300">
+          <code className={className} {...props}>
+            {children}
+          </code>
+        </pre>
+      )}
     </div>
   );
 }

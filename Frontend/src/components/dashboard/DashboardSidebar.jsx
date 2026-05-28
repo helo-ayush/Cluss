@@ -144,7 +144,7 @@ export default function DashboardSidebar({ collapsed, setCollapsed, mobileMenuOp
         <div className="flex h-full flex-col gap-3">
           <div className="relative shrink-0">
             <Link
-              to="/dashboard"
+              to="/"
               onClick={() => setMobileMenuOpen?.(false)}
               className={`flex h-[4.35rem] w-full items-center border border-white/[0.07] bg-[#1b1b1b] shadow-[0_20px_70px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.05)] transition-[border-radius,background-color,padding] duration-300 ease-out hover:bg-[#222222] ${
                 expanded ? 'justify-start' : 'justify-center'

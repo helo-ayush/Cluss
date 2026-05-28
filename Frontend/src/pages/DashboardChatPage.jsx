@@ -42,7 +42,7 @@ function MessageRow({ message, user }) {
     >
       <div className="mx-auto flex w-full max-w-4xl gap-4 px-4 py-4 sm:px-6">
         <div
-          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border shadow-[0_10px_24px_rgba(0,0,0,0.24)] ${
+          className={`hidden sm:flex mt-0.5 h-9 w-9 shrink-0 items-center justify-center rounded-full border shadow-[0_10px_24px_rgba(0,0,0,0.24)] ${
             isSystem
               ? 'border-white/10 bg-white/[0.06] text-zinc-300'
               : 'border-white/10 bg-white text-black'
@@ -51,11 +51,11 @@ function MessageRow({ message, user }) {
           {isSystem ? <span className="text-sm font-black">!</span> : <Sparkles className="h-4 w-4" />}
         </div>
 
-        <div className="min-w-0 flex-1 rounded-[1.6rem] rounded-tl-md border border-white/[0.08] bg-[#202020] px-5 py-4 shadow-[0_14px_34px_rgba(0,0,0,0.18)]">
+        <div className="min-w-0 flex-1 rounded-[1.8rem] rounded-tl-md border border-white/[0.08] bg-[#202020] px-6 py-5 shadow-[0_14px_34px_rgba(0,0,0,0.18)]">
           {isSystem ? (
-            <p className="whitespace-pre-wrap text-[15px] leading-7 text-zinc-300">{message.text}</p>
+            <p className="whitespace-pre-wrap text-[15.5px] leading-[1.8] text-zinc-300">{message.text}</p>
           ) : (
-            <div className="chat-markdown text-[15px] leading-7 text-zinc-100">
+            <div className="chat-markdown text-[15.5px] leading-[1.8] text-zinc-100">
               <MarkdownRenderer content={message.text} />
             </div>
           )}
@@ -69,7 +69,7 @@ function TypingRow() {
   return (
     <div className="w-full">
       <div className="mx-auto flex w-full max-w-4xl gap-4 px-4 py-6 sm:px-6">
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white text-black shadow-[0_10px_24px_rgba(0,0,0,0.24)]">
+        <div className="hidden sm:flex mt-0.5 h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white text-black shadow-[0_10px_24px_rgba(0,0,0,0.24)]">
           <Sparkles className="h-4 w-4" />
         </div>
         <div className="flex items-center gap-1.5">
@@ -99,7 +99,7 @@ function Composer({ input, setInput, sendMessage, loading, usageData, textareaRe
 
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = '44px'; // Base height for 1 line
+      textareaRef.current.style.height = '44px';
       if (input) {
         textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
       }
@@ -110,7 +110,6 @@ function Composer({ input, setInput, sendMessage, loading, usageData, textareaRe
     <div className="mx-auto w-full max-w-4xl px-4 pb-3 pt-3 sm:px-6">
       <div className="rounded-[2rem] border border-white/12 bg-[#2f2f2f] shadow-[0_20px_54px_rgba(0,0,0,0.34)] transition focus-within:border-white/25 focus-within:bg-[#343434]">
         <div className="flex items-end gap-2 px-3 py-3">
-          {/* + Button — locked after first message */}
           <div className="relative" ref={pickerRef}>
             <button
               type="button"
@@ -197,7 +196,7 @@ function Composer({ input, setInput, sendMessage, loading, usageData, textareaRe
             }}
             rows={1}
             placeholder={selectedCourse ? `Ask about ${selectedCourse.course_title.length > 35 ? selectedCourse.course_title.slice(0, 35) + '...' : selectedCourse.course_title}` : 'Ask anything'}
-            className="custom-scroll max-h-[200px] flex-1 resize-none bg-transparent py-2.5 text-[15px] leading-[1.6] text-white outline-none placeholder:text-zinc-500 overflow-y-auto"
+            className="custom-scroll max-h-[200px] flex-1 resize-none bg-transparent py-3 px-1 text-[15px] leading-[1.7] text-white outline-none placeholder:text-zinc-500 overflow-y-auto"
             style={{ minHeight: '44px' }}
           />
 
@@ -205,7 +204,7 @@ function Composer({ input, setInput, sendMessage, loading, usageData, textareaRe
             type="button"
             onClick={sendMessage}
             disabled={!input.trim() || loading}
-            className="mb-1 flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:scale-[1.03] hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-30"
+            className="mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:scale-[1.03] hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-30"
             aria-label="Send message"
           >
             <ArrowUp className="h-4 w-4" strokeWidth={2.4} />
@@ -332,12 +331,6 @@ export default function DashboardChatPage() {
       active = false;
     };
   }, [fetchSessions, fetchUsage, user?.id]);
-
-  useEffect(() => {
-    if (!textareaRef.current) return;
-    textareaRef.current.style.height = '0px';
-    textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
-  }, [input]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -500,16 +493,38 @@ export default function DashboardChatPage() {
   };
 
   const hasMessages = messages.length > 0 || loading;
-   const quickPrompts = [
+  const quickPrompts = [
     'How to be consistent in learning',
     'Motivate me to study',
     'How to become rich in 24 hours',
     'Tell me a sarcastic joke',
   ];
   const openThreadTitle =
-
     sessions.find((session) => session._id === sessionId)?.title ||
     (messages.length > 0 ? 'Current conversation' : 'New conversation');
+  const chatNavTitle = (
+    <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <div className="min-w-0">
+        <h1 className="truncate text-lg font-semibold tracking-tight text-white sm:text-xl md:text-2xl" title={openThreadTitle}>
+          {openThreadTitle}
+        </h1>
+      </div>
+      <button
+        type="button"
+        onClick={() => setDrawerOpen((open) => !open)}
+        className={`inline-flex h-9 shrink-0 items-center gap-1 rounded-full border px-2.5 text-xs font-black transition xl:hidden ${
+          drawerOpen
+            ? 'border-white/25 bg-white text-black'
+            : 'border-white/12 bg-[#2a2a2a] text-zinc-200 hover:border-white/20 hover:bg-white/10 hover:text-white'
+        }`}
+        aria-label="Open recent chats"
+      >
+        <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${drawerOpen ? 'bg-black/10 text-black' : 'bg-white/[0.1] text-zinc-300'}`}>
+          {sessions.length}
+        </span>
+      </button>
+    </div>
+  );
 
   const drawer = (
     <div className="flex h-full w-full flex-col bg-[#171717]">
@@ -562,24 +577,21 @@ export default function DashboardChatPage() {
           sessions.map((session, index) => (
             <div
               key={session._id}
-              className={`group flex w-full min-w-0 items-center gap-2 rounded-[1.35rem] border px-4 py-3.5 text-left text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition duration-200 ${
+              onClick={() => openSession(session._id)}
+              className={`group flex w-full min-w-0 items-center gap-2 rounded-[1.35rem] border px-4 py-3.5 text-left text-sm cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition duration-200 ${
                 sessionId === session._id
                   ? 'border-white/[0.22] bg-gradient-to-b from-[#343434] to-[#262626] text-white shadow-[0_18px_34px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.08)]'
                   : 'border-white/[0.07] bg-gradient-to-b from-[#222222] to-[#1b1b1b] text-zinc-400 hover:border-white/[0.16] hover:from-[#292929] hover:to-[#202020] hover:text-white'
               }`}
             >
-              <button
-                type="button"
-                onClick={() => openSession(session._id)}
-                className="flex min-w-0 flex-1 items-center gap-2 text-left"
-              >
+              <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${
                   sessionId === session._id ? 'bg-white text-black shadow-[0_0_18px_rgba(255,255,255,0.10)]' : 'bg-white/[0.06] text-zinc-500 group-hover:bg-white/[0.10] group-hover:text-zinc-200'
                 }`}>
                   {index + 1}
                 </span>
                 <span className="block min-w-0 truncate font-semibold">{session.title}</span>
-              </button>
+              </div>
               <button
                 type="button"
                 onClick={(event) => requestDeleteSession(event, session)}
@@ -602,15 +614,15 @@ export default function DashboardChatPage() {
 
   return (
     <DashboardShell
-      title="AI Chat"
+      title={chatNavTitle}
       usageData={usageData}
       disableDefaultPadding
       contentClassName="h-dvh overflow-hidden pt-[5.5rem]"
     >
       <style>{`
         .chat-markdown .markdown-renderer {
-          font-size: 15px;
-          line-height: 1.75;
+          font-size: 15.5px;
+          line-height: 1.85;
           color: #e4e4e7;
         }
         .chat-markdown .markdown-renderer p,
@@ -618,6 +630,11 @@ export default function DashboardChatPage() {
         .chat-markdown .markdown-renderer ul,
         .chat-markdown .markdown-renderer ol {
           color: #e4e4e7;
+          margin-bottom: 0.85rem;
+          line-height: 1.85;
+        }
+        .chat-markdown .markdown-renderer p:last-child {
+          margin-bottom: 0;
         }
         .chat-markdown .markdown-renderer strong,
         .chat-markdown .markdown-renderer h1,
@@ -656,34 +673,6 @@ export default function DashboardChatPage() {
           className="relative mx-auto flex h-full w-full max-w-[1720px] overflow-hidden rounded-[2.25rem] border border-white/[0.10] bg-[#171717] shadow-[0_30px_90px_rgba(0,0,0,0.46)]"
         >
         <main className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[#1f1f1f]">
-          <div className="relative z-60 flex min-h-[78px] shrink-0 items-center justify-between gap-4 border-b border-white/[0.06] bg-gradient-to-b from-[#1b1b1b] to-[#171717] px-4 shadow-[0_18px_50px_rgba(0,0,0,0.14)] backdrop-blur-xl sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="min-w-0">
-                <p className="truncate text-lg font-black tracking-tight text-white max-w-[12rem] sm:max-w-[30rem]">{openThreadTitle}</p>
-                <div className="mt-1 flex items-center gap-2 text-[10px] sm:text-[11px] text-zinc-500">
-                  <span>{sessions.length} chats</span>
-                  <span className="h-1 w-1 rounded-full bg-zinc-700" />
-                  <span>{messages.length} messages</span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setDrawerOpen((open) => !open)}
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-[1.25rem] border px-3 py-2 text-sm font-semibold shadow-[0_12px_28px_rgba(0,0,0,0.22)] transition xl:hidden sm:px-4 sm:py-2.5 ${
-                drawerOpen
-                  ? 'border-white/25 bg-white text-black'
-                  : 'border-white/12 bg-[#2f2f2f] text-zinc-200 hover:border-white/20 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <span className="hidden sm:inline">Recent</span>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${drawerOpen ? 'bg-black/10 text-black' : 'bg-white/[0.1] text-zinc-300'}`}>
-                {sessions.length}
-              </span>
-            </button>
-          </div>
-
           <div ref={scrollRef} className="custom-scroll min-h-0 flex-1 overflow-y-auto bg-[#1f1f1f]">
             {!hasMessages ? (
               <div className="flex min-h-full flex-col items-center justify-center px-4 py-10">
