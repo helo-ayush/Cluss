@@ -556,56 +556,52 @@ export default function Profile() {
 
         {error && <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-xs font-bold text-rose-200">{error}</div>}
 
-        {!loading && (
-          <>
-            {/* Row 4: Published Courses (Creation Studio) & Tabbed Graph */}
-            <section className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-              
-              {/* Published Top Courses list */}
-              <motion.div 
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                whileHover={{ 
-                  y: -6, 
-                  borderColor: "rgba(239,255,85,0.15)",
-                  boxShadow: "0 30px 60px -15px rgba(0,0,0,0.7), 0 0 25px 2px rgba(239,255,85,0.03)" 
-                }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="rounded-[2.2rem] border border-white/[0.06] bg-[#1b1b1b] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-300"
-              >
-                <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 block">Public Performance</span>
-                    <h2 className="text-xl font-black tracking-tight text-white mt-0.5">Top Courses</h2>
-                  </div>
-                  <Link to="/courses" className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-4 py-2 text-xs font-black text-[#efff55] hover:bg-[#efff55] hover:text-black hover:border-[#efff55] transition-all duration-300">
-                    Explore <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Link>
+        {/* Row 4: Published Courses (Creation Studio) & Tabbed Graph */}
+        <section className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+          
+          {/* Published Top Courses list */}
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            whileHover={{ 
+              y: -6, 
+              borderColor: "rgba(239,255,85,0.15)",
+              boxShadow: "0 30px 60px -15px rgba(0,0,0,0.7), 0 0 25px 2px rgba(239,255,85,0.03)" 
+            }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="rounded-[2.2rem] border border-white/[0.06] bg-[#1b1b1b] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-300"
+          >
+            <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 block">Public Performance</span>
+                <h2 className="text-xl font-black tracking-tight text-white mt-0.5">Top Courses</h2>
+              </div>
+              <Link to="/courses" className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.04] px-4 py-2 text-xs font-black text-[#efff55] hover:bg-[#efff55] hover:text-black hover:border-[#efff55] transition-all duration-300">
+                Explore <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {analytics.topCourses?.length ? analytics.topCourses.slice(0, 4).map((course, index) => (
+                <CourseRow key={course._id} course={course} index={index} />
+              )) : (
+                <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.01] p-8 text-center select-none">
+                  <Sparkles className="mx-auto h-7 w-7 text-zinc-600 mb-2" />
+                  <p className="text-xs font-bold text-zinc-500">Publish a guided course to start collecting public statistics.</p>
                 </div>
-                <div className="space-y-3">
-                  {analytics.topCourses?.length ? analytics.topCourses.slice(0, 4).map((course, index) => (
-                    <CourseRow key={course._id} course={course} index={index} />
-                  )) : (
-                    <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.01] p-8 text-center select-none">
-                      <Sparkles className="mx-auto h-7 w-7 text-zinc-600 mb-2" />
-                      <p className="text-xs font-bold text-zinc-500">Publish a guided course to start collecting public statistics.</p>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
+              )}
+            </div>
+          </motion.div>
 
-              {/* Combined Tabbed Graph */}
-              <TabbedAnalyticsChart chartData={chartData} />
-            </section>
+          {/* Combined Tabbed Graph */}
+          <TabbedAnalyticsChart chartData={chartData} />
+        </section>
 
-            {/* Row 5: Cost Reference & Activity Ledgers */}
-            <section id="profile-activity" className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-              <CostLedger />
-              <RecentActivity transactions={transactions} txPage={txPage} txTotalPages={txTotalPages} setTxPage={setTxPage} />
-            </section>
-          </>
-        )}
+        {/* Row 5: Cost Reference & Activity Ledgers */}
+        <section id="profile-activity" className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+          <CostLedger />
+          <RecentActivity transactions={transactions} txPage={txPage} txTotalPages={txTotalPages} setTxPage={setTxPage} />
+        </section>
       </div>
     </DashboardShell>
   );
