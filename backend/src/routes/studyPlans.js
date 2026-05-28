@@ -16,6 +16,7 @@ router.post('/:courseId/subtopics/:subtopicId/regenerate', (req, res, next) => {
 router.post('/:courseId/subtopics/:subtopicId/blocks/:blockId/rewrite', guided.rewriteGuidedBlock);
 router.post('/:courseId/subtopics/:subtopicId/blocks/:blockId/undo', guided.undoGuidedBlockRewrite);
 router.post('/:courseId/subtopics/:subtopicId/practice', guided.generateSubtopicPractice);
+router.post('/:courseId/subtopics/:subtopicId/practice/clear', guided.clearSubtopicPractice);
 router.post('/:courseId/subtopics/:subtopicId/submit', guided.submitGuidedAssessment);
 router.post('/:courseId/tune', guided.tuneSyllabus);
 router.post('/:courseId/tune/confirm', guided.confirmTune);

@@ -548,13 +548,13 @@ const submitGuidedAssessment = async (req, res) => {
 
         const user = await User.findById(course.userId);
         await maybeRefillCredits(user);
-        assertCredits(user, 'assessmentGrading');
 
         const { gradeGuidedSubmission, generatePerQuestionExplanations, evaluateImageAnswer } = require('../services/guidedStudyGenerator');
 
         // Process any image answers (written/math questions with image uploads)
         const processedSubmission = { ...submission };
         const imageEvalResults = {};
+        const rejectedImageQuestionIndexes = new Set();
         if (Object.keys(imageAnswers).length > 0 && (user.plan !== 'free' || process.env.NODE_ENV === 'development')) {
             for (const [qIndex, base64Image] of Object.entries(imageAnswers)) {
                 if (!base64Image) continue;
@@ -580,10 +580,32 @@ const submitGuidedAssessment = async (req, res) => {
                     if (evalResult.isReadable && evalResult.extractedText) {
                         if (!processedSubmission.writtenAnswers) processedSubmission.writtenAnswers = {};
                         processedSubmission.writtenAnswers[qIndex] = evalResult.extractedText;
+                    } else {
+                        rejectedImageQuestionIndexes.add(Number(qIndex));
+                        if (!processedSubmission.writtenAnswers) processedSubmission.writtenAnswers = {};
+                        processedSubmission.writtenAnswers[qIndex] = '[Image upload rejected: no readable or relevant written answer was detected.]';
+                        imageEvalResults[qIndex] = {
+                            ...evalResult,
+                            isReadable: false,
+                            score: 0,
+                            extractedText: evalResult.extractedText || '',
+                            feedback: evalResult.feedback || 'The uploaded image does not contain a readable answer to this question.',
+                            evaluationNote: evalResult.evaluationNote || 'No readable or relevant answer text was detected in the uploaded image.'
+                        };
                     }
                     await spendCredits(user, 'imageAnswerGrade');
                 } catch (imgErr) {
                     console.error(`Image eval error for q${qIndex}:`, imgErr.message);
+                    rejectedImageQuestionIndexes.add(Number(qIndex));
+                    if (!processedSubmission.writtenAnswers) processedSubmission.writtenAnswers = {};
+                    processedSubmission.writtenAnswers[qIndex] = '[Image upload rejected: image evaluation failed.]';
+                    imageEvalResults[qIndex] = {
+                        isReadable: false,
+                        extractedText: '',
+                        score: 0,
+                        feedback: 'The uploaded image could not be evaluated, so it was marked incorrect.',
+                        evaluationNote: 'Image evaluation failed: ' + imgErr.message
+                    };
                 }
             }
         }
@@ -608,9 +630,25 @@ const submitGuidedAssessment = async (req, res) => {
         const studentAnswersList = flatQuestions.map((_, i) => ({
             value: processedSubmission?.mcqAnswers?.[i] || processedSubmission?.writtenAnswers?.[i] || processedSubmission?.codeAnswers?.[i] || ''
         }));
-        const gradingResultsList = flatQuestions.map((q, i) => ({
-            correct: q.type === 'mcq' ? q.correctAnswer === (processedSubmission?.mcqAnswers?.[i] || '') : null
-        }));
+        const gradingResultsList = flatQuestions.map((q, i) => {
+            if (q.type === 'mcq') {
+                return { correct: q.correctAnswer === (processedSubmission?.mcqAnswers?.[i] || '') };
+            }
+            if (rejectedImageQuestionIndexes.has(i)) {
+                return { correct: false, score: 0 };
+            }
+            let score = 0;
+            if (q.type === 'written' || q.type === 'math') {
+                const relativeIndex = flatQuestions.slice(0, i).filter(fq => fq.type === 'written' || fq.type === 'math').length;
+                const fb = gradeResult.writtenFeedback?.find(f => Number(f.index) === i || Number(f.index) === relativeIndex);
+                if (fb) score = fb.score;
+            } else if (q.type === 'code') {
+                const relativeIndex = flatQuestions.slice(0, i).filter(fq => fq.type === 'code').length;
+                const fb = gradeResult.codeFeedback?.find(f => Number(f.index) === i || Number(f.index) === relativeIndex);
+                if (fb) score = fb.score;
+            }
+            return { correct: score >= 70 };
+        });
 
         let perQuestionFeedback = [];
         try {
@@ -624,6 +662,59 @@ const submitGuidedAssessment = async (req, res) => {
             });
         } catch (explainErr) {
             console.error('Per-question explanation error (non-fatal):', explainErr.message);
+        }
+
+        if (Array.isArray(perQuestionFeedback)) {
+            const numericIndexes = perQuestionFeedback
+                .map(item => Number(item.questionIndex))
+                .filter(Number.isFinite);
+            const oneBasedIndexes = numericIndexes.length > 0 && Math.min(...numericIndexes) === 1 && !numericIndexes.includes(0);
+            perQuestionFeedback = perQuestionFeedback.map((item, fallbackIndex) => {
+                const rawIndex = Number(item.questionIndex);
+                const normalizedIndex = Number.isFinite(rawIndex)
+                    ? rawIndex - (oneBasedIndexes ? 1 : 0)
+                    : fallbackIndex;
+                return {
+                    ...item,
+                    questionIndex: Math.max(0, Math.min(flatQuestions.length - 1, normalizedIndex))
+                };
+            });
+        }
+
+        for (const qIndex of rejectedImageQuestionIndexes) {
+            const q = flatQuestions[qIndex];
+            if (!q || !['written', 'math'].includes(q.type)) continue;
+
+            const relativeIndex = flatQuestions.slice(0, qIndex).filter(fq => fq.type === 'written' || fq.type === 'math').length;
+            const rejection = imageEvalResults[String(qIndex)] || imageEvalResults[qIndex] || {};
+            const feedbackText = rejection.evaluationNote || rejection.feedback || 'The uploaded image did not contain a readable answer.';
+            const zeroFeedback = {
+                index: qIndex,
+                score: 0,
+                feedback: `Image rejected: ${feedbackText}`
+            };
+
+            if (!Array.isArray(gradeResult.writtenFeedback)) gradeResult.writtenFeedback = [];
+            const existingIndex = gradeResult.writtenFeedback.findIndex(f => Number(f.index) === qIndex || Number(f.index) === relativeIndex);
+            if (existingIndex >= 0) {
+                gradeResult.writtenFeedback[existingIndex] = { ...gradeResult.writtenFeedback[existingIndex], ...zeroFeedback };
+            } else {
+                gradeResult.writtenFeedback.push(zeroFeedback);
+            }
+
+            const feedbackIndex = perQuestionFeedback.findIndex(f => Number(f.questionIndex) === qIndex);
+            const perQuestionRejection = {
+                questionIndex: qIndex,
+                correct: false,
+                explanation: `This upload was marked wrong because the image did not contain a readable answer for the question. ${feedbackText}`,
+                whatWentWell: '',
+                improvementTip: 'Upload a clear photo of your written work on a plain page, or type the answer directly.'
+            };
+            if (feedbackIndex >= 0) {
+                perQuestionFeedback[feedbackIndex] = { ...perQuestionFeedback[feedbackIndex], ...perQuestionRejection };
+            } else {
+                perQuestionFeedback.push(perQuestionRejection);
+            }
         }
 
         practice.state.attemptsUsed += 1;
@@ -640,7 +731,6 @@ const submitGuidedAssessment = async (req, res) => {
         ref.subtopic.mistakeLog = gradeResult.mistakes || [];
 
         await course.save();
-        await spendCredits(user, 'assessmentGrading');
 
         return res.json({
             success: true,
@@ -680,10 +770,42 @@ const generateSubtopicPractice = async (req, res) => {
 
         const user = await User.findById(course.userId);
         await maybeRefillCredits(user);
-        assertCredits(user, 'practiceGeneration');
+        const requestedTypes = Array.isArray(questionTypes) ? questionTypes : ['mcqs', 'written'];
+        const allowedTypes = (user.plan || 'free') === 'free'
+            ? ['mcqs', 'written']
+            : ['mcqs', 'written', 'code', 'math'];
+        const finalQuestionTypes = requestedTypes.filter(type => allowedTypes.includes(type));
+        if (finalQuestionTypes.length === 0) finalQuestionTypes.push('mcqs');
+
+        // Dynamic credit pricing based on time limit (and therefore count of questions)
+        const costMap = { 10: 15, 15: 20, 30: 30, 45: 40 };
+        const finalCost = costMap[timeLimit] || 20;
+
+        if ((user.credits?.balance || 0) < finalCost) {
+            return res.status(403).json({
+                success: false,
+                creditError: true,
+                message: `Not enough credits. A ${timeLimit} min test costs ${finalCost} credits, your balance: ${user.credits?.balance || 0} credits.`
+            });
+        }
 
         const { generatePracticeSheet } = require('../services/guidedStudyGenerator');
-        const lessonContext = ref.subtopic.lessonContent.blocks.map(b => b.title + ': ' + b.body).join('\n\n');
+        const moduleTopics = (ref.module.subtopics || [])
+            .map(topic => topic.subtopic_title)
+            .filter(Boolean);
+        const courseOutline = (course.modules || [])
+            .map(module => {
+                const topics = (module.subtopics || []).map(topic => topic.subtopic_title).filter(Boolean).join(', ');
+                return `${module.module_title}: ${topics}`;
+            })
+            .join('\n');
+        const lessonContext = [
+            `Main course topic: ${course.course_query || course.course_title}`,
+            `Current module: ${ref.module.module_title}`,
+            `Current test topic: ${ref.subtopic.subtopic_title}`,
+            `Topics in this module: ${moduleTopics.join(', ')}`,
+            `Course topic outline:\n${courseOutline}`
+        ].join('\n');
         const appliedConfig = ref.subtopic.appliedConfig || {};
 
         // Wipe all previous practices — clean slate for new test system
@@ -697,13 +819,13 @@ const generateSubtopicPractice = async (req, res) => {
             config: appliedConfig,
             userPlan: user.plan || 'free',
             difficulty,
-            questionTypes,
+            questionTypes: finalQuestionTypes,
             timeLimit
         });
 
         ref.subtopic.practices.push({
             bundle: practiceBundle,
-            config: { difficulty, timeLimit, questionTypes },
+            config: { difficulty, timeLimit, questionTypes: finalQuestionTypes },
             state: {
                 attemptsUsed: 0,
                 passed: false,
@@ -719,7 +841,7 @@ const generateSubtopicPractice = async (req, res) => {
         });
 
         await course.save();
-        await spendCredits(user, 'practiceGeneration');
+        await spendCredits(user, 'practiceGeneration', finalCost);
 
         return res.json({
             success: true,
@@ -894,6 +1016,29 @@ const confirmTune = async (req, res) => {
     }
 };
 
+const clearSubtopicPractice = async (req, res) => {
+    try {
+        const { courseId, subtopicId } = req.params;
+        const course = await Course.findById(courseId);
+        if (!course) {
+            return res.status(404).json({ success: false, message: 'Guided study plan not found' });
+        }
+
+        const ref = findSubtopic(course, subtopicId);
+        if (!ref) {
+            return res.status(404).json({ success: false, message: 'Subtopic not found' });
+        }
+
+        ref.subtopic.practices = [];
+        await course.save();
+
+        return res.json({ success: true });
+    } catch (error) {
+        console.error('Error clearing practice:', error);
+        return res.status(500).json({ success: false, message: 'Failed to clear practice' });
+    }
+};
+
 module.exports = {
     createGuidedStudyPlan,
     getStudyPlansForUser,
@@ -902,6 +1047,7 @@ module.exports = {
     updateGuidedConfig,
     generateSubtopicContent,
     generateSubtopicPractice,
+    clearSubtopicPractice,
     rewriteGuidedBlock,
     undoGuidedBlockRewrite,
     submitGuidedAssessment,

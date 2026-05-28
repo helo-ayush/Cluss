@@ -118,11 +118,11 @@ const assertCredits = (user, actionKey) => {
 /**
  * Deduct credits and log the transaction.
  */
-const spendCredits = async (user, actionKey) => {
+const spendCredits = async (user, actionKey, customCost = null) => {
     if (!user) return;
 
     const plan = getNormalizedPlan(user.plan);
-    const cost = getCostForAction(plan, actionKey);
+    const cost = customCost !== null ? customCost : getCostForAction(plan, actionKey);
     if (cost === 0) return;
 
     user.credits.balance = Math.max(0, (user.credits.balance || 0) - cost);

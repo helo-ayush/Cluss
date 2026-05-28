@@ -494,12 +494,13 @@ function PreTestModal({ open, onClose, courseId, subtopicRef, plan, navigate, mo
   };
 
   const estimatedCount = {
-    easy:   { 10: 6,  15: 8,  30: 12, 0: 15 },
-    medium: { 10: 7,  15: 10, 30: 15, 0: 20 },
-    hard:   { 10: 8,  15: 12, 30: 18, 0: 25 },
+    easy:   { 10: 6,  15: 8,  30: 12, 45: 18 },
+    medium: { 10: 7,  15: 10, 30: 15, 45: 22 },
+    hard:   { 10: 8,  15: 12, 30: 18, 45: 26 },
   }[difficulty]?.[timeLimit] ?? 10;
 
-  const generationCost = getCostForAction(plan, 'practiceGeneration');
+  const costMap = { 10: 15, 15: 20, 30: 30, 45: 40 };
+  const generationCost = costMap[timeLimit] || 20;
   const gradingCost = getCostForAction(plan, 'assessmentGrading');
 
   const handleStart = async () => {
@@ -524,7 +525,7 @@ function PreTestModal({ open, onClose, courseId, subtopicRef, plan, navigate, mo
 
   if (!open) return null;
 
-  const timeLimitOptions = [{ label: '10 min', value: 10 }, { label: '15 min', value: 15 }, { label: '30 min', value: 30 }, { label: 'No limit', value: 0 }];
+  const timeLimitOptions = [{ label: '10 min', value: 10 }, { label: '15 min', value: 15 }, { label: '30 min', value: 30 }, { label: '45 min', value: 45 }];
   const difficultyOptions = [{ label: 'Easy', value: 'easy', color: '#4ade80' }, { label: 'Medium', value: 'medium', color: '#fbbf24' }, { label: 'Hard', value: 'hard', color: '#f87171' }];
   const typeOptions = [
     { key: 'mcqs', label: 'MCQ', icon: '⊙', pro: false },
@@ -544,20 +545,17 @@ function PreTestModal({ open, onClose, courseId, subtopicRef, plan, navigate, mo
         onClick={onClose}
       >
         <motion.div
-          className="relative w-full max-w-md rounded-[2rem] border border-white/[0.08] bg-[#141414] shadow-[0_40px_120px_rgba(0,0,0,0.6)] overflow-hidden"
+          className="relative w-full max-w-md rounded-[2rem] border border-white/[0.08] bg-[#141414] shadow-[0_40px_120px_rgba(0,0,0,0.6)]"
           initial={{ scale: 0.92, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.92, opacity: 0, y: 20 }}
           transition={{ type: 'spring', stiffness: 200, damping: 22 }}
           onClick={e => e.stopPropagation()}
         >
-          {/* Top accent line */}
-          <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#efff55] to-transparent" />
-
           <div className="p-6 md:p-8">
             <div className="flex items-start justify-between mb-6">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efff55]">Practice Test</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Practice Test</p>
                 <h2 className="mt-1 text-2xl font-bold tracking-tight text-white">Configure your test</h2>
               </div>
               <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.06] bg-white/[0.03] text-zinc-400 hover:text-white transition">
@@ -573,7 +571,7 @@ function PreTestModal({ open, onClose, courseId, subtopicRef, plan, navigate, mo
                   <button key={opt.value} onClick={() => setTimeLimit(opt.value)}
                     className={`rounded-[1rem] border py-2.5 text-xs font-bold transition ${
                       timeLimit === opt.value
-                        ? 'border-[#efff55]/60 bg-[#efff55]/10 text-[#efff55]'
+                        ? 'border-[#efff55]/45 bg-white/[0.03] text-white shadow-[0_0_15px_rgba(239,255,85,0.05)]'
                         : 'border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:border-white/20 hover:text-white'
                     }`}>
                     {opt.label}
@@ -593,7 +591,7 @@ function PreTestModal({ open, onClose, courseId, subtopicRef, plan, navigate, mo
                         ? 'border-white/20 text-white'
                         : 'border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:border-white/20 hover:text-white'
                     }`}
-                    style={difficulty === opt.value ? { borderColor: opt.color + '60', background: opt.color + '15', color: opt.color } : {}}>
+                    style={difficulty === opt.value ? { borderColor: opt.color + '40', background: opt.color + '08', color: opt.color } : {}}>
                     {opt.label}
                   </button>
                 ))}
@@ -613,18 +611,18 @@ function PreTestModal({ open, onClose, courseId, subtopicRef, plan, navigate, mo
                       disabled={locked}
                       className={`relative flex items-center gap-2.5 rounded-[1rem] border px-3.5 py-3 text-sm font-semibold transition ${
                         locked ? 'border-white/[0.04] bg-white/[0.01] text-zinc-600 cursor-not-allowed'
-                        : active ? 'border-[#efff55]/40 bg-[#efff55]/8 text-white'
+                        : active ? 'border-[#efff55]/35 bg-white/[0.03] text-white shadow-[0_0_15px_rgba(239,255,85,0.03)]'
                         : 'border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:border-white/20 hover:text-white'
                       }`}>
                       <span className="text-base">{opt.icon}</span>
                       <span>{opt.label}</span>
                       {locked && (
-                        <span className="ml-auto rounded-full bg-[#efff55]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#efff55]">
+                        <span className="ml-auto rounded-full bg-white/[0.06] border border-white/[0.08] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-500">
                           PRO
                         </span>
                       )}
                       {active && !locked && (
-                        <span className="ml-auto h-2 w-2 rounded-full bg-[#efff55]" />
+                        <span className="ml-auto h-2 w-2 rounded-full bg-[#efff55] shadow-[0_0_8px_#efff55]" />
                       )}
                     </button>
                   );
@@ -632,12 +630,21 @@ function PreTestModal({ open, onClose, courseId, subtopicRef, plan, navigate, mo
               </div>
             </div>
 
-            {/* Estimate */}
-            <div className="mb-5 flex items-center justify-between rounded-[1.2rem] border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-              <span className="text-xs text-zinc-500">AI will generate ~{estimatedCount} questions</span>
-              <div className="flex items-center gap-3 text-xs">
-                <span className="text-zinc-500">Test: <span className="text-white font-semibold">⚡{generationCost}</span></span>
-                <span className="text-zinc-500">Grade: <span className="text-white font-semibold">⚡{gradingCost}</span></span>
+            {/* Estimate with Dynamic Question Count and Rising Credits Cost */}
+            <div className="mb-6 rounded-[1.6rem] border border-white/[0.06] bg-white/[0.01] p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-500 mb-1">Total Questions</p>
+                  <span className="text-3xl font-black text-white">{estimatedCount} <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">questions</span></span>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-500 mb-1">Generation Cost</p>
+                  <span className="text-3xl font-black text-white"><span className="text-[#efff55] mr-0.5">⚡</span>{generationCost} <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">credits</span></span>
+                </div>
+              </div>
+              <div className="border-t border-white/[0.04] pt-3 flex items-center justify-between text-xs text-zinc-500">
+                <span>Dynamic pricing based on selected time limit</span>
+                <span>AI Grading: <strong className="text-[#efff55] font-semibold">Included</strong></span>
               </div>
             </div>
 

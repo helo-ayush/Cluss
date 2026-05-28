@@ -599,7 +599,7 @@ Subtopic: "${subtopicTitle}"
 Difficulty: ${difficulty}
 Time limit: ${timeLimit === 0 ? 'unlimited' : timeLimit + ' minutes'}
 
-Lesson context (what the student has studied):
+Study scope. This is an outline only, not full lesson notes:
 ${lessonContext}
 
 Generate EXACTLY the following question counts (do not deviate):
@@ -614,11 +614,12 @@ Difficulty calibration:
 - hard: test analysis, multi-step reasoning, and synthesis
 
 Rules:
-1. All questions must be strictly based on the lesson context above.
-2. Written questions need image_upload: true since student may upload handwritten answer.
-3. Math questions need image_upload: true since student may upload handwritten calculations.
-4. MCQ must have exactly 4 options and one correct answer.
-5. Output ONLY valid JSON, no markdown blocks.
+1. All questions must be strictly based on the course topic, module, current test topic, and topic names above.
+2. Do not assume private note details that are not visible in the outline.
+3. Written questions need image_upload: true since student may upload handwritten answer.
+4. Math questions need image_upload: true since student may upload handwritten calculations.
+5. MCQ must have exactly 4 options and one correct answer.
+6. Output ONLY valid JSON, no markdown blocks.
 
 Expected format:
 {
@@ -658,7 +659,7 @@ Expected format:
 `;
 
     const response = await ai.models.generateContent({
-        model: getModelForPlan(userPlan),
+        model: getModelForPlan('free'),
         contents: prompt,
         config: { responseMimeType: 'application/json' }
     });
@@ -904,7 +905,7 @@ Output ONLY valid JSON — an array with one entry per question:
 `;
 
     const response = await ai.models.generateContent({
-        model: getModelForPlan(userPlan),
+        model: getModelForPlan('free'),
         contents: prompt,
         config: { responseMimeType: 'application/json' }
     });
@@ -926,11 +927,14 @@ Question: ${questionText}
 Rubric points to check: ${rubric.join(', ') || 'general correctness and understanding'}
 
 Look at the uploaded image and:
-1. Extract/transcribe the handwritten text you can see
-2. Evaluate how well it answers the question based on the rubric
-3. Give a score from 0-100
+1. First decide whether the image contains a readable student answer to THIS question.
+2. Extract/transcribe the handwritten text you can see only if it is a real answer attempt.
+3. Evaluate how well it answers the question based on the rubric.
+4. Give a score from 0-100.
 
-If the image is too blurry, illegible, or does not contain a relevant answer, set isReadable to false.
+Strict rejection rule:
+- If the image is scenery, a mountain/nature photo, a selfie, an unrelated screenshot, blank paper, too blurry, illegible, or does not contain a relevant written answer, set isReadable to false and score to 0.
+- Do not give partial credit for an image that has no readable answer text.
 
 Output ONLY valid JSON:
 {
@@ -943,7 +947,7 @@ Output ONLY valid JSON:
 `;
 
         const response = await ai.models.generateContent({
-            model: getModelForPlan(userPlan),
+            model: getModelForPlan('free'),
             contents: [
                 {
                     role: 'user',
