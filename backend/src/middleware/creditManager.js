@@ -51,26 +51,65 @@ const maybeRefillCredits = async (user) => {
     // ── Calculate refill interval ──
     // If lastRefill is null (new user), treat as needing immediate refill
     if (lastRefill) {
-        const msSinceRefill = now.getTime() - lastRefill.getTime();
-        const intervalMs = config.refillInterval === 'weekly'
-            ? 7 * 24 * 60 * 60 * 1000
-            : 24 * 60 * 60 * 1000;
+        // Reset a date to its 00:00:00 UTC start
+        const getUTCDayStart = (d) => {
+            const date = new Date(d);
+            date.setUTCHours(0, 0, 0, 0);
+            return date;
+        };
 
-        if (msSinceRefill < intervalMs) return; // Not time yet
+        // Get the start of the UTC week (Monday 00:00:00 UTC)
+        const getUTCWeekStart = (d) => {
+            const date = getUTCDayStart(d);
+            const day = date.getUTCDay(); // 0 is Sunday, 1 is Monday, etc.
+            const diff = date.getUTCDate() - day + (day === 0 ? -6 : 1);
+            date.setUTCDate(diff);
+            return date;
+        };
+
+        const nowDayStart = getUTCDayStart(now);
+        const lastRefillDayStart = getUTCDayStart(lastRefill);
+
+        if (config.refillInterval === 'weekly') {
+            const nowWeekStart = getUTCWeekStart(now);
+            const lastRefillWeekStart = getUTCWeekStart(lastRefill);
+            // Weekly: refill if the calendar week has changed
+            if (nowWeekStart <= lastRefillWeekStart) return;
+        } else {
+            // Daily: refill if the calendar day has changed (00:00 UTC boundary crossed)
+            if (nowDayStart <= lastRefillDayStart) return;
+        }
     }
 
-    // ── Refill: always give exactly ONE interval's worth ──
+    // ── Refill: give allowance based on how many intervals passed ──
     let newBalance;
     let description;
+    let refillAmount;
 
     if (plan === 'free') {
         // Free: NO rollover — hard reset to allowance
+        refillAmount = config.allowance;
         newBalance = config.allowance;
         description = `Weekly free refill`;
     } else {
-        // Paid: Accumulate — add one daily allowance
-        newBalance = (user.credits?.balance || 0) + config.allowance;
-        description = `Daily ${plan} refill`;
+        // Paid: Accumulate daily allowance for each calendar day passed
+        let daysPassed = 1;
+        if (lastRefill) {
+            const getUTCDayStart = (d) => {
+                const date = new Date(d);
+                date.setUTCHours(0, 0, 0, 0);
+                return date;
+            };
+            const nowDayStart = getUTCDayStart(now);
+            const lastRefillDayStart = getUTCDayStart(lastRefill);
+            daysPassed = Math.max(1, Math.floor((nowDayStart.getTime() - lastRefillDayStart.getTime()) / (24 * 60 * 60 * 1000)));
+        }
+
+        refillAmount = config.allowance * daysPassed;
+        newBalance = (user.credits?.balance || 0) + refillAmount;
+        description = daysPassed > 1 
+            ? `Daily ${plan} refill (${daysPassed} days accumulated)` 
+            : `Daily ${plan} refill`;
     }
 
     user.credits.balance = newBalance;
@@ -80,7 +119,7 @@ const maybeRefillCredits = async (user) => {
 
     await CreditTransaction.create({
         userId: user._id,
-        amount: config.allowance,
+        amount: refillAmount,
         type: 'refill',
         actionKey: 'creditRefill',
         description,
