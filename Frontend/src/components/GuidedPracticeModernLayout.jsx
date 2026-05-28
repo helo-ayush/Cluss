@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
+import CodeWorkspace from './CodeWorkspace';
 
 const answerLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
@@ -251,27 +252,22 @@ function ModernWritten({ value, onChange, imageFile, imageEvalResult, onImageUpl
 }
 
 function ModernCode({ question, value, onChange, submitted }) {
+  useEffect(() => {
+    if (!submitted && !value && question.starterCode) {
+      onChange(question.starterCode);
+    }
+  }, [onChange, question.starterCode, submitted, value]);
+
   return (
-    <div className="space-y-4">
-      {question.starterCode && (
-        <div className="rounded-[1.2rem] border border-white/[0.10] bg-[#1b1b1b] p-4">
-          <div className="mb-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/42">
-            <Code2 className="h-3.5 w-3.5" />
-            Starter Code
-          </div>
-          <pre className="overflow-x-auto whitespace-pre-wrap break-words text-xs leading-relaxed text-white/70">{question.starterCode}</pre>
-        </div>
-      )}
-      <textarea
-        value={value || ''}
-        onChange={event => onChange(event.target.value)}
-        disabled={submitted}
-        rows={14}
-        spellCheck={false}
-        placeholder={submitted ? 'No code answer was submitted.' : 'Write your solution here.'}
-        className="min-h-[320px] w-full resize-none rounded-[1.35rem] border border-white/[0.10] bg-[#1b1b1b] px-5 py-5 font-mono text-sm leading-relaxed text-white outline-none transition placeholder:text-white/28 focus:border-[#efff55]/45 focus:bg-[#242424]"
-      />
-    </div>
+    <CodeWorkspace
+      value={value || question.starterCode || ''}
+      onChange={onChange}
+      starterCode={question.starterCode || ''}
+      language={question.language || 'javascript'}
+      fileName={question.fileName}
+      readOnly={submitted}
+      height={440}
+    />
   );
 }
 
