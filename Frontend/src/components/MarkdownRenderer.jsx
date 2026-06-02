@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { Check, Copy, AlertCircle, X, ZoomIn, ZoomOut, RotateCcw, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, Copy, AlertCircle, X, ZoomIn, ZoomOut, RotateCcw, ChevronRight } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 
 
@@ -116,8 +116,9 @@ function computeLayout(nodes, edges, direction = 'TD') {
   const paddingX = 80;
   const paddingY = 80;
   positionedNodes.forEach(node => {
-    node.x = node.x - minX + paddingX;
-    node.y = node.y - minY + paddingY;
+    // Correct the coordinate translation offset to ensure perfect horizontal and vertical margin symmetry
+    node.x = (node.x - nodeW / 2) - minX + paddingX;
+    node.y = (node.y - nodeH / 2) - minY + paddingY;
     nodePositions[node.id] = { x: node.x, y: node.y };
     maxW = Math.max(maxW, node.x + nodeW + paddingX);
     maxH = Math.max(maxH, node.y + nodeH + paddingY);
@@ -173,8 +174,8 @@ function computeLayout(nodes, edges, direction = 'TD') {
   return {
     nodes: positionedNodes,
     edges: positionedEdges,
-    width: Math.max(maxW, 800),
-    height: Math.max(maxH, 500)
+    width: maxW,
+    height: maxH
   };
 }
 
@@ -205,7 +206,7 @@ function parseNodePart(part) {
   if (!part) return null;
 
   // 1. Check if the part starts with a standard node ID and shape: e.g. A["Label"], B(("Label"))
-  const standardMatch = part.match(/^([a-zA-Z0-9_-]+)\s*(?:(\(\(\s*["']?|\[\s*["']?|\{\s*["']?|["']|\(\s*["']?|\[\s*["']?|\[\(\s*["']?|\{\{\s*["']?|\[\[\s*["']?)(.*?)(?:\s*["']?\)\)|\s*["']?\]|\s*["']?\}|["']|\s*["']?\)|["']?\s*\]|\s*["']?\s*\)\]|\s*["']?\s*\}\}|\s*["']?\s*\]\]))$/);
+  const standardMatch = part.match(/^([a-zA-Z0-9_-]+)\s*(?:(\(\(\s*["']?|\(\[\s*["']?|\[\[\s*["']?|\[\(\s*["']?|\{\{\s*["']?|\{\s*["']?|\(\s*["']?|\[\s*["']?|["'])(.*?)(?:\s*["']?\)\)|\s*["']?\]\)|\s*["']?\]\]|\s*["']?\s*\)\]|\s*["']?\}\}|\s*["']?\}|\s*["']?\)|["']?\s*\]|["']))$/);
   
   if (standardMatch) {
     const id = standardMatch[1];
@@ -290,6 +291,26 @@ function parseFlowchartData(code) {
     const edgesList = [];
     let direction = 'TD';
 
+    const setNodeMapSafe = (newNode) => {
+      if (!newNode) return;
+      const existing = nodesMap.get(newNode.id);
+      if (!existing) {
+        nodesMap.set(newNode.id, newNode);
+        return;
+      }
+      const existingIsSimple = (existing.label === existing.id) && (existing.shape === 'box');
+      const newIsSimple = (newNode.label === newNode.id) && (newNode.shape === 'box');
+      if (existingIsSimple && !newIsSimple) {
+        nodesMap.set(newNode.id, newNode);
+      } else if (!existingIsSimple && newIsSimple) {
+        // Keep existing richer definition
+      } else {
+        if (newNode.label && newNode.label.length > (existing.label ? existing.label.length : 0)) {
+          nodesMap.set(newNode.id, newNode);
+        }
+      }
+    };
+
     for (let line of lines) {
       line = line.trim();
       if (!line) continue;
@@ -305,7 +326,8 @@ function parseFlowchartData(code) {
         }
       }
 
-      if (line.startsWith('%%') || line.startsWith('style') || line.startsWith('classDef') || line.startsWith('class') || line.startsWith('linkStyle') || line.startsWith('subgraph') || line.startsWith('end')) {
+      const lowerLine = line.toLowerCase();
+      if (lowerLine.startsWith('%%') || lowerLine.startsWith('style') || lowerLine.startsWith('classdef') || lowerLine.startsWith('class') || lowerLine.startsWith('linkstyle') || lowerLine.startsWith('subgraph') || lowerLine.startsWith('end')) {
         continue;
       }
 
@@ -316,9 +338,7 @@ function parseFlowchartData(code) {
         if (parsed.hasEdge) {
           const leftNode = parseNodePart(parsed.left);
           if (leftNode) {
-            if (!nodesMap.has(leftNode.id) || leftNode.label) {
-              nodesMap.set(leftNode.id, leftNode);
-            }
+            setNodeMapSafe(leftNode);
           }
 
           const rightNextParsed = parseLine(parsed.right);
@@ -326,13 +346,15 @@ function parseFlowchartData(code) {
           const rightNode = parseNodePart(rightImmediateNodePart);
 
           if (rightNode) {
-            if (!nodesMap.has(rightNode.id) || rightNode.label) {
-              nodesMap.set(rightNode.id, rightNode);
+            setNodeMapSafe(rightNode);
+            let edgeLabel = parsed.edgeLabel.trim();
+            if ((edgeLabel.startsWith('"') && edgeLabel.endsWith('"')) || (edgeLabel.startsWith("'") && edgeLabel.endsWith("'"))) {
+              edgeLabel = edgeLabel.slice(1, -1).trim();
             }
             edgesList.push({
               from: leftNode ? leftNode.id : parsed.left.trim().replace(/[^a-zA-Z0-9_-]/g, ''),
               to: rightNode.id,
-              label: parsed.edgeLabel.trim().replace(/"/g, "'"),
+              label: edgeLabel.replace(/"/g, "'"),
               arrowType: parsed.arrowType
             });
           }
@@ -342,9 +364,7 @@ function parseFlowchartData(code) {
         } else {
           const node = parseNodePart(parsed.content);
           if (node) {
-            if (!nodesMap.has(node.id) || node.label) {
-              nodesMap.set(node.id, node);
-            }
+            setNodeMapSafe(node);
           }
           break;
         }
@@ -396,45 +416,115 @@ function reconstructFlowchart(code) {
   }
 }
 
+const renderNodeShape = (shape, cardFill, cardStroke, isActive, isDark) => {
+  const commonProps = {
+    fill: cardFill,
+    stroke: cardStroke,
+    strokeWidth: isActive ? 2 : 1.5,
+    className: "transition-all duration-300",
+    style: isActive 
+      ? { filter: `drop-shadow(0 0 4px ${isDark ? 'rgba(239, 255, 85, 0.2)' : 'rgba(59, 130, 246, 0.2)'})` } 
+      : undefined
+  };
+
+  switch (shape) {
+    case 'double-circle':
+      return (
+        <g>
+          <ellipse cx="90" cy="35" rx="85" ry="34" {...commonProps} />
+          <ellipse cx="90" cy="35" rx="79" ry="28" fill="none" stroke={cardStroke} strokeWidth={isActive ? 1.5 : 1} className="transition-all duration-300" />
+        </g>
+      );
+    case 'stadium':
+      return <rect x="0" y="0" width="180" height="70" rx="35" ry="35" {...commonProps} />;
+    case 'diamond':
+      return <polygon points="90,0 180,35 90,70 0,35" {...commonProps} />;
+    case 'hexagon':
+      return <polygon points="20,0 160,0 180,35 160,70 20,70 0,35" {...commonProps} />;
+    case 'database':
+      return (
+        <g>
+          <path d="M 0,12 L 0,58 A 90,12 0 0 0 180,58 L 180,12 Z" {...commonProps} />
+          <ellipse cx="90" cy="12" rx="90" ry="12" fill={cardFill} stroke={cardStroke} strokeWidth={isActive ? 2.5 : 1.5} className="transition-all duration-300" />
+        </g>
+      );
+    case 'subroutine':
+      return (
+        <g>
+          <rect x="0" y="0" width="180" height="70" rx="4" {...commonProps} />
+          <line x1="15" y1="0" x2="15" y2="70" stroke={cardStroke} strokeWidth={isActive ? 2.5 : 1.5} className="transition-all duration-300" />
+          <line x1="165" y1="0" x2="165" y2="70" stroke={cardStroke} strokeWidth={isActive ? 2.5 : 1.5} className="transition-all duration-300" />
+        </g>
+      );
+    case 'round':
+      return <rect x="0" y="0" width="180" height="70" rx="20" ry="20" {...commonProps} />;
+    case 'box':
+    default:
+      return <rect x="0" y="0" width="180" height="70" rx="6" ry="6" {...commonProps} />;
+  }
+};
+
 function InteractiveVisualGraph({ data, theme = 'dark' }) {
   const [selectedId, setSelectedId] = useState(data.nodes[0]?.id || '');
   const [direction, setDirection] = useState(data.direction || 'TD');
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [viewport, setViewport] = useState({ zoom: 1, pan: { x: 0, y: 0 } });
+  const { zoom, pan } = viewport;
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const canvasRef = useRef(null);
 
-  // Expanded/Collapsable Tray State (Collapsed by default)
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Hover state for interactive node highlighting
+  const [hoveredId, setHoveredId] = useState(null);
 
   const isDark = theme === 'dark';
+  const themeColor = isDark ? '#efff55' : '#3b82f6';
+  const themeColorRGB = isDark ? '239, 255, 85' : '59, 130, 246';
 
   // Compute layout coordinates dynamically
   const layout = React.useMemo(() => {
     return computeLayout(data.nodes, data.edges, direction);
   }, [data.nodes, data.edges, direction]);
 
-  const activeNode = layout.nodes.find(n => n.id === selectedId) || layout.nodes[0];
 
-  // Fit to screen: calculate zoom/pan to show entire graph
+  // Fit to screen: calculate zoom/pan with optimum scaling and centering
   const fitToView = useCallback(() => {
     const el = canvasRef.current;
     if (!el || !layout.width || !layout.height) {
-      setZoom(1);
-      setPan({ x: 0, y: 0 });
+      setViewport({ zoom: 1, pan: { x: 0, y: 0 } });
       return;
     }
     const containerW = el.clientWidth;
     const containerH = el.clientHeight;
-    const scaleX = containerW / layout.width;
-    const scaleY = containerH / layout.height;
-    const newZoom = Math.min(scaleX, scaleY, 1) * 0.92; // 0.92 for a little breathing room
-    const offsetX = (containerW - layout.width * newZoom) / 2;
-    const offsetY = (containerH - layout.height * newZoom) / 2;
-    setZoom(newZoom);
-    setPan({ x: offsetX, y: offsetY });
-  }, [layout.width, layout.height]);
+
+    let newZoom = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (direction === 'TD') {
+      // For vertical TD graphs, fit to width (horizontally) so they are highly readable,
+      // and do not squash the graph vertically down to fit tall diagrams in a short viewport.
+      const scaleX = containerW / layout.width;
+      // Cap zoom: minimum 0.65 for excellent legibility on load, max 0.9 for standard size
+      newZoom = Math.max(0.65, Math.min(scaleX * 0.92, 0.9));
+      
+      // Center horizontally
+      offsetX = (containerW - layout.width * newZoom) / 2;
+      // Pin the top area in the center at the top of the canvas with a nice 40px padding
+      offsetY = 40;
+    } else {
+      // For horizontal LR graphs, fit to height (vertically)
+      const scaleY = containerH / layout.height;
+      // Cap zoom: minimum 0.65 for legibility, max 0.9
+      newZoom = Math.max(0.65, Math.min(scaleY * 0.92, 0.9));
+
+      // Pin the start area near the left of the canvas
+      offsetX = 40;
+      // Center vertically
+      offsetY = (containerH - layout.height * newZoom) / 2;
+    }
+
+    setViewport({ zoom: newZoom, pan: { x: offsetX, y: offsetY } });
+  }, [layout.width, layout.height, direction]);
 
   const resetView = useCallback(() => {
     fitToView();
@@ -445,8 +535,47 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
     fitToView();
   }, [fitToView]);
 
-  const handleZoomIn = () => setZoom(z => Math.min(4, z + 0.15));
-  const handleZoomOut = () => setZoom(z => Math.max(0.2, z - 0.15));
+  const handleZoomIn = () => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const containerW = el.clientWidth;
+    const containerH = el.clientHeight;
+    const cx = containerW / 2;
+    const cy = containerH / 2;
+
+    setViewport(prev => {
+      const newZoom = Math.min(4, prev.zoom + 0.15);
+      const ratio = newZoom / prev.zoom;
+      return {
+        zoom: newZoom,
+        pan: {
+          x: cx - (cx - prev.pan.x) * ratio,
+          y: cy - (cy - prev.pan.y) * ratio
+        }
+      };
+    });
+  };
+
+  const handleZoomOut = () => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const containerW = el.clientWidth;
+    const containerH = el.clientHeight;
+    const cx = containerW / 2;
+    const cy = containerH / 2;
+
+    setViewport(prev => {
+      const newZoom = Math.max(0.2, prev.zoom - 0.15);
+      const ratio = newZoom / prev.zoom;
+      return {
+        zoom: newZoom,
+        pan: {
+          x: cx - (cx - prev.pan.x) * ratio,
+          y: cy - (cy - prev.pan.y) * ratio
+        }
+      };
+    });
+  };
 
 
 
@@ -460,10 +589,13 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
 
   const handleMouseMove = (e) => {
     if (!isPanning) return;
-    setPan({
-      x: panStart.current.panX + (e.clientX - panStart.current.x),
-      y: panStart.current.panY + (e.clientY - panStart.current.y)
-    });
+    setViewport(prev => ({
+      ...prev,
+      pan: {
+        x: panStart.current.panX + (e.clientX - panStart.current.x),
+        y: panStart.current.panY + (e.clientY - panStart.current.y)
+      }
+    }));
   };
 
   const handleMouseUp = () => setIsPanning(false);
@@ -478,23 +610,17 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
 
   const handleTouchMove = (e) => {
     if (!isPanning || e.touches.length !== 1) return;
-    setPan({
-      x: panStart.current.panX + (e.touches[0].clientX - panStart.current.x),
-      y: panStart.current.panY + (e.touches[0].clientY - panStart.current.y)
-    });
+    setViewport(prev => ({
+      ...prev,
+      pan: {
+        x: panStart.current.panX + (e.touches[0].clientX - panStart.current.x),
+        y: panStart.current.panY + (e.touches[0].clientY - panStart.current.y)
+      }
+    }));
   };
 
   const handleTouchEnd = () => setIsPanning(false);
 
-
-
-  const incomingEdges = selectedId ? layout.edges.filter(e => e.to === selectedId) : [];
-  const outgoingEdges = selectedId ? layout.edges.filter(e => e.from === selectedId) : [];
-
-  const getNodeLabel = (id) => {
-    const node = layout.nodes.find(n => n.id === id);
-    return node ? (node.label || node.id) : id;
-  };
 
 
 
@@ -528,42 +654,26 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
     <div className={`my-6 overflow-hidden rounded-2xl border ${isDark ? 'border-zinc-800 bg-[#0c0d0f] text-zinc-300' : 'border-slate-200 bg-white text-slate-700'} shadow-lg transition-all`}>
       <div className={`flex flex-wrap items-center justify-between border-b ${isDark ? 'border-zinc-800/80 bg-zinc-900/35' : 'border-slate-200 bg-slate-50/50'} px-5 py-3.5`}>
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 items-center justify-center rounded-full bg-indigo-500/15 px-2.5 text-[10px] font-black uppercase tracking-wider text-indigo-400">
+          <div className="flex h-7 items-center justify-center rounded-full px-2.5 text-[10px] font-black uppercase tracking-wider transition-all" style={{ backgroundColor: `rgba(${themeColorRGB}, 0.12)`, color: themeColor }}>
             Interactive Graph
           </div>
           <span className={`text-[12px] font-semibold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Concept Path Navigator</span>
         </div>
         <div className="flex items-center gap-2">
-          {/* Collapse/Expand Sidebar Toggle */}
-          <button 
-            onClick={() => setIsExpanded(e => !e)}
-            className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1.5 ${
-              isExpanded 
-                ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' 
-                : isDark 
-                  ? 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white' 
-                  : 'bg-slate-100 border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Info className="w-3.5 h-3.5" />
-            {isExpanded ? 'Hide Pathways' : 'Show Pathways'}
-          </button>
-          <div className="w-px h-4 bg-zinc-800/50 dark:bg-zinc-700/50 mx-1" />
-          
           <button 
             onClick={() => setDirection(d => d === 'TD' ? 'LR' : 'TD')}
-            className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all duration-200 ${
               isDark 
-                ? 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white' 
-                : 'bg-slate-100 border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900'
+                ? 'bg-zinc-900/80 border-zinc-700/60 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800 hover:shadow-lg hover:shadow-zinc-900/50' 
+                : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-white hover:shadow-md'
             }`}
           >
             Layout: {direction === 'TD' ? 'Vertical' : 'Horizontal'}
           </button>
-          <div className="w-px h-4 bg-zinc-800/50 dark:bg-zinc-700/50 mx-1" />
-          <button onClick={handleZoomOut} className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'}`} title="Zoom out"><ZoomOut className="w-3.5 h-3.5" /></button>
-          <button onClick={handleZoomIn} className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'}`} title="Zoom in"><ZoomIn className="w-3.5 h-3.5" /></button>
-          <button onClick={resetView} className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'}`} title="Reset Zoom"><RotateCcw className="w-3.5 h-3.5" /></button>
+          <div className="w-px h-4 bg-zinc-700/40 mx-0.5" />
+          <button onClick={handleZoomOut} className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-200 ${isDark ? 'bg-zinc-900/80 border-zinc-700/60 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800 hover:shadow-lg hover:shadow-zinc-900/50 active:scale-90' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-white hover:shadow-md active:scale-90'}`} title="Zoom out"><ZoomOut className="w-3.5 h-3.5" /></button>
+          <button onClick={handleZoomIn} className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-200 ${isDark ? 'bg-zinc-900/80 border-zinc-700/60 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800 hover:shadow-lg hover:shadow-zinc-900/50 active:scale-90' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-white hover:shadow-md active:scale-90'}`} title="Zoom in"><ZoomIn className="w-3.5 h-3.5" /></button>
+          <button onClick={resetView} className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-200 ${isDark ? 'bg-zinc-900/80 border-zinc-700/60 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800 hover:shadow-lg hover:shadow-zinc-900/50 active:scale-90' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-white hover:shadow-md active:scale-90'}`} title="Reset Zoom"><RotateCcw className="w-3.5 h-3.5" /></button>
         </div>
       </div>
 
@@ -572,11 +682,8 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
           ref={canvasRef}
           className="flex-1 relative overflow-hidden h-[450px] cursor-grab active:cursor-grabbing select-none"
           style={{
-            backgroundColor: isDark ? '#101114' : '#f8fafc',
-            backgroundImage: isDark
-              ? 'linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px)'
-              : 'linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px)',
-            backgroundSize: '24px 24px'
+            backgroundColor: isDark ? '#1e1e1e' : '#f8fafc',
+            backgroundImage: 'none'
           }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -586,20 +693,7 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Floating toggle button when collapsed */}
-          {!isExpanded && (
-            <button
-              onClick={() => setIsExpanded(true)}
-              className={`absolute right-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full flex items-center justify-center border shadow-md hover:scale-105 active:scale-95 transition-all ${
-                isDark 
-                  ? 'bg-zinc-950 border-zinc-800 text-indigo-400 hover:text-white hover:border-zinc-700' 
-                  : 'bg-white border-slate-200 text-indigo-500 hover:text-indigo-600 hover:border-slate-300'
-              }`}
-              title="Open Concept Pathways"
-            >
-              <ChevronLeft className="w-4 h-4 animate-pulse" />
-            </button>
-          )}
+
 
           <div 
             className="w-full h-full"
@@ -616,10 +710,10 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
             >
               <defs>
                 <marker id="arrow-marker" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                  <path d="M 0 2 L 8 5 L 0 8 z" fill="#6366f1"/>
+                  <path d="M 0 2 L 8 5 L 0 8 z" fill={themeColor}/>
                 </marker>
                 <marker id="arrow-marker-muted" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-                  <path d="M 0 2 L 8 5 L 0 8 z" fill={isDark ? '#4b5563' : '#94a3b8'}/>
+                  <path d="M 0 2 L 8 5 L 0 8 z" fill={isDark ? '#3f3f46' : '#cbd5e1'}/>
                 </marker>
               </defs>
 
@@ -630,24 +724,24 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
                     <path
                       d={edge.path}
                       fill="none"
-                      stroke={isActive ? '#6366f1' : isDark ? '#374151' : '#cbd5e1'}
+                      stroke={isActive ? themeColor : isDark ? '#374151' : '#cbd5e1'}
                       strokeWidth={isActive ? 2.5 : 1.5}
                       markerEnd={`url(#${isActive ? 'arrow-marker' : 'arrow-marker-muted'})`}
                       className="transition-all duration-300"
                     />
                     {edge.label && (
                       <foreignObject
-                        x={(edge.startX + edge.endX) / 2 - 40}
-                        y={(edge.startY + edge.endY) / 2 - 10}
-                        width="80"
-                        height="20"
+                        x={(edge.startX + edge.endX) / 2 - 70}
+                        y={(edge.startY + edge.endY) / 2 - 12}
+                        width="140"
+                        height="24"
                       >
                         <div className="flex items-center justify-center h-full">
-                          <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-md border ${
+                          <span className={`text-[9px] font-medium px-2 py-0.5 rounded border text-center leading-tight ${
                             isDark 
-                              ? 'bg-[#0f1013] border-zinc-800 text-zinc-400' 
-                              : 'bg-white border-slate-100 text-slate-500'
-                          } truncate`}>
+                              ? 'bg-[#1e1e1e] border-zinc-700 text-zinc-400' 
+                              : 'bg-[#f8fafc] border-slate-200 text-slate-500'
+                          }`}>
                             {edge.label}
                           </span>
                         </div>
@@ -659,9 +753,10 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
 
               {layout.nodes.map((node) => {
                 const isActive = node.id === selectedId;
-                const cardFill = isDark ? '#111215' : '#f8fafc';
-                const cardStroke = isActive ? '#6366f1' : isDark ? '#27272a' : '#cbd5e1';
-                const labelColor = isDark ? '#f4f4f5' : '#1e293b';
+                const isHovered = node.id === hoveredId;
+                const cardFill = isDark ? '#1e1e1e' : '#ffffff';
+                const cardStroke = isActive ? themeColor : isHovered ? (isDark ? '#71717a' : '#94a3b8') : isDark ? '#52525b' : '#cbd5e1';
+                const labelColor = isDark ? '#ffffff' : '#1e293b';
 
                 return (
                   <g 
@@ -671,52 +766,15 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
                       e.stopPropagation();
                       setSelectedId(node.id);
                     }}
+                    onMouseEnter={() => setHoveredId(node.id)}
+                    onMouseLeave={() => setHoveredId(null)}
                     className="cursor-pointer"
+                    style={{
+                      opacity: isHovered && !isActive ? 0.85 : 1,
+                      transition: 'opacity 0.2s ease'
+                    }}
                   >
-                    {isActive && (
-                      <rect 
-                        x="-3" 
-                        y="-3" 
-                        width="186" 
-                        height="76" 
-                        rx="15" 
-                        fill="rgba(99, 102, 241, 0.08)" 
-                        stroke="#6366f1" 
-                        strokeWidth="2.5" 
-                      />
-                    )}
-                    <rect
-                      x="0"
-                      y="0"
-                      width="180"
-                      height="70"
-                      rx="12"
-                      fill={cardFill}
-                      stroke={cardStroke}
-                      strokeWidth={isActive ? 2 : 1.5}
-                      className="transition-all duration-300"
-                    />
-                    <rect 
-                      x="15" 
-                      y="-9" 
-                      width="70" 
-                      height="18" 
-                      rx="5" 
-                      fill={isDark ? '#1a1b20' : '#f1f5f9'} 
-                      stroke={isActive ? '#6366f1' : isDark ? '#27272a' : '#cbd5e1'} 
-                      strokeWidth="1" 
-                    />
-                    <text 
-                      x="50" 
-                      y="3" 
-                      fill={isActive ? '#6366f1' : isDark ? '#a1a1aa' : '#64748b'} 
-                      fontSize="8" 
-                      fontWeight="900" 
-                      letterSpacing="0.5" 
-                      textAnchor="middle"
-                    >
-                      {node.shape.toUpperCase()}
-                    </text>
+                    {renderNodeShape(node.shape || 'box', cardFill, cardStroke, isActive, isDark)}
 
                     {renderNodeText(node.label || node.id, labelColor)}
                   </g>
@@ -726,108 +784,7 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
           </div>
         </div>
 
-        {/* Right side expandable/collapsable tray */}
-        {isExpanded && (
-          <div className={`w-full lg:w-[350px] border-t lg:border-t-0 lg:border-l ${isDark ? 'border-zinc-800 bg-[#0a0a0c]' : 'border-slate-200 bg-slate-50/90 backdrop-blur-md'} p-5 flex flex-col gap-4 relative animate-in slide-in-from-right duration-250`}>
-            {/* Close / Collapse header */}
-            <div className="flex items-center justify-between border-b border-zinc-800/50 pb-2">
-              <div className="flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5 text-indigo-400" />
-                <span className={`text-xs font-bold ${isDark ? 'text-zinc-200' : 'text-slate-800'}`}>Concept Pathways</span>
-              </div>
 
-              {/* Close Button */}
-              <button 
-                onClick={() => setIsExpanded(false)} 
-                className={`p-1.5 rounded-lg border transition-all ${
-                  isDark 
-                    ? 'border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:text-white hover:border-zinc-700' 
-                    : 'border-slate-200 bg-slate-100 text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                }`}
-                title="Collapse sidebar"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-4 max-h-[350px] lg:max-h-[380px] custom-scroll pr-1">
-              {activeNode ? (
-                <div className="space-y-4">
-                  <div className={`rounded-xl border p-4 shadow-sm ${
-                    isDark 
-                      ? 'border-indigo-500/20 bg-gradient-to-br from-[#121316] to-[#0e0f12]' 
-                      : 'border-indigo-100 bg-gradient-to-br from-indigo-50/20 to-white'
-                  }`}>
-                    <span className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>
-                      Active Node
-                    </span>
-                    <h4 className={`mt-1 text-sm font-black tracking-tight leading-snug ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {activeNode.label || activeNode.id}
-                    </h4>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className={`text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-                      Preceded By
-                    </span>
-                    <div className="space-y-1.5">
-                      {incomingEdges.map((edge, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedId(edge.from)}
-                          className={`w-full flex items-center justify-between rounded-xl border p-2.5 text-left text-xs transition-all ${
-                            isDark
-                              ? 'border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/60 hover:border-zinc-700 text-zinc-300'
-                              : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700'
-                          }`}
-                        >
-                          <span className="font-bold truncate max-w-[160px]">{getNodeLabel(edge.from)}</span>
-                          {edge.label && <span className="text-[8px] font-extrabold text-indigo-400 border border-indigo-500/20 px-1 py-0.5 rounded">{edge.label}</span>}
-                        </button>
-                      ))}
-                      {incomingEdges.length === 0 && (
-                        <div className={`rounded-xl border border-dashed py-4 text-center text-[11px] ${isDark ? 'border-zinc-800/80 text-zinc-600' : 'border-slate-200/80 text-slate-400'}`}>
-                          Start Node (No parents)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className={`text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-                      Leads To
-                    </span>
-                    <div className="space-y-1.5">
-                      {outgoingEdges.map((edge, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedId(edge.to)}
-                          className={`w-full flex items-center justify-between rounded-xl border p-2.5 text-left text-xs transition-all ${
-                            isDark
-                              ? 'border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/60 hover:border-zinc-700 text-zinc-300'
-                              : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700'
-                          }`}
-                        >
-                          <span className="font-bold truncate max-w-[160px]">{getNodeLabel(edge.to)}</span>
-                          {edge.label && <span className="text-[8px] font-extrabold text-indigo-400 border border-indigo-500/20 px-1 py-0.5 rounded">{edge.label}</span>}
-                        </button>
-                      ))}
-                      {outgoingEdges.length === 0 && (
-                        <div className={`rounded-xl border border-dashed py-4 text-center text-[11px] ${isDark ? 'border-zinc-800/80 text-zinc-600' : 'border-slate-200/80 text-slate-400'}`}>
-                          End Node (No children)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className={`text-center py-8 text-xs ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-                  Select a concept node to view its graph pathways.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

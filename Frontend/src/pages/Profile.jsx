@@ -258,7 +258,7 @@ function RecentActivity({ transactions, txPage, txTotalPages, setTxPage }) {
 }
 
 export default function Profile() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const navigate = useNavigate();
   const { usageData } = useUsage();
@@ -319,7 +319,19 @@ export default function Profile() {
     return views ? Math.round((interactions / views) * 100) : 0;
   }, [analytics]);
 
-  if (!user) return null;
+  if (!isLoaded || !user) {
+    return (
+      <DashboardShell title="Profile" eyebrow="Creator Studio">
+        <div className="mx-auto max-w-[112rem] space-y-6 pb-8 font-nunito text-white animate-pulse">
+          <div className="h-[12rem] rounded-[2.2rem] border border-white/[0.06] bg-[#1b1b1b] shadow-[0_20px_50px_rgba(0,0,0,0.5)]" />
+          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="h-[22rem] rounded-[2.2rem] border border-white/[0.06] bg-[#1b1b1b] shadow-[0_20px_50px_rgba(0,0,0,0.5)]" />
+            <div className="h-[22rem] rounded-[2.2rem] border border-white/[0.06] bg-[#1b1b1b] shadow-[0_20px_50px_rgba(0,0,0,0.5)]" />
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell title="Profile" eyebrow="Creator Studio">

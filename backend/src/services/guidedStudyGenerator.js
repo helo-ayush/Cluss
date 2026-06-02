@@ -403,13 +403,23 @@ Requirements for Visual & Rich Formatting (CRITICAL):
      1. Before the diagram, briefly explain each important element/node that appears in it.
      2. After the diagram, explain what the whole diagram is trying to show and how the student should read it.
      3. Do not leave the diagram standing alone; the text must make it easy to understand without guessing.
-   - Types: DO NOT USE mindmap. Stick strictly to flowcharts (graph TD) and sequenceDiagram.
-   - CRITICAL: In flowcharts, ALWAYS wrap node labels in double quotes. Example: \`A["You (The User)"]\` instead of \`A[You (The User)]\`.
-   - CRITICAL: In sequenceDiagrams, ALWAYS wrap participant names in double quotes if they contain hyphens, dots, or spaces. Example: \`"create-next-app"\` instead of \`create-next-app\`.
-   - CRITICAL: NEVER put spaces inside the shape brackets. Use \`A["Text"]\` NOT \`A[ "Text" ]\`, use \`B{"Text"}\` NOT \`B{ "Text" }\`.
+   - Types: Stick strictly to flowcharts (graph TD or graph LR) and sequenceDiagram
+   - CRITICAL: In flowcharts, ALWAYS explicitly define every single node with its ID, shape, and rich label in single quotes before/when using them in relationships. Naked node IDs (e.g. referencing \`A\` alone without \`A['Label']\`) are completely banned, as they crash or display ugly uppercase IDs.
+   - CRITICAL: In flowcharts, ALWAYS wrap node labels in single quotes. Example: \`A['You (The User)']\` instead of \`A["You (The User)"]\`.
+   - CRITICAL: In sequenceDiagrams, ALWAYS wrap participant names in single quotes if they contain hyphens, dots, or spaces. Example: \`'create-next-app'\` instead of \`"create-next-app"\`.
+   - CRITICAL: NEVER put spaces inside the shape brackets. Use \`A['Text']\` NOT \`A[ 'Text' ]\`, use \`B{'Text'}\` NOT \`B{ 'Text' }\`.
    - Diagrams must be syntactically valid.
-   
-   MANDATORY RULES FOR HIGH-QUALITY CONCEPT MAP DIAGRAMS:
+    
+   MANDATORY RULES FOR HIGH-QUALITY DYNAMIC CONCEPT DIAGRAMS:
+   We support diverse shapes! Eagerly use appropriate, topic-specific visual shapes to make the diagram intuitive:
+   * Standard Squircle: \`A['Simple Concept or Phase']\`
+   * Stadium (Capsule): \`B(['State, Boundary, or Parameter'])\`
+   * Double-Circle / Circle: \`C(('Root Element, Central Hub, or Key Variable'))\` (Highly recommended for trees, heaps, or main concepts!)
+   * Database cylinder: \`D[('Data Store, File, Source, or Disk Server')]\`
+   * Hexagon: \`E{{'External API, System Milestone, or Boundary Event'}}\`
+   * Subroutine box: \`F[['Modular Subroutine or Complex Function Block']]\`
+   * Diamond: \`G{'Decision Check, Conditional Split, or Question'}\` (Highly recommended for conditionals!)
+
    First, decide the exact teaching question the diagram answers, such as "How does Bayes theorem transform prior belief into posterior probability?" or "How does data move through a request pipeline?" The graph must make that answer obvious without needing the surrounding paragraph.
    Prefer diagrams that reveal structure, not vocabulary lists. Use the best pattern for the topic:
    - Process: input -> transformation -> output -> feedback.
@@ -418,16 +428,39 @@ Requirements for Visual & Rich Formatting (CRITICAL):
    - Formula reasoning: known values -> formula step -> substitution -> result interpretation.
    - System architecture: actor -> boundary -> component -> data/state change.
    Add one concrete example node when it improves understanding, and make the final node a clear takeaway/result instead of another vague concept.
-   a) NEVER use single-letter or abstract placeholder node IDs as labels (e.g., A, B, C). Every node MUST have a descriptive, human-readable label that explains the concept it represents.
-      - BAD:  \`A["Relations"] --> B["Reflexive"]\`
-      - GOOD: \`DEF["Relation: A subset of A×B"] --> REF["Reflexive: aRa for every element a in A"]\`
-   b) Node labels MUST be pedagogically meaningful: include brief definitions, formulas, or key properties inside the label text itself (max ~10 words per node). The graph should teach the student at a glance.
-      - Example: \`NORM["Normal Form: Eliminate redundancy"]\` instead of \`NF["Normal Form"]\`
-   c) Edge labels MUST describe the logical relationship between connected concepts. Use descriptive arrow labels like \`-- "is a type of" -->\`, \`-- "requires" -->\`, \`-- "produces" -->\`, \`-- "if condition" -->\`.
-      - BAD:  \`A --> B\`  (no label, no meaning)
-      - GOOD: \`INP["User Input"] -- "validated by" --> VAL["Input Validator"]\`
-   d) Aim for 5-10 nodes per diagram. Avoid trivially simple 2-3 node graphs. Build a meaningful topology that shows how concepts connect, flow, or depend on each other.
-   e) Structure the graph to reflect real conceptual relationships: cause-effect chains, decision trees, classification hierarchies, process pipelines, or dependency graphs—whatever best fits the subject matter.
+   
+   PERFECT EXAMPLE MERMAID DIAGRAM (Copy this syntax style perfectly):
+   \`\`\`mermaid
+   graph TD
+     START(['Start Study Process: Switch toggles at t=0']) -- 'begins' --> SUB[['Initialize: Calculate T-Minus State']]
+     SUB -- 'reads from' --> DB[('Database Store: Load Initial Values')]
+     DB -- 'triggers check' --> CHECK{'Is Circuit Source-Free?'}
+     CHECK -- 'Yes (Source-Free)' --> HOM(('Homogeneous Equations: Focus on Natural Response'))
+     CHECK -- 'No (With Source)' --> NHOM(('Non-Homogeneous: Focus on Forced Response'))
+     HOM -- 'combines into' --> FOR{{'Formulate Equations: Apply KVL/KCL'}}
+     NHOM -- 'combines into' --> FOR
+     FOR -- 'final result' --> FIN(['Solve for other variables like dv/dt or di/dt'])
+   \`\`\`
+   
+   a) NEVER use single-letter or abstract placeholder node IDs as labels (e.g., A, B, C). Every single node in the diagram MUST have a descriptive, rich, human-readable label that explains the concept it represents.
+    b) NEVER use the node ID itself, or a short acronym/abbreviation (e.g. 'ODE', 'LAP', 'SOLVE', 'INV', 'HTML', 'CSS') as the entire label text. Doing this renders an empty-looking graph with raw abbreviations. Every node label MUST contain a descriptive explanation (3-12 words) teaching the concept.
+       - BAD:  \`ODE[['ODE']]\` or \`ODE[['Ordinary Differential Equation']]\` (too short/vague)
+       - GOOD: \`ODE[['ODE: Formulate Ordinary Differential Equation for the circuit']]\`
+       - BAD:  \`LAP[['LAP']]\` or \`LAP[['Laplace']]\`
+       - GOOD: \`LAP[['LAP: Apply Laplace Transform to s-domain']]\`
+       - BAD:  \`SOLVE[['SOLVE']]\`
+       - GOOD: \`SOLVE[['SOLVE: Solve algebraic equations in s-domain']]\`
+       - BAD:  \`INV[['INV']]\`
+       - GOOD: \`INV[['INV: Take Inverse Laplace Transform back to time-domain']]\`
+    c) Node labels MUST be pedagogically meaningful: include brief definitions, formulas, or key properties inside the label text itself (max ~12 words per node). The graph should teach the student at a glance.
+       - Example: \`NORM['Normal Form: Eliminate redundancy']\` instead of \`NF['Normal Form']\`
+    d) Edge labels MUST describe the logical relationship between connected concepts. Use descriptive arrow labels like \`-- 'is a type of' -->\`, \`-- 'requires' -->\`, \`-- 'produces' -->\`, \`-- 'if condition' -->\`.
+       - BAD:  \`A --> B\`  (no label, no meaning)
+       - GOOD: \`INP['User Input'] -- 'validated by' --> VAL['Input Validator']\`
+    e) Aim for 5-10 nodes per diagram. Avoid trivially simple 2-3 node graphs. Build a meaningful topology that shows how concepts connect, flow, or depend on each other.
+    f) Structure the graph to reflect real conceptual relationships: cause-effect chains, decision trees, classification hierarchies, process pipelines, or dependency graphs—whatever best fits the subject matter.
+     g) MANDATORY VISUAL SHAPE DIVERSITY (CRITICAL): Every single diagram generated MUST utilize at least 3-4 different geometric shapes from the available shapes list. Do NOT use a single shape (like subroutine or rect) all over the diagram. Map checks/conditions to diamonds, storage to databases, hubs to double-circles, processes to subroutines, start/end to stadiums, and milestones to hexagons. This keeps the diagram visually rich, colorful, and engaging!
+     h) MANDATORY NON-LINEAR TOPOLOGY (CRITICAL): Avoid generating basic, flat, linear single-chain graphs (e.g. node1 -> node2 -> node3 -> node4 is strictly prohibited!). True concept maps are rich and interconnected. You MUST design non-linear structures featuring decision checks/branches (using diamond nodes that split into 'Yes' and 'No' paths), parallel processing streams, feedback loops (where validation steps connect back to earlier nodes to fix errors), or central hubs with multiple radiating dependencies. The map should look like a highly detailed, professional visual system architecture!
 2. USE COMPARISON TABLES: When explaining multiple related concepts (e.g. INNER vs LEFT JOIN), use Markdown tables.
 3. USE STRUCTURED CALLOUTS: Use blockquotes in the \`body\` for special notes:
    - \`> 💡 Key insight: [text]\`
