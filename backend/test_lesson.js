@@ -5,18 +5,19 @@ async function run() {
     try {
         console.log("Testing generateGuidedSubtopicContent for 'free' plan...");
         const resultFree = await generateGuidedSubtopicContent({
-            courseTitle: "Introduction to React",
-            topic: "Introduction to React",
-            moduleTitle: "Module 1: React Basics",
-            subtopicTitle: "1.1 What is React?",
+            courseTitle: "DBMS and SQL Queries",
+            topic: "Database Management Systems",
+            moduleTitle: "Module 2: Structured Query Language (SQL)",
+            subtopicTitle: "2.3 Table Modifications: ALTER Table and SELECT Queries",
             subtopicType: "lesson",
             config: {
                 level: "beginner",
                 explanationLength: "standard",
-                miniProjectsEnabled: true,
+                miniProjectsEnabled: false,
                 miniProjectMode: "independent",
                 webGroundingEnabled: false,
-                interactiveWidgets: true
+                interactiveWidgets: false, // interactive code widget disabled
+                mcqEnabled: true
             },
             userPlan: "free"
         });

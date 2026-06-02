@@ -379,19 +379,13 @@ async function generateGuidedSubtopicContent({ courseTitle, topic, moduleTitle, 
 3. Break notes into clear, highly descriptive blocks. Use multiple "concept", "example", and "callout" blocks to explain ideas and build complete understanding step-by-step.`;
     }
 
-    // Adaptive Code Block Instructions
-    let codeBlockInstructions = '';
-    if (config.codeEnabled) {
-        codeBlockInstructions = `
-- Since this is a programming/coding topic, you should include standard code blocks (type "code") for code examples, configuration files, or starter code where appropriate.
-- Specify the correct "language" field (e.g. javascript, python, cpp, html, css).
-- In the expected JSON schema, make sure to use type "code" blocks where helpful.
+    // Adaptive Code Block Instructions: Instruct the LLM to dynamically determine if the topic/subtopic is programming/coding related
+    const codeBlockInstructions = `
+- DYNAMIC CODE BLOCKS INSTRUCTION:
+  You must dynamically evaluate if the current topic ("${topic}") or subtopic ("${subtopicTitle}") involves computer programming, coding, databases/queries (e.g. SQL, DBMS), scripting, terminal/command-line commands, markup languages (e.g. HTML, CSS), or technical syntax.
+  - If it is related to coding/programming/queries/syntax: you SHOULD include standard illustrative code blocks (block type "code") for syntax demonstrations, query examples (like ALTER, SELECT, UPDATE, etc.), config files, or starter code where appropriate. You must decide where code examples are needed to make the concepts practical and clear for the student. Specify the correct "language" field (e.g. sql, javascript, python, cpp, html, css, bash, json).
+  - If it is a purely conceptual/non-programming topic: keep explanations conceptual using text, bullet points, comparisons, tables, and concept diagrams, and do not use block type "code" unless showing configuration or data formats.
 `;
-    } else {
-        codeBlockInstructions = `
-- Strictly DO NOT include any programming code, code blocks, or coding challenges. This is a non-coding topic (e.g. conceptual, historical, scientific, literary, etc.). Keep all explanations conceptual using text, bullet points, comparisons, tables, and concept diagrams. Do not use block type "code".
-`;
-    }
 
     // Adaptive Challenges Instructions & Schema
     let challengeInstructions = '';
