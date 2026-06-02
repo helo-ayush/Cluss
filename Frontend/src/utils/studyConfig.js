@@ -4,8 +4,8 @@ export const DEFAULT_STUDY_CONFIG = {
   explanationLength: 'standard',
   mcqEnabled: true,
   mcqCount: 3,
-  writtenEnabled: true,
-  writtenCount: 1,
+  writtenEnabled: false,
+  writtenCount: 0,
   codeEnabled: false,
   codeCount: 0,
   miniProjectsEnabled: false,
@@ -58,7 +58,8 @@ export const normalizeStudyConfig = (config, plan = 'free') => {
   }
 
   next.mcqCount = next.mcqEnabled ? Math.min(Math.max(Number(next.mcqCount) || 0, 0), limits.mcqMax) : 0;
-  next.writtenCount = next.writtenEnabled ? Math.min(Math.max(Number(next.writtenCount) || 0, 0), limits.writtenMax) : 0;
+  next.writtenEnabled = false;
+  next.writtenCount = 0;
 
   if (!limits.canUseCode) {
     next.codeEnabled = false;

@@ -881,6 +881,61 @@ function CodeBlock({ className = '', children, ...props }) {
 export default function LightMarkdownRenderer({ content, className = '' }) {
   if (!content) return null;
 
+  const processedContent = React.useMemo(() => {
+    if (!content) return '';
+    const parts = content.split(/(```[\s\S]*?```)/);
+    return parts.map((part, index) => {
+      if (index % 2 !== 0) return part;
+      const lines = part.split('\n');
+      let insideUnwrappedDiagram = false;
+      let diagramLines = [];
+      const newLines = [];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        const isDiagramStart = /^\s*(?:graph\s+(?:TD|LR|TB|BT|RL)|flowchart\s+(?:TD|LR|TB|BT|RL)|sequenceDiagram|mindmap)\b/i.test(trimmed);
+        if (isDiagramStart) {
+          insideUnwrappedDiagram = true;
+          diagramLines.push(line);
+        } else if (insideUnwrappedDiagram) {
+          const isMarkdownBlock = /^\s*(?:#+|-|\*|\d+\.|\>)\s+/i.test(trimmed);
+          const isDiagramLine = 
+            /-->|==>|-\.->|->/g.test(trimmed) ||
+            /subgraph\b|end\b/i.test(trimmed) ||
+            /\b(?:participant|actor|as)\b/i.test(trimmed) ||
+            /\b(?:style|class|classDef|linkStyle|click)\b/i.test(trimmed) ||
+            /^\s*(?:[a-zA-Z0-9_-]+)\s*(?:(?:\(\(\s*["']?|\(\[\s*["']?|\[\[\s*["']?|\[\(\s*["']?|\{\{\s*["']?|\{\s*["']?|\(\s*["']?|\[\s*["']?|["']))/i.test(trimmed);
+          if (trimmed === '') {
+            diagramLines.push(line);
+          } else if (isMarkdownBlock || !isDiagramLine) {
+            while (diagramLines.length > 0 && diagramLines[diagramLines.length - 1].trim() === '') {
+              diagramLines.pop();
+            }
+            if (diagramLines.length > 0) {
+              newLines.push('```mermaid\n' + diagramLines.join('\n') + '\n```');
+            }
+            diagramLines = [];
+            insideUnwrappedDiagram = false;
+            newLines.push(line);
+          } else {
+            diagramLines.push(line);
+          }
+        } else {
+          newLines.push(line);
+        }
+      }
+      if (insideUnwrappedDiagram && diagramLines.length > 0) {
+        while (diagramLines.length > 0 && diagramLines[diagramLines.length - 1].trim() === '') {
+          diagramLines.pop();
+        }
+        if (diagramLines.length > 0) {
+          newLines.push('```mermaid\n' + diagramLines.join('\n') + '\n```');
+        }
+      }
+      return newLines.join('\n');
+    }).join('');
+  }, [content]);
+
   const components = React.useMemo(() => ({
           p: ({ node, ...props }) => <p className="mb-3 last:mb-0 leading-7 text-slate-600" {...props} />,
           strong: ({ node, ...props }) => <strong className="font-bold text-slate-950" {...props} />,
@@ -944,7 +999,7 @@ export default function LightMarkdownRenderer({ content, className = '' }) {
         rehypePlugins={[rehypeKatex]}
         components={components}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );

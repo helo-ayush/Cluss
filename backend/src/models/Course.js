@@ -51,11 +51,13 @@ const lessonBlockSchema = new mongoose.Schema({
     blockSummary: { type: String, default: '' },
     inlineChallenge: {
         type: new mongoose.Schema({
-            type: { type: String, enum: ['fill-in-the-blank', 'guess-output'], default: 'fill-in-the-blank' },
+            type: { type: String, enum: ['fill-in-the-blank', 'guess-output', 'mcq'], default: 'fill-in-the-blank' },
             question: { type: String, default: '' },
             codeTemplate: { type: String, default: '' },
             expectedAnswer: { type: String, default: '' },
-            hint: { type: String, default: '' }
+            hint: { type: String, default: '' },
+            options: { type: [String], default: [] },
+            explanation: { type: String, default: '' }
         }, { _id: false }),
         default: null
     },
@@ -227,8 +229,8 @@ const studyConfigSchema = new mongoose.Schema({
     },
     mcqEnabled: { type: Boolean, default: true },
     mcqCount: { type: Number, default: 3 },
-    writtenEnabled: { type: Boolean, default: true },
-    writtenCount: { type: Number, default: 1 },
+    writtenEnabled: { type: Boolean, default: false },
+    writtenCount: { type: Number, default: 0 },
     codeEnabled: { type: Boolean, default: false },
     codeCount: { type: Number, default: 0 },
     miniProjectsEnabled: { type: Boolean, default: false },

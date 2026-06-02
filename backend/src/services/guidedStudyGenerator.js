@@ -221,7 +221,7 @@ function sanitizeStudyConfig(requestedConfig = {}, userPlan = 'free') {
         : (limits.explanationLengths.includes('standard') ? 'standard' : limits.explanationLengths[0]);
 
     const mcqEnabled = requestedConfig.mcqEnabled !== false;
-    const writtenEnabled = requestedConfig.writtenEnabled !== false;
+    const writtenEnabled = false;
     const codeEnabled = limits.maxCodeCount > 0 && requestedConfig.codeEnabled === true;
     const miniProjectsEnabled = limits.allowMiniProjects && requestedConfig.miniProjectsEnabled === true;
     const webGroundingEnabled = limits.allowWebGrounding && requestedConfig.webGroundingEnabled === true;
@@ -234,7 +234,7 @@ function sanitizeStudyConfig(requestedConfig = {}, userPlan = 'free') {
         mcqEnabled,
         mcqCount: mcqEnabled ? Math.max(0, Math.min(Number(requestedConfig.mcqCount ?? 3), limits.maxMcqCount)) : 0,
         writtenEnabled,
-        writtenCount: writtenEnabled ? Math.max(0, Math.min(Number(requestedConfig.writtenCount ?? 1), limits.maxWrittenCount)) : 0,
+        writtenCount: 0,
         codeEnabled,
         codeCount: codeEnabled ? Math.max(0, Math.min(Number(requestedConfig.codeCount ?? 1), limits.maxCodeCount)) : 0,
         miniProjectsEnabled,
@@ -316,19 +316,37 @@ const blockIdFrom = (index) => `block-${String(index + 1).padStart(2, '0')}`;
 function normalizeGeneratedBlocks(blocks = []) {
     const allowedTypes = ['intro', 'concept', 'diagram', 'example', 'code', 'callout', 'summary', 'project', 'practice'];
     return (Array.isArray(blocks) ? blocks : [])
-        .map((block, index) => ({
-            blockId: block.blockId || blockIdFrom(index),
-            type: allowedTypes.includes(block.type) ? block.type : 'concept',
-            title: block.title || `Study block ${index + 1}`,
-            body: block.body || '',
-            code: block.code || '',
-            language: block.language || '',
-            callout: block.callout || '',
-            blockSummary: block.blockSummary || '',
-            widgetPrompt: block.widgetPrompt || '',
-            revisionHistory: []
-        }))
-        .filter((block) => block.title || block.body || block.code || block.callout);
+        .map((block, index) => {
+            const normalized = {
+                blockId: block.blockId || blockIdFrom(index),
+                type: allowedTypes.includes(block.type) ? block.type : 'concept',
+                title: block.title || `Study block ${index + 1}`,
+                body: block.body || '',
+                code: block.code || '',
+                language: block.language || '',
+                callout: block.callout || '',
+                blockSummary: block.blockSummary || '',
+                widgetPrompt: block.widgetPrompt || '',
+                revisionHistory: []
+            };
+
+            if (block.inlineChallenge) {
+                normalized.inlineChallenge = {
+                    type: block.inlineChallenge.type || 'fill-in-the-blank',
+                    question: block.inlineChallenge.question || '',
+                    codeTemplate: block.inlineChallenge.codeTemplate || '',
+                    expectedAnswer: block.inlineChallenge.expectedAnswer || '',
+                    hint: block.inlineChallenge.hint || '',
+                    options: Array.isArray(block.inlineChallenge.options) ? block.inlineChallenge.options : [],
+                    explanation: block.inlineChallenge.explanation || ''
+                };
+            } else {
+                normalized.inlineChallenge = null;
+            }
+
+            return normalized;
+        })
+        .filter((block) => block.title || block.body || block.code || block.callout || block.inlineChallenge);
 }
 
 async function generateGuidedSubtopicContent({ courseTitle, topic, moduleTitle, subtopicTitle, subtopicType, config, userPlan = 'free' }) {
@@ -345,19 +363,86 @@ async function generateGuidedSubtopicContent({ courseTitle, topic, moduleTitle, 
 
     if (lengthPref === 'short') {
         blockCountRange = '3-4';
-        depthInstructions = `1. Keep the explanations crisp, clear, and direct. Focus on key definitions and core concepts without unnecessary details or deep background.
-2. Structure the content into exactly 3-4 distinct blocks to keep the lesson concise.
-3. Be highly focused—teach the fundamentals quickly.`;
+        depthInstructions = `1. Keep explanations very crisp, clear, compact, and direct. Focus strictly on key definitions, core concepts, and direct takeaways without unnecessary details, extensive side contexts, or deep background.
+2. Structure the content into exactly 3-4 distinct blocks to keep the lesson highly concise.
+3. Be highly focused—teach the absolute fundamentals quickly.`;
     } else if (lengthPref === 'deep') {
-        blockCountRange = '7-9';
-        depthInstructions = `1. Explain everything with extreme comprehensive depth and length. Focus on high-quality, exhaustive, and rigorous explanations. Detail all background, core theories, implementation strategies, advanced nuances, and edge cases.
-2. Structure the content into 7-9 distinct blocks (covering multiple concepts, solved problems, diagrams, code blocks, callouts, and practice) to leave no stone unturned.
-3. Break concepts down step-by-step in multiple successive concept blocks for total mastery.`;
+        blockCountRange = '8-11';
+        depthInstructions = `1. Explain everything with extreme, comprehensive, and exhaustive depth. Focus on high-quality, rigorous explanations. Detail all underlying background, core theories, implementation strategies, advanced nuances, historical context, and potential edge cases.
+2. Structure the content into 8-11 distinct blocks (covering multiple concepts, detailed step-by-step solved problems, callouts, and practice) to leave absolutely no stone unturned.
+3. Break concepts down step-by-step across multiple successive detailed concept blocks for total subject mastery. Provide exhaustive text for each block.`;
     } else {
-        blockCountRange = '5-6';
-        depthInstructions = `1. Explain concepts thoroughly and clearly with a well-balanced, detail-oriented approach. Provide good depth without overwhelming the student.
-2. Structure the content into 5-6 distinct blocks (concepts, examples, diagram, callout, practice) to ensure solid coverage.
-3. Break notes into clear, focused blocks. Use multiple "concept", "example", and "callout" blocks to build understanding step-by-step.`;
+        // Standard explanation (corresponds to high-level detail, previous 'deep' style)
+        blockCountRange = '5-7';
+        depthInstructions = `1. Explain concepts thoroughly and clearly with a detailed, well-balanced, and comprehensive approach. Provide good depth, thorough background, and complete detail for solid understanding.
+2. Structure the content into 5-7 distinct blocks to ensure highly detailed coverage of all subtopic parts.
+3. Break notes into clear, highly descriptive blocks. Use multiple "concept", "example", and "callout" blocks to explain ideas and build complete understanding step-by-step.`;
+    }
+
+    // Adaptive Code Block Instructions
+    let codeBlockInstructions = '';
+    if (config.codeEnabled) {
+        codeBlockInstructions = `
+- Since this is a programming/coding topic, you should include standard code blocks (type "code") for code examples, configuration files, or starter code where appropriate.
+- Specify the correct "language" field (e.g. javascript, python, cpp, html, css).
+- In the expected JSON schema, make sure to use type "code" blocks where helpful.
+`;
+    } else {
+        codeBlockInstructions = `
+- Strictly DO NOT include any programming code, code blocks, or coding challenges. This is a non-coding topic (e.g. conceptual, historical, scientific, literary, etc.). Keep all explanations conceptual using text, bullet points, comparisons, tables, and concept diagrams. Do not use block type "code".
+`;
+    }
+
+    // Adaptive Challenges Instructions & Schema
+    let challengeInstructions = '';
+    let challengeSchema = '';
+    
+    const hasMcq = !!config.mcqEnabled;
+    const hasCodeChallenge = !!config.codeEnabled;
+    
+    if (hasMcq || hasCodeChallenge) {
+        let typesDesc = [];
+        let schemaFields = [];
+        
+        if (hasMcq) {
+            typesDesc.push(`- "mcq": A beautiful conceptual multiple-choice question based on the content of this specific block.
+    - expectedAnswer: the exact correct option text (must match one of the options exactly).
+    - options: an array of exactly 4 choices.
+    - explanation: a detailed explanation of why the correct option is right.
+    - question: the question text.`);
+            schemaFields.push(`"mcq"`);
+        }
+        
+        if (hasCodeChallenge) {
+            typesDesc.push(`- "fill-in-the-blank": You provide a text template, formula, or code with exactly ONE missing piece represented by "___". The user must type the exact missing string.
+    - codeTemplate: e.g. "def greet(name):\\n    print('Hello, ' + ___)"
+    - expectedAnswer: e.g. "name"
+- "guess-output": You provide working code or a step-by-step logic statement. The user must type exactly what it outputs or evaluates to.
+    - codeTemplate: e.g. "x = 5\\nprint(x * 2)"
+    - expectedAnswer: "10"`);
+            schemaFields.push(`"fill-in-the-blank" | "guess-output"`);
+        }
+        
+        challengeInstructions = `
+INLINE CHALLENGES:
+You MUST dynamically decide how many separate blocks should contain an inline challenge based on the complexity and educational value of the content. You can choose to embed challenges in 1, 2, or 3 separate blocks of the lesson, but do not exceed 3 blocks. Keep it highly variable and natural—some lessons might have 1, others 2, and others 3 challenges distributed across separate blocks to test the student at different points of their learning!
+Enabled challenge types for this lesson:
+${typesDesc.join('\n')}
+
+Rules for inlineChallenge:
+- expectedAnswer must be a short, deterministic string (no spaces padding).
+- Do not use for every block. Choose a dynamic and variable number of blocks (from 1 up to 3 blocks) to embed challenges where active recall makes sense.
+`;
+
+        challengeSchema = `
+        "inlineChallenge": {
+          "type": ${schemaFields.join(' | ')},
+          "question": "string (question or instructions)",
+          "codeTemplate": "string (with '___' for fill-in-the-blank, or full template for guess-output)",
+          "expectedAnswer": "string (exact correct option text or exact string match)",
+          "hint": "string",
+          ${hasMcq ? `"options": ["string"],\n          "explanation": "string"` : ''}
+        }`;
     }
 
     const prompt = `
@@ -394,31 +479,33 @@ INTEGRATE SOLVED PROBLEMS & APPLICATION QUESTIONS (CRITICAL):
      - Step-by-step execution: plugging in values, derivation steps, logical reasoning, and final calculation, so the student learns by seeing exactly how the problem is solved.
 2. For purely theoretical subtopics, construct hypothetical "what-if" conceptual or scenario-based questions (e.g. "What happens if variable X is changed to Y?") and explain the step-by-step analytical solution/deduction.
 3. Show all math formulas and equations clearly using standard text/markdown syntax so they are beautifully formatted and readable.
-`}
-
-Requirements for Visual & Rich Formatting (CRITICAL):
-1. USE MERMAID DIAGRAMS: Wherever a concept has a flow, hierarchy, architecture, or relationship, include a Mermaid diagram in the block's \`body\` field.
-   - Use \`\`\`mermaid ... \`\`\` syntax.
-   - For every diagram block, the \`body\` MUST include a short plain-English explanation around the diagram:
+`}Requirements for Visual & Rich Formatting (CRITICAL):
+1. USE MERMAID DIAGRAMS DYNAMICALLY (DO NOT FORCE THEM EVERYWHERE):
+   - You should decide whether a subtopic needs visual diagrams based on the nature of the topic.
+   - If the subtopic explains processes, workflows, structural hierarchies, classification trees, decision logic, or architectural systems, you SHOULD generate 1 or 2 visual Mermaid diagrams (using block type "diagram").
+   - If the topic is purely factual, descriptive, narrative, or simple and doesn't benefit from a diagram (e.g., historical dates, simple definitions), DO NOT force a diagram. Keep a natural, high-quality balance—never force diagrams where they don't make sense, but eagerly use 1 or 2 where they provide strong visual learning value.
+   - For every diagram generated, include it inside the block's "body" field.
+   - You MUST wrap the Mermaid code inside a standard markdown code block starting with \`\`\`mermaid and ending with \`\`\`.
+   - For every diagram block, the "body" MUST include a short plain-English explanation around the diagram:
      1. Before the diagram, briefly explain each important element/node that appears in it.
      2. After the diagram, explain what the whole diagram is trying to show and how the student should read it.
      3. Do not leave the diagram standing alone; the text must make it easy to understand without guessing.
    - Types: Stick strictly to flowcharts (graph TD or graph LR) and sequenceDiagram
-   - CRITICAL: In flowcharts, ALWAYS explicitly define every single node with its ID, shape, and rich label in single quotes before/when using them in relationships. Naked node IDs (e.g. referencing \`A\` alone without \`A['Label']\`) are completely banned, as they crash or display ugly uppercase IDs.
-   - CRITICAL: In flowcharts, ALWAYS wrap node labels in single quotes. Example: \`A['You (The User)']\` instead of \`A["You (The User)"]\`.
-   - CRITICAL: In sequenceDiagrams, ALWAYS wrap participant names in single quotes if they contain hyphens, dots, or spaces. Example: \`'create-next-app'\` instead of \`"create-next-app"\`.
-   - CRITICAL: NEVER put spaces inside the shape brackets. Use \`A['Text']\` NOT \`A[ 'Text' ]\`, use \`B{'Text'}\` NOT \`B{ 'Text' }\`.
+   - CRITICAL: In flowcharts, ALWAYS explicitly define every single node with its ID, shape, and rich label in single quotes before/when using them in relationships. Naked node IDs (e.g. referencing 'A' alone without 'A['Label']') are completely banned, as they crash or display ugly uppercase IDs.
+   - CRITICAL: In flowcharts, ALWAYS wrap node labels in single quotes. Example: 'A['You (The User)']' instead of 'A["You (The User)"]'.
+   - CRITICAL: In sequenceDiagrams, ALWAYS wrap participant names in single quotes if they contain hyphens, dots, or spaces. Example: 'create-next-app' instead of "create-next-app".
+   - CRITICAL: NEVER put spaces inside the shape brackets. Use 'A['Text']' NOT 'A[ 'Text' ]', use 'B{'Text'}' NOT 'B{ 'Text' }'.
    - Diagrams must be syntactically valid.
     
    MANDATORY RULES FOR HIGH-QUALITY DYNAMIC CONCEPT DIAGRAMS:
    We support diverse shapes! Eagerly use appropriate, topic-specific visual shapes to make the diagram intuitive:
-   * Standard Squircle: \`A['Simple Concept or Phase']\`
-   * Stadium (Capsule): \`B(['State, Boundary, or Parameter'])\`
-   * Double-Circle / Circle: \`C(('Root Element, Central Hub, or Key Variable'))\` (Highly recommended for trees, heaps, or main concepts!)
-   * Database cylinder: \`D[('Data Store, File, Source, or Disk Server')]\`
-   * Hexagon: \`E{{'External API, System Milestone, or Boundary Event'}}\`
-   * Subroutine box: \`F[['Modular Subroutine or Complex Function Block']]\`
-   * Diamond: \`G{'Decision Check, Conditional Split, or Question'}\` (Highly recommended for conditionals!)
+   * Standard Squircle: 'A['Simple Concept or Phase']'
+   * Stadium (Capsule): 'B(['State, Boundary, or Parameter'])'
+   * Double-Circle / Circle: 'C(('Root Element, Central Hub, or Key Variable'))' (Highly recommended for trees, heaps, or main concepts!)
+   * Database cylinder: 'D[('Data Store, File, Source, or Disk Server')]'
+   * Hexagon: 'E{{'External API, System Milestone, or Boundary Event'}}'
+   * Subroutine box: 'F[['Modular Subroutine or Complex Function Block']]'
+   * Diamond: 'G{'Decision Check, Conditional Split, or Question'}' (Highly recommended for conditionals!)
 
    First, decide the exact teaching question the diagram answers, such as "How does Bayes theorem transform prior belief into posterior probability?" or "How does data move through a request pipeline?" The graph must make that answer obvious without needing the surrounding paragraph.
    Prefer diagrams that reveal structure, not vocabulary lists. Use the best pattern for the topic:
@@ -430,7 +517,7 @@ Requirements for Visual & Rich Formatting (CRITICAL):
    Add one concrete example node when it improves understanding, and make the final node a clear takeaway/result instead of another vague concept.
    
    PERFECT EXAMPLE MERMAID DIAGRAM (Copy this syntax style perfectly):
-   \`\`\`mermaid
+   [Mermaid Flowchart Example]
    graph TD
      START(['Start Study Process: Switch toggles at t=0']) -- 'begins' --> SUB[['Initialize: Calculate T-Minus State']]
      SUB -- 'reads from' --> DB[('Database Store: Load Initial Values')]
@@ -440,50 +527,36 @@ Requirements for Visual & Rich Formatting (CRITICAL):
      HOM -- 'combines into' --> FOR{{'Formulate Equations: Apply KVL/KCL'}}
      NHOM -- 'combines into' --> FOR
      FOR -- 'final result' --> FIN(['Solve for other variables like dv/dt or di/dt'])
-   \`\`\`
    
    a) NEVER use single-letter or abstract placeholder node IDs as labels (e.g., A, B, C). Every single node in the diagram MUST have a descriptive, rich, human-readable label that explains the concept it represents.
     b) NEVER use the node ID itself, or a short acronym/abbreviation (e.g. 'ODE', 'LAP', 'SOLVE', 'INV', 'HTML', 'CSS') as the entire label text. Doing this renders an empty-looking graph with raw abbreviations. Every node label MUST contain a descriptive explanation (3-12 words) teaching the concept.
-       - BAD:  \`ODE[['ODE']]\` or \`ODE[['Ordinary Differential Equation']]\` (too short/vague)
-       - GOOD: \`ODE[['ODE: Formulate Ordinary Differential Equation for the circuit']]\`
-       - BAD:  \`LAP[['LAP']]\` or \`LAP[['Laplace']]\`
-       - GOOD: \`LAP[['LAP: Apply Laplace Transform to s-domain']]\`
-       - BAD:  \`SOLVE[['SOLVE']]\`
-       - GOOD: \`SOLVE[['SOLVE: Solve algebraic equations in s-domain']]\`
-       - BAD:  \`INV[['INV']]\`
-       - GOOD: \`INV[['INV: Take Inverse Laplace Transform back to time-domain']]\`
+       - BAD:  'ODE[['ODE']]' or 'ODE[['Ordinary Differential Equation']]' (too short/vague)
+       - GOOD: 'ODE[['ODE: Formulate Ordinary Differential Equation for the circuit']]'
+       - BAD:  'LAP[['LAP']]' or 'LAP[['Laplace']]'
+       - GOOD: 'LAP[['LAP: Apply Laplace Transform to s-domain']]'
+       - BAD:  'SOLVE[['SOLVE']]'
+       - GOOD: 'SOLVE[['SOLVE: Solve algebraic equations in s-domain']]'
+       - BAD:  'INV[['INV']]'
+       - GOOD: 'INV[['INV: Take Inverse Laplace Transform back to time-domain']]'
     c) Node labels MUST be pedagogically meaningful: include brief definitions, formulas, or key properties inside the label text itself (max ~12 words per node). The graph should teach the student at a glance.
-       - Example: \`NORM['Normal Form: Eliminate redundancy']\` instead of \`NF['Normal Form']\`
-    d) Edge labels MUST describe the logical relationship between connected concepts. Use descriptive arrow labels like \`-- 'is a type of' -->\`, \`-- 'requires' -->\`, \`-- 'produces' -->\`, \`-- 'if condition' -->\`.
-       - BAD:  \`A --> B\`  (no label, no meaning)
-       - GOOD: \`INP['User Input'] -- 'validated by' --> VAL['Input Validator']\`
+       - Example: 'NORM['Normal Form: Eliminate redundancy']' instead of 'NF['Normal Form']'
+    d) Edge labels MUST describe the logical relationship between connected concepts. Use descriptive arrow labels like '-- 'is a type of' -->', '-- 'requires' -->', '-- 'produces' -->', '-- 'if condition' -->'.
+       - BAD:  'A --> B'  (no label, no meaning)
+       - GOOD: 'INP['User Input'] -- 'validated by' --> VAL['Input Validator']'
     e) Aim for 5-10 nodes per diagram. Avoid trivially simple 2-3 node graphs. Build a meaningful topology that shows how concepts connect, flow, or depend on each other.
     f) Structure the graph to reflect real conceptual relationships: cause-effect chains, decision trees, classification hierarchies, process pipelines, or dependency graphs—whatever best fits the subject matter.
      g) MANDATORY VISUAL SHAPE DIVERSITY (CRITICAL): Every single diagram generated MUST utilize at least 3-4 different geometric shapes from the available shapes list. Do NOT use a single shape (like subroutine or rect) all over the diagram. Map checks/conditions to diamonds, storage to databases, hubs to double-circles, processes to subroutines, start/end to stadiums, and milestones to hexagons. This keeps the diagram visually rich, colorful, and engaging!
      h) MANDATORY NON-LINEAR TOPOLOGY (CRITICAL): Avoid generating basic, flat, linear single-chain graphs (e.g. node1 -> node2 -> node3 -> node4 is strictly prohibited!). True concept maps are rich and interconnected. You MUST design non-linear structures featuring decision checks/branches (using diamond nodes that split into 'Yes' and 'No' paths), parallel processing streams, feedback loops (where validation steps connect back to earlier nodes to fix errors), or central hubs with multiple radiating dependencies. The map should look like a highly detailed, professional visual system architecture!
 2. USE COMPARISON TABLES: When explaining multiple related concepts (e.g. INNER vs LEFT JOIN), use Markdown tables.
-3. USE STRUCTURED CALLOUTS: Use blockquotes in the \`body\` for special notes:
-   - \`> 💡 Key insight: [text]\`
-   - \`> ⚠️ Common mistake: [text]\`
-   - \`> 🔗 Real-world analogy: [text]\`
+3. USE STRUCTURED CALLOUTS: Use blockquotes in the "body" for special notes:
+   - "> 💡 Key insight: [text]"
+   - "> ⚠️ Common mistake: [text]"
+   - "> 🔗 Real-world analogy: [text]"
 4. USE NUMBERED FLOWS: For step-by-step processes, use bolded numbered lists.
-5. Code blocks must be separated into the "code" field, not buried inside body markdown.
-6. Output ONLY valid JSON. Do not use markdown blocks like \`\`\`json. Return the raw JSON directly.
-
-INLINE MINI CHALLENGES:
-You can embed interactive, no-compiler coding challenges directly into the lesson to test the user's understanding. Use this for 1-2 blocks per lesson where active recall is useful.
-There are two types of challenges:
-1. "fill-in-the-blank": You provide a codeTemplate with exactly ONE missing piece represented by "___". The user must type the exact missing string.
-   - Example codeTemplate: "def greet(name):\n    print('Hello, ' + ___)"
-   - Example expectedAnswer: "name"
-2. "guess-output": You provide working code. The user must type exactly what the code will output when run.
-   - Example codeTemplate: "x = 5\nprint(x * 2)"
-   - Example expectedAnswer: "10"
-
-Rules for inlineChallenge:
-- expectedAnswer must be a short, deterministic string (no spaces padding).
-- Do not use for every block. Only where coding practice makes sense.
-
+5. CODE EXAMPLES AND BLOCKS POLICY:
+${codeBlockInstructions}
+6. Output ONLY valid JSON. Do not use markdown blocks like 'json'. Return the raw JSON directly.
+${challengeInstructions}
 Expected format:
 {
   "lessonContent": {
@@ -505,14 +578,7 @@ Expected format:
         "code": "string",
         "language": "string",
         "callout": "string",
-        "blockSummary": "string",
-        "inlineChallenge": {
-          "type": "fill-in-the-blank" | "guess-output",
-          "question": "string (the instruction for the user)",
-          "codeTemplate": "string (the code with '___' for fill-in-the-blank, or full code for guess-output)",
-          "expectedAnswer": "string (exact match string)",
-          "hint": "string"
-        }
+        "blockSummary": "string"${challengeSchema ? ',\n' + challengeSchema.trim() : ''}
       }
     ],
     "citations": []

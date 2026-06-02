@@ -22,6 +22,12 @@ async function run() {
         });
         console.log("✅ Success with free plan! Overview length:", resultFree.lessonContent?.overview?.length);
         console.log("Blocks count:", resultFree.lessonContent?.blocks?.length);
+        (resultFree.lessonContent?.blocks || []).forEach((b, idx) => {
+            console.log(`Block ${idx + 1} (${b.type}): "${b.title}"`);
+            if (b.inlineChallenge) {
+                console.log(`  -> HAS inlineChallenge:`, JSON.stringify(b.inlineChallenge, null, 2));
+            }
+        });
     } catch (err) {
         console.error("❌ Failed with free plan:", err.message, err.stack);
     }
@@ -40,12 +46,19 @@ async function run() {
                 miniProjectsEnabled: true,
                 miniProjectMode: "independent",
                 webGroundingEnabled: false,
-                interactiveWidgets: true
+                interactiveWidgets: true,
+                mcqEnabled: true
             },
             userPlan: "ultra"
         });
         console.log("✅ Success with ultra plan! Overview length:", resultUltra.lessonContent?.overview?.length);
         console.log("Blocks count:", resultUltra.lessonContent?.blocks?.length);
+        (resultUltra.lessonContent?.blocks || []).forEach((b, idx) => {
+            console.log(`Block ${idx + 1} (${b.type}): "${b.title}"`);
+            if (b.inlineChallenge) {
+                console.log(`  -> HAS inlineChallenge:`, JSON.stringify(b.inlineChallenge, null, 2));
+            }
+        });
     } catch (err) {
         console.error("❌ Failed with ultra plan:", err.message, err.stack);
     }
