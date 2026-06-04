@@ -362,21 +362,19 @@ async function generateGuidedSubtopicContent({ courseTitle, topic, moduleTitle, 
     let depthInstructions = '';
 
     if (lengthPref === 'short') {
-        blockCountRange = '3-4';
-        depthInstructions = `1. Keep explanations very crisp, clear, compact, and direct. Focus strictly on key definitions, core concepts, and direct takeaways without unnecessary details, extensive side contexts, or deep background.
-2. Structure the content into exactly 3-4 distinct blocks to keep the lesson highly concise.
-3. Be highly focused—teach the absolute fundamentals quickly.`;
+        blockCountRange = '4-5';
+        depthInstructions = `1. Explain concepts clearly and descriptively across exactly 4-5 distinct blocks. Even in short mode, avoid brief single-sentence definitions. Write well-explained, descriptive paragraphs that introduce the fundamentals thoroughly.
+2. Be focused and clear, but make sure the explanation is comprehensive enough for a beginner to grasp the context.`;
     } else if (lengthPref === 'deep') {
-        blockCountRange = '8-11';
-        depthInstructions = `1. Explain everything with extreme, comprehensive, and exhaustive depth. Focus on high-quality, rigorous explanations. Detail all underlying background, core theories, implementation strategies, advanced nuances, historical context, and potential edge cases.
-2. Structure the content into 8-11 distinct blocks (covering multiple concepts, detailed step-by-step solved problems, callouts, and practice) to leave absolutely no stone unturned.
-3. Break concepts down step-by-step across multiple successive detailed concept blocks for total subject mastery. Provide exhaustive text for each block.`;
+        blockCountRange = '12-15';
+        depthInstructions = `1. Explain everything with extreme, comprehensive, and exhaustive depth. Break down all concepts across 12-15 distinct, highly descriptive blocks (covering concepts, examples, callouts, diagrams, and practice) to leave absolutely no stone unturned.
+2. Detail all underlying background, history, technical trade-offs, architecture, under-the-hood mechanics, core theories, implementation steps, and potential edge cases.
+3. Every "concept", "example", or "practice" block must contain rich, detailed, multi-paragraph prose. Do NOT write basic or quick summaries. Elaborate on details, explain the core logic thoroughly, and include step-by-step problem-solving.`;
     } else {
         // Standard explanation (corresponds to high-level detail, previous 'deep' style)
-        blockCountRange = '5-7';
-        depthInstructions = `1. Explain concepts thoroughly and clearly with a detailed, well-balanced, and comprehensive approach. Provide good depth, thorough background, and complete detail for solid understanding.
-2. Structure the content into 5-7 distinct blocks to ensure highly detailed coverage of all subtopic parts.
-3. Break notes into clear, highly descriptive blocks. Use multiple "concept", "example", and "callout" blocks to explain ideas and build complete understanding step-by-step.`;
+        blockCountRange = '7-9';
+        depthInstructions = `1. Explain concepts thoroughly and clearly with a detailed, well-balanced, and comprehensive approach. Structure the content into 7-9 distinct blocks to ensure highly detailed coverage of all subtopic parts.
+2. Every "concept" or "example" block must be highly descriptive, thorough, and detailed. Explain the underlying background, real-world context, and complete details step-by-step. Do not settle for simple, brief definitions.`;
     }
 
     // Adaptive Code Block Instructions: Instruct the LLM to dynamically determine if the topic/subtopic is programming/coding related
@@ -445,23 +443,23 @@ You are creating a comprehensive, highly visual, notes-first guided lesson for t
 Current module: "${moduleTitle}"
 Current subtopic: "${subtopicTitle}"
 Subtopic type: "${subtopicType}"
-Student level: ${config.level}
-
-${isProject ? `
+Student level: ${config.level}${isProject ? `
 Requirements for Mini-Project Blueprint:
-1. Since this is a mini-project, DO NOT generate standard academic notes. Instead, generate a highly detailed "Project Blueprint" for the student to build locally.
-2. Break the blueprint into clear blocks:
-   - "intro": Project overview, real-world use case, and what they will build.
-   - "concept": Core requirements, constraints, and prerequisites.
-   - "diagram": A visual architecture or workflow diagram using Mermaid.
-   - "code": Essential starter code, scaffolding, or configuration files needed to begin.
-   - "project": A detailed, step-by-step implementation guide (use bolded numbered lists).
-   - "summary": How to verify/test the project and the expected final outcome.
-3. The goal is to give the student a complete roadmap to successfully build this on their own, acting as a structured guide rather than a test.
+1. Since this is a mini-project, DO NOT generate standard academic notes. Instead, generate an extremely comprehensive, highly detailed "Project Blueprint" for the student to build locally.
+2. Every section must be written with maximum depth, leaving no details vague.
+3. Break the blueprint into clear blocks:
+   - "intro": Project overview, real-world use case, target audience, system capabilities, and exactly what they will build. Explain the project's real-world relevance deeply.
+   - "concept": Core requirements, technical constraints, design patterns, and prerequisites (software, packages, database setup). Detail these thoroughly.
+   - "diagram": A visual architecture, component interaction, or data flow diagram using Mermaid.
+   - "code": Essential starter code, full file scaffolding, package.json files, environment configurations, or boilerplates needed to begin. Do not write dummy comments; provide actual working scaffold structures.
+   - "project": An extremely detailed, step-by-step implementation guide (use bolded numbered lists). Break down the coding phases step-by-step with code/logic explanations for every task.
+   - "summary": How to verify/test the project, sample outputs/responses, debugging tips, and the expected final outcome.
+4. The goal is to give the student a complete, exhaustive roadmap to successfully build this on their own, acting as an extremely structured, professional developer guide.
 ` : `
 Requirements for Depth and Completeness (Scale: ${lengthPref.toUpperCase()}):
 ${depthInstructions}
 4. Teach like a patient big brother explaining to a beginner: start from basics, use simple words, then slowly introduce jargon. Provide "why this matters" context.
+5. EVERY BLOCK MUST BE HIGHLY DESCRIPTIVE AND DETAILED: Do not write brief, single-paragraph, or basic two-sentence explanations. Every concept block must have detailed, comprehensive paragraphs (2-3 detailed paragraphs) explaining the mechanics, logic, under-the-hood principles, and why things work the way they do. Keep all descriptions rich and deeply explanatory.
 
 INTEGRATE SOLVED PROBLEMS & APPLICATION QUESTIONS (CRITICAL):
 1. Wherever a topic features formulas, equations, mathematical rules, logic (e.g. logic programming like PSLP, Horn clauses, resolution, unification), algorithms, or technical rules:
