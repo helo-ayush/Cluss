@@ -14,6 +14,7 @@ const {
     summarizeStudyPlans
 } = require('../services/studyPlanMetrics');
 const { assertCredits, spendCredits, maybeRefillCredits } = require('../middleware/creditManager');
+const { getGuidedLessonCost } = require('../config/creditConfig');
 
 const logActivity = async (userId, courseId, courseTitle, count = 1) => {
     try {
@@ -339,8 +340,9 @@ const generateSubtopicContent = async (req, res) => {
         }
 
         const usageAction = regenerate ? 'regenerateLesson' : 'guidedLessonGeneration';
+        const lessonCost = getGuidedLessonCost(user.plan, appliedConfig.explanationLength);
         await maybeRefillCredits(user);
-        assertCredits(user, usageAction);
+        assertCredits(user, usageAction, lessonCost);
 
         ref.subtopic.generationStatus = 'generating';
         await course.save();
@@ -365,7 +367,7 @@ const generateSubtopicContent = async (req, res) => {
         recalculateCourseStatuses(course);
 
         await course.save();
-        await spendCredits(user, usageAction);
+        await spendCredits(user, usageAction, lessonCost);
         await logActivity(user._id, course._id, course.course_title, 1);
 
         return res.json({

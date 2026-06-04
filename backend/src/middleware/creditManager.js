@@ -133,9 +133,9 @@ const maybeRefillCredits = async (user) => {
  * Check if the user has enough credits for an action.
  * Does NOT deduct — call spendCredits after the action succeeds.
  */
-const assertCredits = (user, actionKey) => {
+const assertCredits = (user, actionKey, customCost = null) => {
     const plan = getNormalizedPlan(user?.plan);
-    const cost = getCostForAction(plan, actionKey);
+    const cost = customCost !== null ? customCost : getCostForAction(plan, actionKey);
 
     if (cost === 0) return { cost, balance: user?.credits?.balance || 0 };
 

@@ -13,8 +13,21 @@ export const ACTION_COSTS = {
     playlistCheckpointGrading:   { standard: 5,  advanced: 15 },
 };
 
-export const getCostForAction = (plan, actionKey) => {
+export const getCostForAction = (plan, actionKey, explanationLength = 'standard') => {
     const p = ['free', 'pro', 'ultra'].includes(plan) ? plan : 'free';
+
+    if (actionKey === 'guidedLessonGeneration' || actionKey === 'regenerateLesson') {
+        const length = explanationLength || 'standard';
+        if (p === 'free') {
+            if (length === 'short') return 10;
+            return 20; // standard
+        } else if (p === 'pro' || p === 'ultra') {
+            if (length === 'short') return 40;
+            if (length === 'deep') return 60;
+            return 50; // standard
+        }
+    }
+
     const tier = p === 'free' ? 'standard' : 'advanced';
     const costs = ACTION_COSTS[actionKey];
     if (!costs) return 0;

@@ -109,6 +109,21 @@ const getCostForAction = (plan, actionKey) => {
     return costs[tier];
 };
 
+const getGuidedLessonCost = (plan, explanationLength) => {
+    const p = getNormalizedPlan(plan);
+    const length = explanationLength || 'standard';
+
+    if (p === 'free') {
+        if (length === 'short') return 10;
+        return 20; // standard
+    } else if (p === 'pro' || p === 'ultra') {
+        if (length === 'short') return 40;
+        if (length === 'deep') return 60;
+        return 50; // standard
+    }
+    return 30; // fallback
+};
+
 const getPlanCredits = (plan) => {
     const p = getNormalizedPlan(plan);
     return PLAN_CREDITS[p];
@@ -129,6 +144,7 @@ module.exports = {
     getStudyControlLimits,
     getModelForPlan,
     getCostForAction,
+    getGuidedLessonCost,
     getPlanCredits,
     meetsMinimumPlan,
 };

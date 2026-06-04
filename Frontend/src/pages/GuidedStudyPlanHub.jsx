@@ -261,6 +261,7 @@ function LessonCommandDeck({
   const totalLessons = module?.subtopics?.length || 0;
   const lessonPosition = totalLessons ? `${numericSubtopicIndex + 1}/${totalLessons}` : `${numericSubtopicIndex + 1}`;
   const statusLabel = generating ? 'Generating' : isReady ? 'Ready' : 'Not generated';
+  const explanationLength = (subtopic?.subtopicOverrideConfig || course?.studyConfig || {}).explanationLength || 'standard';
 
   return (
     <section className="relative overflow-hidden rounded-[2.4rem] border border-white/[0.06] bg-[#1b1b1b] shadow-[0_24px_90px_rgba(0,0,0,0.38)]">
@@ -295,7 +296,7 @@ function LessonCommandDeck({
               <button type="button" disabled={generating} onClick={() => generateLesson(false)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-zinc-200 disabled:opacity-50">
                 {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                 {generating ? loadingMessage : 'Generate lesson'}
-                {!generating && <CreditCost cost={getCostForAction(usageData?.plan, 'guidedLessonGeneration')} className="text-black/60" />}
+                {!generating && <CreditCost cost={getCostForAction(usageData?.plan, 'guidedLessonGeneration', explanationLength)} className="text-black/60" />}
               </button>
             ) : (
               <>
@@ -1197,7 +1198,7 @@ export default function GuidedStudyPlanHub() {
                 <button type="button" disabled={generating} onClick={() => generateLesson(false)} className="mx-auto mt-7 flex min-h-12 min-w-[200px] items-center justify-center gap-2 rounded-full bg-[#efff55] px-6 py-3 text-sm font-bold text-black transition hover:bg-[#efff55]/90 hover:shadow-[0_0_20px_rgba(239,255,85,0.15)] disabled:opacity-50">
                   {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                   {generating ? loadingMessage : 'Generate lesson notes'}
-                  {!generating && <CreditCost cost={getCostForAction(usageData?.plan, 'guidedLessonGeneration')} className="text-black ml-2" />}
+                  {!generating && <CreditCost cost={getCostForAction(usageData?.plan, 'guidedLessonGeneration', (subtopic?.subtopicOverrideConfig || course?.studyConfig || {}).explanationLength)} className="text-black ml-2" />}
                 </button>
               </section>
             ) : (
@@ -1267,7 +1268,7 @@ export default function GuidedStudyPlanHub() {
                   <Ic className="h-4 w-4 shrink-0" />
                   <span className="flex max-w-full items-center gap-1 truncate">
                     {tip}
-                    {costAction && <CreditCost cost={getCostForAction(usageData?.plan, costAction)} />}
+                    {costAction && <CreditCost cost={getCostForAction(usageData?.plan, costAction, (subtopic?.subtopicOverrideConfig || course?.studyConfig || {}).explanationLength)} />}
                   </span>
                 </button>
               ))}
