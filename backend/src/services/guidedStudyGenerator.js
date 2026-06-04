@@ -578,10 +578,20 @@ Expected format:
 }
 `;
 
+    let thinkingLevel = 'minimal';
+    if (lengthPref === 'deep') {
+        thinkingLevel = 'medium';
+    } else if (lengthPref === 'standard') {
+        thinkingLevel = 'low';
+    }
+
     const apiConfig = {
         responseMimeType: 'application/json',
         maxOutputTokens: 8192,
         temperature: 0.7,
+        thinkingConfig: {
+            thinkingLevel
+        }
     };
     if (config.webGroundingEnabled) {
         apiConfig.tools = [{ googleSearch: {} }];
