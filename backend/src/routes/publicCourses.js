@@ -10,6 +10,10 @@ const CourseBookmark = require('../models/CourseBookmark');
 const CourseReadingProgress = require('../models/CourseReadingProgress');
 const CreatorFollow = require('../models/CreatorFollow');
 const CourseViewEvent = require('../models/CourseViewEvent');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
+const EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004';
 
 const normalizeIndex = (value, fallback = 0) => {
     const number = Number.parseInt(value, 10);
@@ -50,21 +54,31 @@ const safeModuleCopy = (modules = []) => (modules || []).map((module) => ({
         }))
 })).filter((module) => module.subtopics.length > 0);
 
-const buildSearchText = (course, publicModules) => compactText([
+const expandSearchText = (value = '') => {
+    const text = String(value || '');
+    const lower = text.toLowerCase();
+    const expansions = [];
+    if (/\baiml\b|\bai ml\b|\bai\/ml\b/.test(lower)) expansions.push('artificial intelligence machine learning deep learning neural networks data science');
+    if (/\bml\b/.test(lower)) expansions.push('machine learning supervised unsupervised regression classification models');
+    if (/\bai\b/.test(lower)) expansions.push('artificial intelligence intelligent agents generative ai machine learning');
+    if (/\bdsa\b/.test(lower)) expansions.push('data structures algorithms graphs trees dynamic programming');
+    if (/\btoc\b/.test(lower)) expansions.push('theory of computation automata turing machines complexity');
+    return compactText([text, expansions]);
+};
+
+const buildSearchText = (course, publicModules, creatorName = '') => expandSearchText(compactText([
     course.course_title,
     course.course_query,
     course.learningGoal,
+    creatorName,
     publicModules.map((module) => [
         module.module_title,
         module.subtopics.map((subtopic) => [
             subtopic.subtopic_title,
-            subtopic.lessonContent?.overview,
-            subtopic.lessonContent?.summary,
-            subtopic.lessonContent?.keyPoints,
-            (subtopic.lessonContent?.blocks || []).map((block) => [block.title, block.blockSummary, block.body])
+            subtopic.subtopic_type
         ])
     ])
-]);
+]));
 
 const buildTags = (course, publicModules) => {
     const raw = compactText([
@@ -113,6 +127,92 @@ const buildCard = async (course, viewerClerkId) => {
     };
 };
 
+const normalizeVector = (vector = []) => {
+    const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + (Number(value) || 0) ** 2, 0));
+    return magnitude ? vector.map((value) => (Number(value) || 0) / magnitude) : [];
+};
+
+const escapeRegExp = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const cosine = (left = [], right = []) => {
+    const count = Math.min(left.length, right.length);
+    if (!count) return 0;
+    let score = 0;
+    for (let index = 0; index < count; index += 1) score += (Number(left[index]) || 0) * (Number(right[index]) || 0);
+    return score;
+};
+
+const generateEmbedding = async (text) => {
+    if (!genAI || !text) return [];
+    try {
+        const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
+        const result = await model.embedContent(text.slice(0, 8000));
+        const values = result?.embedding?.values || result?.embedding || [];
+        return normalizeVector(Array.isArray(values) ? values : []);
+    } catch (error) {
+        console.warn('Course embedding generation skipped:', error.message);
+        return [];
+    }
+};
+
+const textScore = (course, search) => {
+    if (!search) return 0;
+    const expanded = expandSearchText(search).toLowerCase();
+    const haystack = expandSearchText([course.title, course.description, course.learningGoal, course.searchText, course.tags?.join(' ')].join(' ')).toLowerCase();
+    const terms = [...new Set(expanded.split(/[^a-z0-9]+/).filter((term) => term.length > 1))];
+    return terms.reduce((score, term) => score + (haystack.includes(term) ? 1 : 0), 0) / Math.max(terms.length, 1);
+};
+
+const rankCourses = async ({ baseQuery = {}, search = '', viewer = '', sort = 'latest', limit = 12, page = 1 }) => {
+    const safeLimit = Math.min(30, Math.max(1, normalizeIndex(limit, 12)));
+    const safePage = Math.max(1, normalizeIndex(page, 1));
+    const expandedSearch = expandSearchText(search).trim();
+
+    if (!expandedSearch) {
+        const mongoSort = sort === 'top'
+            ? { 'metrics.likes': -1, 'metrics.bookmarks': -1, 'metrics.readStarts': -1, 'metrics.views': -1, publishedAt: -1 }
+            : { publishedAt: -1 };
+        const [courses, total] = await Promise.all([
+            PublishedCourse.find(baseQuery).sort(mongoSort).skip((safePage - 1) * safeLimit).limit(safeLimit).lean(),
+            PublishedCourse.countDocuments(baseQuery)
+        ]);
+        return { courses: await Promise.all(courses.map((course) => buildCard(course, viewer))), total, page: safePage, totalPages: Math.ceil(total / safeLimit) };
+    }
+
+    const queryEmbedding = await generateEmbedding(expandedSearch);
+    const regexTerms = expandedSearch.split(/\s+/).filter(Boolean).map(escapeRegExp);
+    const regex = regexTerms.length ? new RegExp(regexTerms.join('|'), 'i') : null;
+    const candidates = await PublishedCourse.find({
+        ...baseQuery,
+        ...(regex ? {
+            $or: [
+                { title: regex },
+                { description: regex },
+                { learningGoal: regex },
+                { sourceQuery: regex },
+                { searchText: regex },
+                { tags: regex },
+            ]
+        } : { searchEmbedding: { $exists: true, $ne: [] } })
+    }).limit(150).lean();
+
+    const fallbackCandidates = candidates.length >= safeLimit
+        ? candidates
+        : await PublishedCourse.find(baseQuery).sort({ publishedAt: -1 }).limit(150).lean();
+
+    const scored = fallbackCandidates.map((course) => {
+        const semantic = queryEmbedding.length && course.searchEmbedding?.length ? cosine(queryEmbedding, course.searchEmbedding) : 0;
+        const lexical = textScore(course, expandedSearch);
+        const popularity = Math.min(0.2, ((course.metrics?.likes || 0) * 0.015) + ((course.metrics?.bookmarks || 0) * 0.01) + ((course.metrics?.views || 0) * 0.001));
+        return { course, score: semantic * 0.62 + lexical * 0.32 + popularity };
+    }).filter((item) => item.score > 0 || textScore(item.course, search) > 0);
+
+    scored.sort((a, b) => b.score - a.score || new Date(b.course.publishedAt) - new Date(a.course.publishedAt));
+    const total = scored.length;
+    const pageCourses = scored.slice((safePage - 1) * safeLimit, safePage * safeLimit).map((item) => item.course);
+    return { courses: await Promise.all(pageCourses.map((course) => buildCard(course, viewer))), total, page: safePage, totalPages: Math.ceil(total / safeLimit) };
+};
+
 async function uniqueSlug(baseTitle) {
     const base = slugify(baseTitle);
     let candidate = base;
@@ -158,6 +258,11 @@ router.post('/publish/:courseId', async (req, res) => {
         });
 
         if (existing) {
+            if (!existing.searchEmbedding?.length || !existing.searchText) {
+                existing.searchText = buildSearchText(course, publicModules, existing.creatorName || creatorName || user.name || 'Creator');
+                existing.searchEmbedding = await generateEmbedding(existing.searchText);
+                await existing.save();
+            }
             return res.json({
                 success: true,
                 alreadyPublished: true,
@@ -166,14 +271,16 @@ router.post('/publish/:courseId', async (req, res) => {
         }
 
         const slug = await uniqueSlug(course.course_title);
-        const searchText = buildSearchText(course, publicModules);
+        const displayName = creatorName || user.name || 'Creator';
+        const searchText = buildSearchText(course, publicModules, displayName);
         const tags = buildTags(course, publicModules);
+        const searchEmbedding = await generateEmbedding(searchText);
 
         const published = await PublishedCourse.create({
             sourcePrivateCourseId: course._id,
             creatorUserId: user._id,
             creatorClerkId: clerkId,
-            creatorName: creatorName || user.name || 'Creator',
+            creatorName: displayName,
             title: course.course_title,
             slug,
             description: course.learningGoal || course.course_query || '',
@@ -182,7 +289,8 @@ router.post('/publish/:courseId', async (req, res) => {
             modules: publicModules,
             studyConfig: course.studyConfig || null,
             tags,
-            searchText
+            searchText,
+            searchEmbedding
         });
 
         return res.status(201).json({
@@ -192,6 +300,160 @@ router.post('/publish/:courseId', async (req, res) => {
     } catch (error) {
         console.error('Publish public course error:', error);
         return res.status(500).json({ success: false, message: 'Failed to publish course', error: error.message });
+    }
+});
+
+const courseProgress = (course) => {
+    const subtopics = (course.modules || []).flatMap((module) => module.subtopics || []);
+    if (!subtopics.length) return 0;
+    const completed = subtopics.filter((subtopic) => (
+        subtopic.status === 'completed'
+        || subtopic.generationStatus === 'ready'
+        || subtopic.lessonContent?.generatedAt
+    )).length;
+    return Math.round((completed / subtopics.length) * 100);
+};
+
+router.get('/sections', async (req, res) => {
+    try {
+        const viewer = req.query.viewerClerkId || req.query.clerkId || '';
+        const q = String(req.query.q || '').trim();
+        const page = normalizeIndex(req.query.page, 1);
+        const limit = Math.min(18, Math.max(6, normalizeIndex(req.query.limit, 12)));
+        const sections = [];
+
+        if (q) {
+            const searchResults = await rankCourses({ baseQuery: { status: 'published' }, search: q, viewer, sort: 'top', limit, page });
+            return res.json({
+                success: true,
+                mode: 'search',
+                sections: [{
+                    key: 'search',
+                    title: `Search results for "${q}"`,
+                    subtitle: 'Matched by course title, outline, topics, tags, and semantic similarity.',
+                    courses: searchResults.courses,
+                    page: searchResults.page,
+                    totalPages: searchResults.totalPages,
+                    total: searchResults.total
+                }]
+            });
+        }
+
+        if (viewer) {
+            const [progressRows, bookmarkRows, ownedRows] = await Promise.all([
+                CourseReadingProgress.find({ clerkId: viewer }).sort({ lastReadAt: -1 }).limit(12).populate('courseId').lean(),
+                CourseBookmark.find({ clerkId: viewer }).sort({ createdAt: -1 }).limit(12).populate('courseId').lean(),
+                PublishedCourse.find({ creatorClerkId: viewer, status: 'published' }).sort({ publishedAt: -1 }).limit(12).lean()
+            ]);
+            const progressCourses = progressRows.map((row) => row.courseId).filter((course) => course?.status === 'published');
+            const bookmarkCourses = bookmarkRows.map((row) => row.courseId).filter((course) => course?.status === 'published');
+
+            if (progressCourses.length) sections.push({
+                key: 'continue',
+                title: 'Continue Reading',
+                subtitle: 'Pick up where you stopped.',
+                courses: await Promise.all(progressCourses.map((course) => buildCard(course, viewer)))
+            });
+            if (ownedRows.length) sections.push({
+                key: 'mine',
+                title: 'My Uploaded Courses',
+                subtitle: 'Manage courses you published.',
+                ownerSection: true,
+                courses: await Promise.all(ownedRows.map((course) => buildCard(course, viewer)))
+            });
+            if (bookmarkCourses.length) sections.push({
+                key: 'bookmarked',
+                title: 'Bookmarked',
+                subtitle: 'Saved courses from your library.',
+                courses: await Promise.all(bookmarkCourses.map((course) => buildCard(course, viewer)))
+            });
+        }
+
+        const [top, latest] = await Promise.all([
+            rankCourses({ baseQuery: { status: 'published' }, viewer, sort: 'top', limit: 12, page: 1 }),
+            rankCourses({ baseQuery: { status: 'published' }, viewer, sort: 'latest', limit: 12, page: Math.max(1, page) })
+        ]);
+
+        sections.push(
+            { key: 'top', title: 'Top Courses', subtitle: 'Popular with learners right now.', courses: top.courses },
+            { key: 'latest', title: page > 1 ? `Latest Courses · Page ${page}` : 'Latest Courses', subtitle: 'Freshly uploaded guided courses.', courses: latest.courses, page: latest.page, totalPages: latest.totalPages }
+        );
+
+        if (viewer) {
+            const follows = await CreatorFollow.find({ followerClerkId: viewer }).select('creatorClerkId').lean();
+            if (follows.length) {
+                const following = await rankCourses({
+                    baseQuery: { status: 'published', creatorClerkId: { $in: follows.map((follow) => follow.creatorClerkId) } },
+                    viewer,
+                    sort: 'latest',
+                    limit: 12,
+                    page: 1
+                });
+                if (following.courses.length) sections.push({ key: 'following', title: 'Following', subtitle: 'New from creators you follow.', courses: following.courses });
+            }
+        }
+
+        const tagRows = await PublishedCourse.aggregate([
+            { $match: { status: 'published', tags: { $exists: true, $ne: [] } } },
+            { $unwind: '$tags' },
+            { $group: { _id: '$tags', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 4 }
+        ]);
+        for (const row of tagRows) {
+            const tagged = await rankCourses({ baseQuery: { status: 'published', tags: row._id }, viewer, sort: 'top', limit: 12, page: 1 });
+            if (tagged.courses.length) sections.push({
+                key: `tag-${row._id}`,
+                title: row._id.replace(/-/g, ' '),
+                subtitle: 'Topic collection',
+                courses: tagged.courses
+            });
+        }
+
+        return res.json({ success: true, mode: 'browse', sections, page, hasMore: latest.page < latest.totalPages });
+    } catch (error) {
+        console.error('Public course sections error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to load course sections', error: error.message });
+    }
+});
+
+router.get('/me/uploadable/:clerkId', async (req, res) => {
+    try {
+        const user = await User.findOne({ clerkId: req.params.clerkId });
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        const [courses, published] = await Promise.all([
+            Course.find({ userId: user._id, sourceType: 'guided-topic' }).sort({ updatedAt: -1 }).lean(),
+            PublishedCourse.find({ creatorClerkId: req.params.clerkId, status: 'published' }).select('sourcePrivateCourseId slug').lean()
+        ]);
+        const publishedMap = new Map(published.map((course) => [String(course.sourcePrivateCourseId), course.slug]));
+        const uploadable = courses
+            .map((course) => {
+                const progress = courseProgress(course);
+                return {
+                    _id: course._id,
+                    title: course.course_title,
+                    description: course.learningGoal || course.course_query || '',
+                    progress,
+                    moduleCount: course.modules?.length || 0,
+                    lessonCount: (course.modules || []).reduce((sum, module) => sum + (module.subtopics || []).length, 0),
+                    alreadyPublished: publishedMap.has(String(course._id)),
+                    slug: publishedMap.get(String(course._id)) || null
+                };
+            })
+            .filter((course) => course.progress >= 100 || course.alreadyPublished);
+        return res.json({ success: true, courses: uploadable });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Failed to load uploadable courses', error: error.message });
+    }
+});
+
+router.get('/me/published/:clerkId', async (req, res) => {
+    try {
+        const courses = await PublishedCourse.find({ creatorClerkId: req.params.clerkId, status: 'published' }).sort({ publishedAt: -1 }).lean();
+        const cards = await Promise.all(courses.map((course) => buildCard(course, req.params.clerkId)));
+        return res.json({ success: true, courses: cards });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Failed to load uploaded courses', error: error.message });
     }
 });
 
@@ -206,44 +468,19 @@ router.get('/', async (req, res) => {
             limit = 12
         } = req.query;
 
-        const safeLimit = Math.min(30, Math.max(1, normalizeIndex(limit, 12)));
-        const safePage = Math.max(1, normalizeIndex(page, 1));
         const viewer = viewerClerkId || clerkId || '';
         const query = { status: 'published' };
-        const search = String(q || '').trim();
-
-        if (search) {
-            query.$or = [
-                { title: new RegExp(search, 'i') },
-                { description: new RegExp(search, 'i') },
-                { learningGoal: new RegExp(search, 'i') },
-                { searchText: new RegExp(search, 'i') },
-                { tags: new RegExp(search, 'i') }
-            ];
-        }
 
         if (tab === 'following') {
-            if (!viewer) return res.json({ success: true, courses: [], total: 0, page: safePage, totalPages: 0 });
+            if (!viewer) return res.json({ success: true, courses: [], total: 0, page: normalizeIndex(page, 1), totalPages: 0 });
             const follows = await CreatorFollow.find({ followerClerkId: viewer }).select('creatorClerkId').lean();
             query.creatorClerkId = { $in: follows.map((follow) => follow.creatorClerkId) };
         }
 
-        const sort = tab === 'top'
-            ? { 'metrics.likes': -1, 'metrics.bookmarks': -1, 'metrics.readStarts': -1, 'metrics.views': -1, publishedAt: -1 }
-            : { publishedAt: -1 };
-
-        const [courses, total] = await Promise.all([
-            PublishedCourse.find(query).sort(sort).skip((safePage - 1) * safeLimit).limit(safeLimit).lean(),
-            PublishedCourse.countDocuments(query)
-        ]);
-
-        const cards = await Promise.all(courses.map((course) => buildCard(course, viewer)));
+        const result = await rankCourses({ baseQuery: query, search: q, viewer, sort: tab === 'top' ? 'top' : 'latest', limit, page });
         return res.json({
             success: true,
-            courses: cards,
-            total,
-            page: safePage,
-            totalPages: Math.ceil(total / safeLimit)
+            ...result
         });
     } catch (error) {
         console.error('Public courses list error:', error);
@@ -499,6 +736,31 @@ router.get('/creator/:creatorClerkId/following', async (req, res) => {
     }
 });
 
+router.delete('/:courseId', async (req, res) => {
+    try {
+        const clerkId = req.query.clerkId || req.body?.clerkId || '';
+        if (!clerkId) return res.status(400).json({ success: false, message: 'clerkId is required' });
+        if (!mongoose.Types.ObjectId.isValid(req.params.courseId)) return res.status(400).json({ success: false, message: 'Invalid course id' });
+
+        const course = await PublishedCourse.findById(req.params.courseId);
+        if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
+        if (course.creatorClerkId !== clerkId) return res.status(403).json({ success: false, message: 'Only the creator can delete this course' });
+
+        await Promise.all([
+            CourseLike.deleteMany({ courseId: course._id }),
+            CourseBookmark.deleteMany({ courseId: course._id }),
+            CourseReadingProgress.deleteMany({ courseId: course._id }),
+            CourseViewEvent.deleteMany({ courseId: course._id }),
+            PublishedCourse.deleteOne({ _id: course._id })
+        ]);
+
+        return res.json({ success: true });
+    } catch (error) {
+        console.error('Public course delete error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to delete public course', error: error.message });
+    }
+});
+
 router.post('/creator/:creatorClerkId/follow', async (req, res) => {
     try {
         const { creatorClerkId } = req.params;
@@ -541,7 +803,7 @@ router.get('/:slug', async (req, res) => {
                 viewer: {
                     ...card.viewer,
                     followingCreator: !!following,
-                    canChat: !!user && user.plan !== 'free',
+                    canChat: !!user,
                     plan: user?.plan || 'free'
                 }
             }
@@ -653,7 +915,7 @@ router.get('/:courseId/chat-access', async (req, res) => {
         const user = clerkId ? await User.findOne({ clerkId }).lean() : null;
         return res.json({
             success: true,
-            canChat: !!user && user.plan !== 'free',
+            canChat: !!user,
             plan: user?.plan || 'free'
         });
     } catch (error) {
@@ -662,3 +924,4 @@ router.get('/:courseId/chat-access', async (req, res) => {
 });
 
 module.exports = router;
+

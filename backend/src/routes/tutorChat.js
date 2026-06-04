@@ -94,13 +94,6 @@ router.post('/', checkCredits('tutorChat'), async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        if (publicCourseId && user.plan === 'free') {
-            return res.status(403).json({
-                success: false,
-                message: 'AI tutor chat for public courses is available on Pro and Ultra plans.'
-            });
-        }
-
         const course = courseId ? await Course.findById(courseId) : null;
         if (courseId && !course) {
             return res.status(404).json({ success: false, message: 'Course not found' });

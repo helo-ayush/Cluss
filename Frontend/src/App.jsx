@@ -14,6 +14,7 @@ import PlanLibraryPage from './pages/PlanLibraryPage';
 import Profile from './pages/Profile';
 import PublicCoursesPage from './pages/PublicCoursesPage';
 import PublicCourseReader from './pages/PublicCourseReader';
+import PublicCoursePlanPage from './pages/PublicCoursePlanPage';
 import BookmarksPage from './pages/BookmarksPage';
 import CreatorProfilePage from './pages/CreatorProfilePage';
 
@@ -38,7 +39,8 @@ export default function App() {
         <Route path="/dashboard/profile" element={<Profile />} />
         <Route path="/dashboard/bookmarks" element={<BookmarksPage />} />
         <Route path="/courses" element={<PublicCoursesPage />} />
-        <Route path="/courses/:slug" element={<PublicCourseReader />} />
+        <Route path="/courses/:slug" element={<PublicCoursePlanPage />} />
+        <Route path="/courses/:slug/learn/:moduleIndex/:subtopicIndex" element={<PublicCourseReader />} />
         <Route path="/creators/:creatorClerkId" element={<CreatorProfilePage />} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -3,7 +3,29 @@ import { useUser } from '@clerk/clerk-react';
 import { Bookmark, Clock, Loader2 } from 'lucide-react';
 import DashboardShell from '../components/dashboard/DashboardShell';
 import PublicCourseCard from '../components/publicCourses/PublicCourseCard';
+import CreatorProfileModal from '../components/publicCourses/CreatorProfileModal';
 import { API_BASE } from '../utils/publicCourse';
+
+function Rail({ title, subtitle, icon: Icon, courses, onLike, onBookmark, onCreator }) {
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-zinc-300"><Icon className="h-5 w-5" /></div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">{subtitle}</p>
+          <h2 className="text-3xl font-black text-white">{title}</h2>
+        </div>
+      </div>
+      {courses.length ? (
+        <div className="custom-scroll flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible xl:grid-cols-3 2xl:grid-cols-4">
+          {courses.map((course) => <PublicCourseCard key={course._id} course={course} onLike={onLike} onBookmark={onBookmark} onCreator={onCreator} />)}
+        </div>
+      ) : (
+        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-6 text-sm font-semibold text-zinc-500">Nothing here yet.</div>
+      )}
+    </section>
+  );
+}
 
 export default function BookmarksPage() {
   const { user, isLoaded } = useUser();
@@ -11,6 +33,7 @@ export default function BookmarksPage() {
   const [continues, setContinues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [creatorModal, setCreatorModal] = useState(null);
 
   const load = useCallback(async () => {
     if (!user?.id) {
@@ -36,9 +59,7 @@ export default function BookmarksPage() {
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    if (isLoaded) load();
-  }, [isLoaded, load]);
+  useEffect(() => { if (isLoaded) load(); }, [isLoaded, load]);
 
   const mutateCourse = async (course, action) => {
     if (!user?.id) return;
@@ -56,58 +77,25 @@ export default function BookmarksPage() {
 
   return (
     <DashboardShell title="Bookmarks" eyebrow="Saved Courses">
-      <div className="mx-auto max-w-[104rem] space-y-8">
-        <section className="rounded-[2.4rem] border border-white/10 bg-[#12141c] p-7 shadow-[0_24px_90px_rgba(0,0,0,0.34)]">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-amber-200">
-              <Bookmark className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Your library</p>
-              <h1 className="mt-1 text-4xl font-black tracking-[-0.03em] text-white">Saved and in-progress courses</h1>
-            </div>
-          </div>
+      <div className="mx-auto max-w-[112rem] space-y-8 pb-16 text-white">
+        <section className="rounded-[2.4rem] border border-white/10 bg-[#1b1b1b] p-7 shadow-[0_24px_90px_rgba(0,0,0,0.34)]">
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Your public course shelf</p>
+          <h1 className="mt-2 text-5xl font-black tracking-tight text-white">Saved and in-progress courses</h1>
         </section>
 
         {error && <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-5 py-4 text-sm font-semibold text-rose-200">{error}</div>}
         {loading ? (
-          <div className="flex min-h-60 items-center justify-center rounded-[2rem] border border-white/10 bg-[#101114]">
-            <Loader2 className="h-7 w-7 animate-spin text-cyan-100" />
-          </div>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((item) => <div key={item} className="h-96 animate-pulse rounded-[1.65rem] border border-white/10 bg-[#1b1b1b]" />)}</div>
         ) : !user?.id ? (
-          <div className="rounded-[2rem] border border-white/10 bg-[#101114] px-6 py-16 text-center text-zinc-400">Sign in to save courses and continue reading.</div>
+          <div className="rounded-[2rem] border border-white/10 bg-[#1b1b1b] px-6 py-16 text-center text-zinc-400">Sign in to save courses and continue reading.</div>
         ) : (
           <>
-            <section className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-cyan-100" />
-                <h2 className="text-2xl font-black text-white">Continue Reading</h2>
-              </div>
-              {continues.length ? (
-                <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                  {continues.map((course) => <PublicCourseCard key={course._id} course={course} onLike={(item) => mutateCourse(item, 'like')} onBookmark={(item) => mutateCourse(item, 'bookmark')} />)}
-                </div>
-              ) : (
-                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-6 text-sm font-semibold text-zinc-500">Courses you start reading will appear here.</div>
-              )}
-            </section>
-
-            <section className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Bookmark className="h-5 w-5 text-amber-200" />
-                <h2 className="text-2xl font-black text-white">Bookmarks</h2>
-              </div>
-              {bookmarks.length ? (
-                <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                  {bookmarks.map((course) => <PublicCourseCard key={course._id} course={course} onLike={(item) => mutateCourse(item, 'like')} onBookmark={(item) => mutateCourse(item, 'bookmark')} />)}
-                </div>
-              ) : (
-                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-6 text-sm font-semibold text-zinc-500">Bookmark courses from the Courses page to build your reading list.</div>
-              )}
-            </section>
+            <Rail title="Continue Reading" subtitle="Resume lessons" icon={Clock} courses={continues} onLike={(course) => mutateCourse(course, 'like')} onBookmark={(course) => mutateCourse(course, 'bookmark')} onCreator={setCreatorModal} />
+            <Rail title="Bookmarks" subtitle="Saved courses" icon={Bookmark} courses={bookmarks} onLike={(course) => mutateCourse(course, 'like')} onBookmark={(course) => mutateCourse(course, 'bookmark')} onCreator={setCreatorModal} />
           </>
         )}
       </div>
+      <CreatorProfileModal creatorClerkId={creatorModal} viewerClerkId={user?.id} onClose={() => setCreatorModal(null)} onLike={(course) => mutateCourse(course, 'like')} onBookmark={(course) => mutateCourse(course, 'bookmark')} />
     </DashboardShell>
   );
 }

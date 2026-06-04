@@ -1,30 +1,19 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
-import { ArrowLeft, ArrowRight, Bookmark, Bot, Crown, Eye, Heart, Loader2, Send, UserPlus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bookmark, Bot, Eye, Heart, Layers, Loader2, Send, UserPlus } from 'lucide-react';
 import DashboardShell from '../components/dashboard/DashboardShell';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import CreditCost from '../components/CreditCost';
 import { getCostForAction } from '../config/creditCosts';
 import { API_BASE, progressPercent, safeLessonBlocks } from '../utils/publicCourse';
 
-function useQueryIndexes() {
-  const { search } = useLocation();
-  return useMemo(() => {
-    const params = new URLSearchParams(search);
-    return {
-      moduleIndex: Math.max(0, Number.parseInt(params.get('m') || '0', 10) || 0),
-      subtopicIndex: Math.max(0, Number.parseInt(params.get('s') || '0', 10) || 0),
-    };
-  }, [search]);
-}
-
 function PublicTutor({ course, moduleIndex, subtopicIndex, selectedBlock, user }) {
   const [messages, setMessages] = useState([{ role: 'assistant', text: 'I can help explain this public lesson. Ask me anything from the notes.' }]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const scrollRef = useRef(null);
-  const canChat = course?.viewer?.canChat;
+  const canChat = !!user?.id && course?.viewer?.canChat;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -74,21 +63,13 @@ function PublicTutor({ course, moduleIndex, subtopicIndex, selectedBlock, user }
             <Bot className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-100/70">Paid tutor</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">AI tutor</p>
             <h2 className="text-xl font-black text-white">Ask with context</h2>
           </div>
         </div>
       </div>
 
-      {!canChat && (
-        <div className="m-4 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-sm font-semibold leading-6 text-amber-100">
-          <div className="mb-2 flex items-center gap-2 font-black">
-            <Crown className="h-4 w-4" />
-            Public course chat is for Pro and Ultra users.
-          </div>
-          Free users can still read the full course, bookmark it, and track progress.
-        </div>
-      )}
+      {!user?.id && <div className="m-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-semibold leading-6 text-zinc-300">Sign in to chat with this lesson.</div>}
 
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 custom-scroll">
         {messages.map((message, index) => (
@@ -114,7 +95,7 @@ function PublicTutor({ course, moduleIndex, subtopicIndex, selectedBlock, user }
             }}
             disabled={!canChat || sending}
             rows={1}
-            placeholder={canChat ? 'Ask about this lesson...' : 'Upgrade to chat here'}
+            placeholder={canChat ? 'Ask about this lesson...' : 'Sign in to chat here'}
             className="h-11 flex-1 resize-none bg-transparent px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-zinc-600"
           />
           <button type="button" onClick={send} disabled={!canChat || sending || !input.trim()} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-full bg-white px-3 text-black disabled:opacity-40">
@@ -128,12 +109,12 @@ function PublicTutor({ course, moduleIndex, subtopicIndex, selectedBlock, user }
 }
 
 export default function PublicCourseReader() {
-  const { slug } = useParams();
-  const initial = useQueryIndexes();
+  const { slug, moduleIndex: moduleParam = '0', subtopicIndex: subtopicParam = '0' } = useParams();
+  const navigate = useNavigate();
+  const moduleIndex = Math.max(0, Number.parseInt(moduleParam, 10) || 0);
+  const subtopicIndex = Math.max(0, Number.parseInt(subtopicParam, 10) || 0);
   const { user } = useUser();
   const [course, setCourse] = useState(null);
-  const [moduleIndex, setModuleIndex] = useState(initial.moduleIndex);
-  const [subtopicIndex, setSubtopicIndex] = useState(initial.subtopicIndex);
   const [selectedBlock, setSelectedBlock] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -148,12 +129,7 @@ export default function PublicCourseReader() {
       const data = await res.json();
       if (!data.success) throw new Error(data.message || 'Could not load course.');
       const loaded = data.course;
-      const saved = loaded.viewer?.progress;
       setCourse(loaded);
-      if (!initial.moduleIndex && !initial.subtopicIndex && saved) {
-        setModuleIndex(saved.moduleIndex || 0);
-        setSubtopicIndex(saved.subtopicIndex || 0);
-      }
       fetch(`${API_BASE}/api/public-courses/${loaded._id}/view`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -164,7 +140,7 @@ export default function PublicCourseReader() {
     } finally {
       setLoading(false);
     }
-  }, [initial.moduleIndex, initial.subtopicIndex, slug, user?.id]);
+  }, [slug, user?.id]);
 
   useEffect(() => {
     load();
@@ -199,8 +175,7 @@ export default function PublicCourseReader() {
       nextS = 0;
     }
     if (modules[nextM]?.subtopics?.[nextS]) {
-      setModuleIndex(nextM);
-      setSubtopicIndex(nextS);
+      navigate(`/courses/${slug}/learn/${nextM}/${nextS}`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -248,7 +223,7 @@ export default function PublicCourseReader() {
   };
 
   return (
-    <DashboardShell title={course?.title || 'Course'} eyebrow="Public Course" showCreate={false} disableDefaultPadding>
+    <DashboardShell title={course?.title || 'Course'} eyebrow="Public Lesson" showCreate={false} disableDefaultPadding>
       <div className="mx-auto max-w-[104rem] space-y-6 px-4 pt-24 pb-20 sm:px-6 lg:px-8">
         {loading ? (
           <div className="flex min-h-96 items-center justify-center rounded-[2rem] border border-white/10 bg-[#101114]">
@@ -258,21 +233,22 @@ export default function PublicCourseReader() {
           <div className="rounded-[2rem] border border-rose-400/20 bg-rose-500/10 p-8 text-rose-200">{error}</div>
         ) : (
           <>
-            <section className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-[#12141c] p-6 shadow-[0_24px_90px_rgba(0,0,0,0.34)] sm:p-8">
+            <section className="relative overflow-hidden rounded-[2.4rem] border border-white/10 bg-[#1b1b1b] p-6 shadow-[0_24px_90px_rgba(0,0,0,0.38)] sm:p-8">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link to="/courses" className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/[0.1]">
+                    <Link to={`/courses/${slug}`} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-black text-zinc-200 transition hover:bg-white/[0.1]">
                       <ArrowLeft className="h-4 w-4" />
-                      Courses
+                      Course plan
                     </Link>
-                    <Link to={`/creators/${course.creatorClerkId}`} className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-200/10 px-4 py-2 text-xs font-black text-cyan-100">
+                    <Link to={`/creators/${course.creatorClerkId}`} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black text-zinc-300">
                       <UserPlus className="h-4 w-4" />
                       {course.creatorName || 'Creator'}
                     </Link>
                   </div>
-                  <h1 className="mt-6 break-words text-5xl font-black leading-none tracking-[-0.03em] text-white md:text-6xl">{course.title}</h1>
-                  <p className="mt-4 max-w-3xl text-sm font-semibold leading-7 text-zinc-500">{course.description || course.learningGoal || 'A public generated guided course.'}</p>
+                  <p className="mt-6 text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">{module?.module_title}</p>
+                  <h1 className="mt-2 break-words text-4xl font-black leading-tight tracking-tight text-white md:text-5xl">{subtopic?.subtopic_title}</h1>
+                  <p className="mt-4 max-w-3xl text-sm font-semibold leading-7 text-zinc-500">{course.title}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => toggle('like')} className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-black ${course.viewer?.liked ? 'border-rose-300/30 bg-rose-300/15 text-rose-200' : 'border-white/10 bg-white/[0.05] text-zinc-300'}`}>
@@ -299,22 +275,22 @@ export default function PublicCourseReader() {
 
             <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_25rem]">
               <main className="min-w-0 space-y-6">
-                <section className="rounded-[2rem] border border-white/10 bg-[#12141c] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">{module?.module_title}</p>
-                  <h2 className="mt-2 text-4xl font-black tracking-[-0.03em] text-white">{subtopic?.subtopic_title}</h2>
+                <section className="rounded-[2rem] border border-white/10 bg-[#1b1b1b] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Lesson controls</p>
+                  <h2 className="mt-2 flex items-center gap-2 text-2xl font-black tracking-tight text-white"><Layers className="h-5 w-5" />Structured notes</h2>
                   <div className="mt-5 flex flex-wrap gap-2">
                     <button type="button" onClick={() => go(-1)} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 text-sm font-black text-zinc-300"><ArrowLeft className="h-4 w-4" />Prev</button>
                     <button type="button" onClick={() => go(1)} className="inline-flex min-h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-black text-black">Next<ArrowRight className="h-4 w-4" /></button>
                   </div>
                 </section>
 
-                <section className="space-y-5 rounded-[2rem] border border-white/10 bg-[#12141c] p-4 shadow-[0_20px_70px_rgba(0,0,0,0.28)] md:p-7">
+                <section className="space-y-5 rounded-[2rem] border border-white/10 bg-[#1b1b1b] p-4 shadow-[0_20px_70px_rgba(0,0,0,0.28)] md:p-7">
                   {blocks.map((block) => (
                     <article
                       key={block.blockId || block.title}
                       onClick={() => setSelectedBlock(block)}
                       className={`rounded-[1.75rem] border p-5 transition md:p-7 ${
-                        selectedBlock?.blockId === block.blockId ? 'border-cyan-200/35 bg-cyan-200/[0.07]' : 'border-white/10 bg-white/[0.035] hover:border-white/20'
+                        selectedBlock?.blockId === block.blockId ? 'border-white/30 bg-white/[0.08]' : 'border-white/10 bg-white/[0.035] hover:border-white/20'
                       }`}
                     >
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">{block.type || 'concept'}</p>

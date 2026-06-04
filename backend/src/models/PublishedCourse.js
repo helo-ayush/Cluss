@@ -62,6 +62,10 @@ const publishedCourseSchema = new mongoose.Schema({
         default: '',
         index: true
     },
+    searchEmbedding: {
+        type: [Number],
+        default: []
+    },
     status: {
         type: String,
         enum: ['published', 'archived'],
