@@ -6,7 +6,8 @@
 // ── Models ──
 const MODELS = {
     FREE_MODEL: 'gemini-3.1-flash-lite',
-    PREMIUM_MODEL: 'gemini-3-flash-preview',
+    // PREMIUM_MODEL: 'gemini-3-flash-preview',
+    PREMIUM_MODEL: 'gemini-3.1-flash-lite',
 };
 
 // ── Plan Credit Allowances ──
