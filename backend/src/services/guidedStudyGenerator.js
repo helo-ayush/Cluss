@@ -363,19 +363,21 @@ async function generateGuidedSubtopicContent({ courseTitle, topic, moduleTitle, 
     if (lengthPref === 'short') {
         depthInstructions = `
 - STYLE PERSONA: You are a concise but highly informative instructor. Keep explanations clear, direct, and compact. Focus on core definitions and primary concepts.
-- DEPTH & LENGTH: Explain the absolute fundamentals clearly. Generate as many blocks as you see fit to cover the essentials, but keep the overall content focused and concise.
+- DEPTH & LENGTH: Explain the absolute fundamentals clearly. The total lesson notes content (combining all blocks) should target **400 to 600 words**. You are free to split this into as few or as many blocks as you see fit.
 `;
     } else if (lengthPref === 'deep') {
         depthInstructions = `
 - STYLE PERSONA: You are an elite, exhaustive textbook author and expert professor. Explain everything with extreme, comprehensive, and thorough depth, adopting a highly verbose academic tone.
-- DEPTH & LENGTH: Leave absolutely no stone unturned. Detail all underlying background, core theories, system designs, implementation strategies, advanced nuances, historical context, and potential edge cases. You should dynamically generate a highly comprehensive sequence of blocks to explain the concepts systematically—creating as many separate blocks as needed to ensure total mastery of the topic.
+- DEPTH & LENGTH: Leave absolutely no stone unturned. Detail all underlying background, core theories, system designs, implementation strategies, advanced nuances, historical context, and potential edge cases.
+- TARGET LENGTH (CRITICAL): The total content of the lesson notes (combining all blocks) MUST target **2,500 to 3,500 words** of thorough, detailed exposition. You have full freedom to distribute this across any number of blocks as makes sense for the topic's structure, but the overall text must be highly verbose and exhaustive.
 - ANTI-BREVITY POLICY: Strictly avoid brevity. If a concept is worth explaining, expand on it extensively in multiple paragraphs. Treat every block as a deep-dive chapter section of a masterclass.
 `;
     } else {
         // Standard explanation
         depthInstructions = `
 - STYLE PERSONA: You are a comprehensive and engaging textbook author. Explain concepts thoroughly and clearly with a well-balanced, detailed approach.
-- DEPTH & LENGTH: Provide solid depth, complete detail, and helpful background context. Dynamically break down the core concepts into as many blocks as needed to ensure full coverage of the subtopic in rich detail, ensuring each block has multiple rich, informative paragraphs of prose explaining the concepts in full detail. Avoid summarizing.
+- DEPTH & LENGTH: Provide solid depth, complete detail, and helpful background context. The total content of the lesson notes (combining all blocks) should target **1,200 to 1,800 words**. You are free to distribute this across as many blocks as needed to structure the explanations beautifully.
+- BLOCK RICHNESS: Avoid summarizing. Write rich, informative paragraphs of prose explaining the concepts in full detail.
 `;
     }
 
