@@ -358,27 +358,25 @@ async function generateGuidedSubtopicContent({ courseTitle, topic, moduleTitle, 
     const isProject = subtopicType === 'mini-project';
 
     const lengthPref = config.explanationLength || 'standard';
+    let blockCountRange = '5-6';
     let depthInstructions = '';
 
     if (lengthPref === 'short') {
-        depthInstructions = `
-- STYLE PERSONA: You are a concise but highly informative instructor. Keep explanations clear, direct, and compact. Focus on core definitions and primary concepts.
-- DEPTH & LENGTH: Explain the absolute fundamentals clearly. The total lesson notes content (combining all blocks) should target **400 to 600 words**. You are free to split this into as few or as many blocks as you see fit.
-`;
+        blockCountRange = '3-4';
+        depthInstructions = `1. Keep explanations very crisp, clear, compact, and direct. Focus strictly on key definitions, core concepts, and direct takeaways without unnecessary details, extensive side contexts, or deep background.
+2. Structure the content into exactly 3-4 distinct blocks to keep the lesson highly concise.
+3. Be highly focused—teach the absolute fundamentals quickly.`;
     } else if (lengthPref === 'deep') {
-        depthInstructions = `
-- STYLE PERSONA: You are an elite, exhaustive textbook author and expert professor. Explain everything with extreme, comprehensive, and thorough depth, adopting a highly verbose academic tone.
-- DEPTH & LENGTH: Leave absolutely no stone unturned. Detail all underlying background, core theories, system designs, implementation strategies, advanced nuances, historical context, and potential edge cases.
-- TARGET LENGTH (CRITICAL): The total content of the lesson notes (combining all blocks) MUST target **2,500 to 3,500 words** of thorough, detailed exposition. You have full freedom to distribute this across any number of blocks as makes sense for the topic's structure, but the overall text must be highly verbose and exhaustive.
-- ANTI-BREVITY POLICY: Strictly avoid brevity. If a concept is worth explaining, expand on it extensively in multiple paragraphs. Treat every block as a deep-dive chapter section of a masterclass.
-`;
+        blockCountRange = '8-11';
+        depthInstructions = `1. Explain everything with extreme, comprehensive, and exhaustive depth. Focus on high-quality, rigorous explanations. Detail all underlying background, core theories, implementation strategies, advanced nuances, historical context, and potential edge cases.
+2. Structure the content into 8-11 distinct blocks (covering multiple concepts, detailed step-by-step solved problems, callouts, and practice) to leave absolutely no stone unturned.
+3. Break concepts down step-by-step across multiple successive detailed concept blocks for total subject mastery. Provide exhaustive text for each block.`;
     } else {
-        // Standard explanation
-        depthInstructions = `
-- STYLE PERSONA: You are a comprehensive and engaging textbook author. Explain concepts thoroughly and clearly with a well-balanced, detailed approach.
-- DEPTH & LENGTH: Provide solid depth, complete detail, and helpful background context. The total content of the lesson notes (combining all blocks) should target **1,200 to 1,800 words**. You are free to distribute this across as many blocks as needed to structure the explanations beautifully.
-- BLOCK RICHNESS: Avoid summarizing. Write rich, informative paragraphs of prose explaining the concepts in full detail.
-`;
+        // Standard explanation (corresponds to high-level detail, previous 'deep' style)
+        blockCountRange = '5-7';
+        depthInstructions = `1. Explain concepts thoroughly and clearly with a detailed, well-balanced, and comprehensive approach. Provide good depth, thorough background, and complete detail for solid understanding.
+2. Structure the content into 5-7 distinct blocks to ensure highly detailed coverage of all subtopic parts.
+3. Break notes into clear, highly descriptive blocks. Use multiple "concept", "example", and "callout" blocks to explain ideas and build complete understanding step-by-step.`;
     }
 
     // Adaptive Code Block Instructions: Instruct the LLM to dynamically determine if the topic/subtopic is programming/coding related
@@ -461,33 +459,9 @@ Requirements for Mini-Project Blueprint:
    - "summary": How to verify/test the project and the expected final outcome.
 3. The goal is to give the student a complete roadmap to successfully build this on their own, acting as a structured guide rather than a test.
 ` : `
-CORE WRITING STYLE & PEDAGOGY (CRITICAL):
-1. ELITE TEXTBOOK AUTHOR STYLE: Adopt the persona of an elite, comprehensive textbook author. Write in a naturally verbose, rich, and highly explanatory style. Avoid using short bullet-point lists as a replacement for detailed explanations. Use full, flowing paragraphs to elaborate on concepts, mechanics, and context.
-2. STRICT ANTI-BREVITY POLICY (For Standard & Deep scales): Do not summarize, condense, or provide quick overviews. Treat every concept as a deep-dive topic. If a block explains SQL Alter Table, do not just show the command; explain *why* database engines handle schema modifications this way, the locks it might trigger, and the exact steps. Expand details in multiple paragraphs.
-3. Patient, Beginner-Friendly Exposition: Start from first principles using simple, clear terminology, then introduce jargon step-by-step with rich context.
-4. Scale-Specific Instructions (Scale: ${lengthPref.toUpperCase()}):
+Requirements for Depth and Completeness (Scale: ${lengthPref.toUpperCase()}):
 ${depthInstructions}
-
-PEERLESS STYLE PATTERN (Few-Shot Guidance):
-Below is a comparison showing the difference between unacceptable, shallow content and the expected rich, highly-detailed prose style. You MUST write in the "GOOD" style.
-
-[BAD / Concisely Written Block (DO NOT DO THIS)]:
-"ALTER TABLE is a SQL command used to modify an existing table structure. You can add new columns, delete columns, or change column data types. For example, if you want to add an email column, you can write: ALTER TABLE Users ADD email VARCHAR(255). This changes the schema on the disk."
-
-[GOOD / Richly Detailed Textbook Block (WRITE IN THIS STYLE)]:
-"The ALTER TABLE statement in Structured Query Language (SQL) is a critical Data Definition Language (DDL) command that allows developers and database administrators to modify the schema of an existing table without deleting and recreating it. Recreating tables can lead to catastrophic data loss and service downtime, which is why alter operations are vital.
-
-When a database engine processes an ALTER TABLE statement—such as adding a column, dropping a constraint, or changing a data type—it executes several operations under the hood:
-1. Schema Locking: The database acquires an exclusive schema modification lock on the table. This prevents active read or write queries from modifying the data while the structure is in transition, ensuring data integrity.
-2. Metadata Updates: The internal system catalogs (which track tables, columns, constraints, and data types) are updated with the new schema configuration.
-3. Disk Allocation: If adding a new column, the database engine updates table metadata to represent default values for existing rows. On older storage engines, this may require a physical rebuild of the table on disk, rewriting every row block, which is computationally expensive and slow for tables with millions of records. Modern relational databases often support instant-alter operations (such as PostgreSQL's DEFAULT constraint or MySQL's ALGORITHM=INSTANT) where the table is modified logically in metadata first, and actual row updates are deferred until the next write operation.
-
-For example, to modify a production users table by adding a new attribute:
-\`\`\`sql
-ALTER TABLE users 
-ADD COLUMN email_address VARCHAR(255) DEFAULT 'not_provided' NOT NULL;
-\`\`\`
-This query alters the table structure by adding a non-nullable character column with a fallback default value, preventing existing records from violating the NOT NULL constraint upon modification."
+4. Teach like a patient big brother explaining to a beginner: start from basics, use simple words, then slowly introduce jargon. Provide "why this matters" context.
 
 INTEGRATE SOLVED PROBLEMS & APPLICATION QUESTIONS (CRITICAL):
 1. Wherever a topic features formulas, equations, mathematical rules, logic (e.g. logic programming like PSLP, Horn clauses, resolution, unification), algorithms, or technical rules:
