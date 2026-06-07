@@ -13,6 +13,7 @@ const tutorChatRoutes = require('./src/routes/tutorChat');
 const paymentRoutes = require('./src/routes/payment');
 const flashcardRoutes = require('./src/routes/flashcards');
 const publicCourseRoutes = require('./src/routes/publicCourses');
+const compilerRoutes = require('./src/routes/compiler');
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/flashcards', flashcardRoutes);
 app.use('/api/public-courses', publicCourseRoutes);
 app.use('/api/schedule', require('./src/routes/schedule'));
+app.use('/api/compiler', compilerRoutes);
 
 app.use((err, req, res, next) => {
     console.error('Global Catch-All Error:', err.stack);

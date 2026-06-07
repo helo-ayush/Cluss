@@ -1,68 +1,77 @@
 require('dotenv').config();
 const { generateGuidedSubtopicContent } = require('./src/services/guidedStudyGenerator');
 
-async function run() {
-    try {
-        console.log("Testing generateGuidedSubtopicContent for 'free' plan...");
-        const resultFree = await generateGuidedSubtopicContent({
-            courseTitle: "DBMS and SQL Queries",
-            topic: "Database Management Systems",
-            moduleTitle: "Module 2: Structured Query Language (SQL)",
-            subtopicTitle: "2.3 Table Modifications: ALTER Table and SELECT Queries",
-            subtopicType: "lesson",
-            config: {
-                level: "beginner",
-                explanationLength: "standard",
-                miniProjectsEnabled: false,
-                miniProjectMode: "independent",
-                webGroundingEnabled: false,
-                interactiveWidgets: false, // interactive code widget disabled
-                mcqEnabled: true
-            },
-            userPlan: "free"
-        });
-        console.log("✅ Success with free plan! Overview length:", resultFree.lessonContent?.overview?.length);
-        console.log("Blocks count:", resultFree.lessonContent?.blocks?.length);
-        (resultFree.lessonContent?.blocks || []).forEach((b, idx) => {
-            console.log(`Block ${idx + 1} (${b.type}): "${b.title}"`);
-            if (b.inlineChallenge) {
-                console.log(`  -> HAS inlineChallenge:`, JSON.stringify(b.inlineChallenge, null, 2));
-            }
-        });
-    } catch (err) {
-        console.error("❌ Failed with free plan:", err.message, err.stack);
-    }
+async function testChallenge(courseTitle, topic, moduleTitle, subtopicTitle, language, configProps = {}) {
+    console.log(`\n==================================================`);
+    console.log(`Generating challenge for ${language.toUpperCase()}...`);
+    console.log(`Course: ${courseTitle}`);
+    console.log(`Topic: ${subtopicTitle}`);
+    console.log(`==================================================`);
 
     try {
-        console.log("\nTesting generateGuidedSubtopicContent for 'ultra' plan...");
-        const resultUltra = await generateGuidedSubtopicContent({
-            courseTitle: "Introduction to React",
-            topic: "Introduction to React",
-            moduleTitle: "Module 1: React Basics",
-            subtopicTitle: "1.1 What is React?",
+        const result = await generateGuidedSubtopicContent({
+            courseTitle,
+            topic,
+            moduleTitle,
+            subtopicTitle,
             subtopicType: "lesson",
             config: {
-                level: "beginner",
+                level: "intermediate",
                 explanationLength: "standard",
                 miniProjectsEnabled: true,
                 miniProjectMode: "independent",
                 webGroundingEnabled: false,
                 interactiveWidgets: true,
-                mcqEnabled: true
+                mcqEnabled: false,
+                codeEnabled: true,
+                ...configProps
             },
             userPlan: "ultra"
         });
-        console.log("✅ Success with ultra plan! Overview length:", resultUltra.lessonContent?.overview?.length);
-        console.log("Blocks count:", resultUltra.lessonContent?.blocks?.length);
-        (resultUltra.lessonContent?.blocks || []).forEach((b, idx) => {
-            console.log(`Block ${idx + 1} (${b.type}): "${b.title}"`);
-            if (b.inlineChallenge) {
-                console.log(`  -> HAS inlineChallenge:`, JSON.stringify(b.inlineChallenge, null, 2));
+
+        const blocks = result.lessonContent?.blocks || [];
+        let foundChallenge = null;
+
+        for (const b of blocks) {
+            if (b.inlineChallenge && b.inlineChallenge.type === 'interactive-code') {
+                foundChallenge = b.inlineChallenge;
+                break;
             }
-        });
+        }
+
+        if (foundChallenge) {
+            console.log("✅ Success! Generated Challenge Details:");
+            console.log(`Language: ${foundChallenge.language}`);
+            console.log("----------------------------------");
+            console.log("QUESTION:");
+            console.log(foundChallenge.question);
+            console.log("----------------------------------");
+            console.log("CODE TEMPLATE:");
+            console.log(foundChallenge.codeTemplate);
+            console.log("----------------------------------");
+            console.log("EXPECTED ANSWER:");
+            console.log(JSON.stringify(foundChallenge.expectedAnswer));
+            console.log("----------------------------------");
+            console.log("HINT:");
+            console.log(foundChallenge.hint);
+        } else {
+            console.log("❌ Failed: No interactive-code challenge found in blocks.");
+            console.log("Blocks generated:", blocks.map(b => b.type));
+        }
     } catch (err) {
-        console.error("❌ Failed with ultra plan:", err.message, err.stack);
+        console.error("❌ Generation Error:", err.message);
     }
 }
 
-run();
+async function runAll() {
+    // 3. Rust (rust) - Systems Programming
+    await testChallenge(
+        "Systems Programming with Rust",
+        "Memory Safety and Borrowing",
+        "Module 2: Smart Pointers",
+        "2.3 Implementing a Custom Reference-Counted Box Wrapper",
+        "rust"
+    );
+}
+
+runAll();

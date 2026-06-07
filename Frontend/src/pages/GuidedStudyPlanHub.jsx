@@ -36,7 +36,7 @@ import CreditCost from '../components/CreditCost';
 import { getCostForAction } from '../config/creditCosts';
 import { SignInButton } from '@clerk/clerk-react';
 import DashboardShell from '../components/dashboard/DashboardShell';
-import CodeChallengeBlock from '../components/CodeChallengeBlock';
+import CodeChallengeBlock, { PremiumCodeWorkspace } from '../components/CodeChallengeBlock';
 import { useUsage } from '../contexts/UsageContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -350,7 +350,7 @@ function LessonCommandDeck({
   );
 }
 
-function NoteBlock({ block, active, busy, onSelect, onAction, onAsk, onChatTrigger }) {
+function NoteBlock({ block, active, busy, onSelect, onAction, onAsk, onChatTrigger, onWorkspaceUpdate }) {
   const typeConfig = {
     intro: { icon: BookOpen, color: 'text-zinc-300', bg: 'bg-white/[0.03]', border: 'border-white/[0.06]', label: 'Introduction' },
     concept: { icon: Lightbulb, color: 'text-zinc-300', bg: 'bg-white/[0.03]', border: 'border-white/[0.06]', label: 'Concept' },
@@ -363,18 +363,29 @@ function NoteBlock({ block, active, busy, onSelect, onAction, onAsk, onChatTrigg
     practice: { icon: HelpCircle, color: 'text-[#efff55]', bg: 'bg-[#efff55]/5', border: 'border-[#efff55]/20', label: 'Practice' },
   };
 
-  const config = typeConfig[block.type] || typeConfig.concept;
-  const TypeIcon = config.icon;
   const history = Array.isArray(block.revisionHistory) ? block.revisionHistory : [];
-  
+
   const [viewIndex, setViewIndex] = useState(history.length);
-  
+
   useEffect(() => {
     setViewIndex(history.length);
   }, [history.length]);
-  
+
   const currentView = viewIndex < history.length ? history[viewIndex] : block;
   const hasMultipleVersions = history.length > 0;
+
+  const isInteractiveCode = currentView.inlineChallenge && currentView.inlineChallenge.type === 'interactive-code';
+
+  const challengeConfig = {
+    icon: Code,
+    color: 'text-[#efff55]',
+    bg: 'bg-[#efff55]/5',
+    border: 'border-[#efff55]/20 shadow-[0_0_15px_rgba(239,255,85,0.05)]',
+    label: 'Coding Challenge'
+  };
+
+  const config = isInteractiveCode ? challengeConfig : (typeConfig[block.type] || typeConfig.concept);
+  const TypeIcon = config.icon;
 
   return (
     <motion.article
@@ -457,8 +468,19 @@ function NoteBlock({ block, active, busy, onSelect, onAction, onAsk, onChatTrigg
       </div>
 
       {currentView.code && (
-        <div className="mt-5 min-w-0 overflow-hidden rounded-2xl shadow-sm">
-          <MarkdownRenderer content={`\`\`\`${currentView.language || block.language || ''}\n${currentView.code}\n\`\`\``} />
+        <div className="mt-5 min-w-0">
+          {['markdown', 'md'].includes((currentView.language || block.language || '').toLowerCase()) ? (
+            <MarkdownRenderer content={currentView.code} />
+          ) : (
+            <PremiumCodeWorkspace
+              blockId={block.blockId}
+              title={block.title}
+              originalCode={currentView.code}
+              language={currentView.language || block.language || 'python'}
+              onWorkspaceUpdate={(data) => onWorkspaceUpdate?.(block.blockId, data)}
+              readOnly={true}
+            />
+          )}
         </div>
       )}
 
@@ -468,7 +490,11 @@ function NoteBlock({ block, active, busy, onSelect, onAction, onAsk, onChatTrigg
         </div>
       )}
       {currentView.inlineChallenge && (
-        <CodeChallengeBlock challenge={currentView.inlineChallenge} />
+        <CodeChallengeBlock 
+          challenge={currentView.inlineChallenge} 
+          language={currentView.language || block.language || 'javascript'}
+          onWorkspaceUpdate={(data) => onWorkspaceUpdate?.(block.blockId, data)}
+        />
       )}
 
       {busy && (
@@ -668,7 +694,7 @@ function PreTestModal({ open, onClose, courseId, subtopicRef, plan, navigate, mo
   );
 }
 
-function TutorPanel({ courseId, moduleIndex, subtopicIndex, user, selectedBlock, onClearBlock, externalPrompt, clearExternalPrompt, plan }) {
+function TutorPanel({ courseId, moduleIndex, subtopicIndex, user, selectedBlock, onClearBlock, externalPrompt, clearExternalPrompt, plan, onClose }) {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -741,6 +767,18 @@ function TutorPanel({ courseId, moduleIndex, subtopicIndex, user, selectedBlock,
 
   return (
     <aside className="no-scrollbar flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem] border border-white/[0.06] bg-[#1b1b1b] shadow-[0_20px_70px_rgba(0,0,0,0.32)]">
+      {onClose && (
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4 bg-white/[0.02]">
+          <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">AI Tutor Chatbot</span>
+          <button 
+            type="button" 
+            onClick={onClose}
+            className="p-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/5 text-zinc-400 hover:text-white transition"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <div ref={chatContainerRef} className="no-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 pt-5">
         {messages.map((message, index) => (
           <div key={`${message.role}-${index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -803,6 +841,16 @@ export default function GuidedStudyPlanHub() {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [externalPrompt, setExternalPrompt] = useState(null);
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
+
+  const [chatMobileFullScreen, setChatMobileFullScreen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1280); // xl breakpoint is 1280px
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const pdfRef = useRef(null);
 
   const numericModuleIndex = Number(moduleIndex);
@@ -1202,8 +1250,34 @@ export default function GuidedStudyPlanHub() {
                 </button>
               </section>
             ) : (
-              <section className="rounded-[2.2rem] border border-white/[0.06] bg-[#1b1b1b] p-4 shadow-[0_20px_70px_rgba(0,0,0,0.32)] md:p-7">
-                <div className="mb-6 flex flex-col gap-4 border-b border-white/[0.06] pb-6 md:flex-row md:items-center md:justify-between">
+              <>
+                {/* Mobile-only Buttons bar (shown above the notes document start) */}
+                <div className="grid grid-cols-4 gap-2 rounded-[1.35rem] border border-white/[0.06] bg-[#1b1b1b] p-2 shadow-[0_18px_54px_rgba(0,0,0,0.22)] xl:hidden mb-5">
+                  {[
+                    { icon: ArrowLeft, tip: 'Prev', onClick: goPrev, disabled: !prevUnlockedRef },
+                    { icon: Download, tip: 'PDF', onClick: downloadPdf, disabled: !isReady || pdfBusy },
+                    { icon: RefreshCcw, tip: 'Again', onClick: () => generateLesson(true), disabled: generating, costAction: 'regenerateLesson' },
+                    { icon: ArrowRight, tip: 'Next', onClick: goNext, disabled: !nextUnlockedRef },
+                  ].map(({ icon: Ic, tip, onClick: onBtnClick, disabled: dis, costAction }) => (
+                    <button
+                      type="button"
+                      key={tip}
+                      onClick={onBtnClick}
+                      disabled={dis}
+                      title={tip}
+                      className="flex min-h-10 min-w-0 flex-col items-center justify-center gap-1 rounded-[0.9rem] border border-white/[0.06] bg-white/[0.02] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 transition duration-300 hover:bg-white/[0.05] hover:text-[#efff55] disabled:opacity-35"
+                    >
+                      <Ic className="h-4 w-4 shrink-0" />
+                      <span className="flex max-w-full items-center gap-1 truncate">
+                        {tip}
+                        {costAction && <CreditCost cost={getCostForAction(usageData?.plan, costAction, (subtopic?.subtopicOverrideConfig || course?.studyConfig || {}).explanationLength)} />}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <section className="rounded-[2.2rem] border border-white/[0.06] bg-[#1b1b1b] p-4 shadow-[0_20px_70px_rgba(0,0,0,0.32)] md:p-7">
+                  <div className="mb-6 flex flex-col gap-4 border-b border-white/[0.06] pb-6 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Notes document</p>
                     <h2 className="mt-2 text-2xl font-bold tracking-[-0.02em] text-white">
@@ -1234,23 +1308,40 @@ export default function GuidedStudyPlanHub() {
                       busy={rewritingBlockId === block.blockId}
                       onSelect={setSelectedBlock}
                       onAction={rewriteBlock}
-                      onAsk={(nextBlock) => {
+                      onWorkspaceUpdate={(blockId, updateData) => {
+                        setSelectedBlock(prev => {
+                          if (prev && prev.blockId === blockId) {
+                            return { ...prev, ...updateData };
+                          }
+                          return prev;
+                        });
+                      }}
+                       onAsk={(nextBlock) => {
                         setSelectedBlock(nextBlock);
-                        document.getElementById('guided-tutor-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        if (isMobile) {
+                          setChatMobileFullScreen(true);
+                        } else {
+                          document.getElementById('guided-tutor-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
                       }}
                       onChatTrigger={(nextBlock, prompt) => {
                         setSelectedBlock(nextBlock);
                         setExternalPrompt(prompt);
-                        document.getElementById('guided-tutor-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        if (isMobile) {
+                          setChatMobileFullScreen(true);
+                        } else {
+                          document.getElementById('guided-tutor-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
                       }}
                     />
                   ))}
                 </div>
               </section>
-            )}
+            </>
+          )}
           </main>
-          <div id="guided-tutor-panel" className="no-scrollbar min-w-0 xl:sticky xl:top-24 xl:flex xl:h-[calc(100dvh-7rem)] xl:flex-col xl:gap-2 xl:overflow-hidden">
-            <div className="grid shrink-0 grid-cols-4 gap-2 rounded-[1.35rem] border border-white/[0.06] bg-[#1b1b1b] p-2 shadow-[0_18px_54px_rgba(0,0,0,0.22)]">
+          <div id="guided-tutor-panel" className="hidden xl:flex no-scrollbar min-w-0 xl:sticky xl:top-24 xl:flex-col xl:gap-2 xl:overflow-hidden xl:h-[calc(100dvh-7rem)]">
+            <div className="hidden xl:grid shrink-0 grid-cols-4 gap-2 rounded-[1.35rem] border border-white/[0.06] bg-[#1b1b1b] p-2 shadow-[0_18px_54px_rgba(0,0,0,0.22)]">
               {[
                 { icon: ArrowLeft, tip: 'Prev', onClick: goPrev, disabled: !prevUnlockedRef },
                 { icon: Download, tip: 'PDF', onClick: downloadPdf, disabled: !isReady || pdfBusy },
@@ -1289,6 +1380,35 @@ export default function GuidedStudyPlanHub() {
         </div>
       </div>
 
+      {/* Mobile-only Floating Chat Action Button */}
+      {isMobile && !chatMobileFullScreen && (
+        <button
+          type="button"
+          onClick={() => setChatMobileFullScreen(true)}
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#efff55] text-black shadow-2xl hover:scale-105 active:scale-95 transition-all"
+        >
+          <MessageCircle className="h-6 w-6" />
+        </button>
+      )}
+
+      {/* Mobile-only Fullscreen Tutor Panel Chatbot Modal */}
+      {isMobile && chatMobileFullScreen && (
+        <div className="fixed inset-0 z-[10000] w-screen h-screen flex flex-col bg-[#1b1b1b] p-4">
+          <TutorPanel
+            courseId={courseId}
+            moduleIndex={numericModuleIndex}
+            subtopicIndex={numericSubtopicIndex}
+            user={user}
+            selectedBlock={selectedBlock}
+            onClearBlock={() => setSelectedBlock(null)}
+            externalPrompt={externalPrompt}
+            clearExternalPrompt={() => setExternalPrompt(null)}
+            plan={usageData?.plan}
+            onClose={() => setChatMobileFullScreen(false)}
+          />
+        </div>
+      )}
+
       <PreTestModal
         open={practiceModalOpen}
         onClose={() => setPracticeModalOpen(false)}
@@ -1320,9 +1440,15 @@ export default function GuidedStudyPlanHub() {
               <LightMarkdownRenderer content={block.body || ''} />
             </div>
             {block.code && (
-              <pre style={{ whiteSpace: 'pre-wrap', background: '#111827', color: '#f8fafc', padding: 14, borderRadius: 14, fontSize: 11, overflowWrap: 'break-word', marginTop: 14 }}>
-                {block.code}
-              </pre>
+              ['markdown', 'md'].includes((block.language || '').toLowerCase()) ? (
+                <div style={{ color: '#334155', fontSize: 13, lineHeight: 1.75, marginTop: 14 }}>
+                  <LightMarkdownRenderer content={block.code} />
+                </div>
+              ) : (
+                <pre style={{ whiteSpace: 'pre-wrap', background: '#111827', color: '#f8fafc', padding: 14, borderRadius: 14, fontSize: 11, overflowWrap: 'break-word', marginTop: 14 }}>
+                  {block.code}
+                </pre>
+              )
             )}
             {block.callout && (
               <p style={{ background: '#fffbeb', color: '#92400e', padding: 12, borderRadius: 12, fontSize: 12, marginTop: 14 }}>

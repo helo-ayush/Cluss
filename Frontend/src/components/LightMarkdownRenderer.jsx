@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { Check, Copy, AlertCircle, X, ZoomIn, ZoomOut, RotateCcw, ChevronRight } from 'lucide-react';
+import { Check, Copy, AlertCircle, X, ZoomIn, ZoomOut, RotateCcw, ChevronRight, Maximize2, Compass } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 
 
@@ -479,12 +480,101 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
   const themeColor = isDark ? '#efff55' : '#3b82f6';
   const themeColorRGB = isDark ? '239, 255, 85' : '59, 130, 246';
 
+  const [nodeOffsets, setNodeOffsets] = useState({});
+  const [draggingNodeId, setDraggingNodeId] = useState(null);
+  const dragStartRef = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
+
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Reset node offsets when data or layout direction changes
+  useEffect(() => {
+    setNodeOffsets({});
+  }, [data, direction]);
+
   // Compute layout coordinates dynamically
   const layout = React.useMemo(() => {
     return computeLayout(data.nodes, data.edges, direction);
   }, [data.nodes, data.edges, direction]);
 
+  // Resolve layout coordinates dynamically with dragging offsets applied
+  const resolvedLayout = React.useMemo(() => {
+    if (!layout) return null;
+    const nodePositions = {};
+    const nodeW = 180;
+    const nodeH = 70;
+    const isHorizontal = direction === 'LR' || direction === 'RL';
 
+    const nodes = layout.nodes.map(node => {
+      const offset = nodeOffsets[node.id] || { x: 0, y: 0 };
+      const adjustedNode = {
+        ...node,
+        x: node.x + offset.x,
+        y: node.y + offset.y
+      };
+      nodePositions[node.id] = { x: adjustedNode.x, y: adjustedNode.y };
+      return adjustedNode;
+    });
+
+    const edges = layout.edges.map(edge => {
+      const start = nodePositions[edge.from];
+      const end = nodePositions[edge.to];
+      if (!start || !end) return null;
+
+      const sx = start.x + nodeW / 2;
+      const sy = start.y + nodeH / 2;
+      const ex = end.x + nodeW / 2;
+      const ey = end.y + nodeH / 2;
+
+      let startX = sx;
+      let startY = sy;
+      let endX = ex;
+      let endY = ey;
+
+      if (isHorizontal) {
+        startX = start.x + nodeW;
+        startY = sy;
+        endX = end.x;
+        endY = ey;
+      } else {
+        startX = sx;
+        startY = start.y + nodeH;
+        endX = ex;
+        endY = end.y;
+      }
+
+      let path = '';
+      if (isHorizontal) {
+        const midX = (startX + endX) / 2;
+        path = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`;
+      } else {
+        const midY = (startY + endY) / 2;
+        path = `M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`;
+      }
+
+      return {
+        ...edge,
+        path,
+        startX,
+        startY,
+        endX,
+        endY
+      };
+    }).filter(Boolean);
+
+    return {
+      ...layout,
+      nodes,
+      edges
+    };
+  }, [layout, nodeOffsets, direction]);
 
   // Fit to screen: calculate zoom/pan with optimum scaling and centering
   const fitToView = useCallback(() => {
@@ -527,13 +617,18 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
   }, [layout.width, layout.height, direction]);
 
   const resetView = useCallback(() => {
+    // Reset dragging offsets on explicit reset click
+    setNodeOffsets({});
     fitToView();
   }, [fitToView]);
 
-  // Auto-fit on initial render and when layout changes
+  // Auto-fit on initial render and when layout or maximized state changes
   useEffect(() => {
-    fitToView();
-  }, [fitToView]);
+    const timer = setTimeout(() => {
+      fitToView();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [fitToView, isMaximized]);
 
   const handleZoomIn = () => {
     const el = canvasRef.current;
@@ -577,8 +672,37 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
     });
   };
 
+  // Node Drag Event Handlers
+  const handleNodeMouseDown = (e, nodeId) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedId(nodeId);
+    setDraggingNodeId(nodeId);
+    const offset = nodeOffsets[nodeId] || { x: 0, y: 0 };
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      offsetX: offset.x,
+      offsetY: offset.y
+    };
+  };
 
-  // Drag pan
+  const handleNodeTouchStart = (e, nodeId) => {
+    if (e.touches.length !== 1) return;
+    e.stopPropagation();
+    setSelectedId(nodeId);
+    setDraggingNodeId(nodeId);
+    const offset = nodeOffsets[nodeId] || { x: 0, y: 0 };
+    dragStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      offsetX: offset.x,
+      offsetY: offset.y
+    };
+  };
+
+  // Drag pan & Drag node
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;
     setIsPanning(true);
@@ -586,19 +710,33 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
   };
 
   const handleMouseMove = (e) => {
-    if (!isPanning) return;
-    setViewport(prev => ({
-      ...prev,
-      pan: {
-        x: panStart.current.panX + (e.clientX - panStart.current.x),
-        y: panStart.current.panY + (e.clientY - panStart.current.y)
-      }
-    }));
+    if (draggingNodeId) {
+      const dx = (e.clientX - dragStartRef.current.x) / zoom;
+      const dy = (e.clientY - dragStartRef.current.y) / zoom;
+      setNodeOffsets(prev => ({
+        ...prev,
+        [draggingNodeId]: {
+          x: dragStartRef.current.offsetX + dx,
+          y: dragStartRef.current.offsetY + dy
+        }
+      }));
+    } else if (isPanning) {
+      setViewport(prev => ({
+        ...prev,
+        pan: {
+          x: panStart.current.panX + (e.clientX - panStart.current.x),
+          y: panStart.current.panY + (e.clientY - panStart.current.y)
+        }
+      }));
+    }
   };
 
-  const handleMouseUp = () => setIsPanning(false);
+  const handleMouseUp = () => {
+    setIsPanning(false);
+    setDraggingNodeId(null);
+  };
 
-  // Touch pan
+  // Touch pan & drag
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
       setIsPanning(true);
@@ -607,21 +745,31 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
   };
 
   const handleTouchMove = (e) => {
-    if (!isPanning || e.touches.length !== 1) return;
-    setViewport(prev => ({
-      ...prev,
-      pan: {
-        x: panStart.current.panX + (e.touches[0].clientX - panStart.current.x),
-        y: panStart.current.panY + (e.touches[0].clientY - panStart.current.y)
-      }
-    }));
+    if (draggingNodeId && e.touches.length === 1) {
+      const dx = (e.touches[0].clientX - dragStartRef.current.x) / zoom;
+      const dy = (e.touches[0].clientY - dragStartRef.current.y) / zoom;
+      setNodeOffsets(prev => ({
+        ...prev,
+        [draggingNodeId]: {
+          x: dragStartRef.current.offsetX + dx,
+          y: dragStartRef.current.offsetY + dy
+        }
+      }));
+    } else if (isPanning && e.touches.length === 1) {
+      setViewport(prev => ({
+        ...prev,
+        pan: {
+          x: panStart.current.panX + (e.touches[0].clientX - panStart.current.x),
+          y: panStart.current.panY + (e.touches[0].clientY - panStart.current.y)
+        }
+      }));
+    }
   };
 
-  const handleTouchEnd = () => setIsPanning(false);
-
-
-
-
+  const handleTouchEnd = () => {
+    setIsPanning(false);
+    setDraggingNodeId(null);
+  };
 
   const renderNodeText = (label, textColor) => {
     const words = label.split(' ');
@@ -649,58 +797,142 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
     );
   };
 
-  return (
-    <div className={`my-6 overflow-hidden rounded-2xl border ${isDark ? 'border-zinc-800 bg-[#0c0d0f] text-zinc-300' : 'border-slate-200 bg-white text-slate-700'} shadow-lg transition-all`}>
-      <div className={`flex flex-wrap items-center justify-between border-b ${isDark ? 'border-zinc-800/80 bg-zinc-900/35' : 'border-slate-200 bg-slate-50/50'} px-5 py-3.5`}>
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-7 items-center justify-center rounded-full px-2.5 text-[10px] font-black uppercase tracking-wider transition-all" style={{ backgroundColor: `rgba(${themeColorRGB}, 0.12)`, color: themeColor }}>
-            Interactive Graph
-          </div>
-          <span className={`text-[12px] font-semibold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Concept Path Navigator</span>
+  const showInteractive = !isMobile || isMaximized;
+  const containerClasses = isMaximized
+    ? `fixed inset-0 z-[9999] flex h-screen w-screen flex-col ${isDark ? 'bg-[#151515] text-zinc-300' : 'bg-slate-50 text-slate-700'} p-3 md:p-4`
+    : `my-6 overflow-hidden rounded-[1.6rem] border ${isDark ? 'border-white/[0.09] bg-[#242424] text-zinc-300' : 'border-slate-200 bg-white text-slate-700'} shadow-[0_24px_70px_rgba(0,0,0,0.30)] transition-all`;
+
+  const graphContent = (
+    <div className={containerClasses}>
+      <div className={`relative z-20 flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-3 ${
+        isMaximized
+          ? 'mb-3 rounded-[1.35rem] border shadow-[0_18px_60px_rgba(0,0,0,0.28)]'
+          : 'mx-4 mt-4 rounded-[1.35rem] border shadow-[0_14px_44px_rgba(0,0,0,0.20)]'
+      } ${
+        isDark
+          ? 'border-white/[0.09] bg-[#202020]/92 backdrop-blur-xl'
+          : 'border-slate-200 bg-white/90 backdrop-blur-md'
+      }`}>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${
+            isDark 
+              ? 'bg-[#efff55]/10 text-[#efff55] border border-[#efff55]/20' 
+              : 'bg-slate-100 text-slate-700 border border-slate-200'
+          }`}>
+            Concept Path
+          </span>
+          <span className={`truncate text-[12px] font-black uppercase tracking-[0.12em] ${isDark ? 'text-zinc-200' : 'text-slate-700'}`}>
+            Navigator
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="custom-scroll flex max-w-full items-center gap-2 overflow-x-auto">
           <button 
             onClick={() => setDirection(d => d === 'TD' ? 'LR' : 'TD')}
-            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all duration-200 ${
+            className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-3 text-[11px] font-black transition-all duration-200 active:scale-95 ${
               isDark 
-                ? 'bg-zinc-900/80 border-zinc-700/60 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800 hover:shadow-lg hover:shadow-zinc-900/50' 
-                : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-white hover:shadow-md'
+                ? 'bg-[#2b2b2b] border-white/[0.09] text-zinc-300 hover:text-white hover:border-white/[0.16] hover:bg-[#303030] hover:shadow-lg hover:shadow-black/20' 
+                : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-950 hover:border-slate-300 hover:bg-white hover:shadow-sm hover:scale-[1.02] active:scale-[0.98]'
             }`}
+            title="Toggle Graph Direction"
           >
-            Layout: {direction === 'TD' ? 'Vertical' : 'Horizontal'}
+            <Compass className="h-3.5 w-3.5 text-[#efff55]" />
+            <span>{direction === 'TD' ? 'Vertical' : 'Horizontal'}</span>
           </button>
-          <div className="w-px h-4 bg-zinc-700/40 mx-0.5" />
-          <button onClick={handleZoomOut} className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-200 ${isDark ? 'bg-zinc-900/80 border-zinc-700/60 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800 hover:shadow-lg hover:shadow-zinc-900/50 active:scale-90' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-white hover:shadow-md active:scale-90'}`} title="Zoom out"><ZoomOut className="w-3.5 h-3.5" /></button>
-          <button onClick={handleZoomIn} className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-200 ${isDark ? 'bg-zinc-900/80 border-zinc-700/60 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800 hover:shadow-lg hover:shadow-zinc-900/50 active:scale-90' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-white hover:shadow-md active:scale-90'}`} title="Zoom in"><ZoomIn className="w-3.5 h-3.5" /></button>
-          <button onClick={resetView} className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-200 ${isDark ? 'bg-zinc-900/80 border-zinc-700/60 text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-zinc-800 hover:shadow-lg hover:shadow-zinc-900/50 active:scale-90' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-white hover:shadow-md active:scale-90'}`} title="Reset Zoom"><RotateCcw className="w-3.5 h-3.5" /></button>
+          
+          <div className={`h-5 w-px shrink-0 ${isDark ? 'bg-white/[0.09]' : 'bg-slate-200'} mx-0.5`} />
+          
+          <button 
+            onClick={handleZoomOut} 
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-all duration-200 active:scale-90 ${
+              isDark 
+                ? 'bg-[#2b2b2b] border-white/[0.09] text-zinc-400 hover:text-white hover:border-white/[0.16] hover:bg-[#303030]' 
+                : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-white'
+            }`} 
+            title="Zoom Out"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <button 
+            onClick={handleZoomIn} 
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-all duration-200 active:scale-90 ${
+              isDark 
+                ? 'bg-[#2b2b2b] border-white/[0.09] text-zinc-400 hover:text-white hover:border-white/[0.16] hover:bg-[#303030]' 
+                : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-white'
+            }`} 
+            title="Zoom In"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          <button 
+            onClick={resetView} 
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-all duration-200 active:scale-90 ${
+              isDark 
+                ? 'bg-[#2b2b2b] border-white/[0.09] text-zinc-400 hover:text-white hover:border-white/[0.16] hover:bg-[#303030]' 
+                : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-white'
+            }`} 
+            title="Reset Zoom"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+          
+          <div className={`h-5 w-px shrink-0 ${isDark ? 'bg-white/[0.09]' : 'bg-slate-200'} mx-0.5`} />
+
+          <button 
+            onClick={() => setIsMaximized(!isMaximized)}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-all duration-200 active:scale-90 ${
+              isDark 
+                ? 'bg-[#2b2b2b] border-white/[0.12] text-zinc-300 hover:text-white hover:border-white/[0.22] hover:bg-[#303030]' 
+                : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300 hover:bg-white'
+            }`}
+            title={isMaximized ? "Exit Fullscreen" : "Fullscreen"}
+          >
+            {isMaximized ? <X className="w-4 h-4" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          </button>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row min-h-[450px] relative">
+      <div className={`relative flex min-h-0 flex-col overflow-hidden ${
+        isMaximized
+          ? `flex-1 rounded-[1.6rem] border ${isDark ? 'border-white/[0.09] bg-[#202020]' : 'border-slate-200 bg-white'}`
+          : `mx-4 mb-4 mt-3 min-h-[520px] rounded-[1.35rem] border ${isDark ? 'border-white/[0.08] bg-[#202020]' : 'border-slate-200 bg-white'}`
+      }`}>
         <div 
           ref={canvasRef}
-          className="flex-1 relative overflow-hidden h-[450px] cursor-grab active:cursor-grabbing select-none"
+          className={`relative flex-1 overflow-hidden select-none ${
+            showInteractive ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+          } ${isMaximized ? 'h-full w-full' : isMobile ? 'h-[280px]' : 'h-[520px]'}`}
           style={{
-            backgroundColor: isDark ? '#1e1e1e' : '#f8fafc',
+            backgroundColor: isDark ? '#202020' : '#f8fafc',
             backgroundImage: 'none'
           }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          onMouseDown={showInteractive ? handleMouseDown : undefined}
+          onMouseMove={showInteractive ? handleMouseMove : undefined}
+          onMouseUp={showInteractive ? handleMouseUp : undefined}
+          onMouseLeave={showInteractive ? handleMouseUp : undefined}
+          onTouchStart={showInteractive ? handleTouchStart : undefined}
+          onTouchMove={showInteractive ? handleTouchMove : undefined}
+          onTouchEnd={showInteractive ? handleTouchEnd : undefined}
         >
-
-
+          {isMobile && !isMaximized && (
+            <div 
+              onClick={() => setIsMaximized(true)}
+              className="absolute inset-0 z-10 flex cursor-pointer flex-col items-center justify-center bg-[#202020]/72 backdrop-blur-sm transition-all"
+            >
+              <div className={`rounded-full p-3 ${isDark ? 'bg-[#2b2b2b] text-zinc-100 border border-white/[0.12]' : 'bg-white text-slate-800 border border-slate-200'} shadow-lg transition-all active:scale-95`}>
+                <Maximize2 className="w-5 h-5 animate-pulse" />
+              </div>
+              <span className={`mt-3 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] ${isDark ? 'text-zinc-200 bg-[#2b2b2b]/95 border border-white/[0.09]' : 'text-slate-700 bg-white/90 border border-slate-100'} shadow-md`}>
+                Tap to Expand Graph
+              </span>
+            </div>
+          )}
 
           <div 
             className="w-full h-full"
             style={{
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
               transformOrigin: '0 0',
-              transition: isPanning ? 'none' : 'transform 0.15s ease-out'
+              transition: isPanning || draggingNodeId ? 'none' : 'transform 0.15s ease-out'
             }}
           >
             <svg 
@@ -717,7 +949,7 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
                 </marker>
               </defs>
 
-              {layout.edges.map((edge) => {
+              {resolvedLayout?.edges.map((edge) => {
                 const isActive = edge.from === selectedId || edge.to === selectedId;
                 return (
                   <g key={edge.id}>
@@ -727,7 +959,7 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
                       stroke={isActive ? themeColor : isDark ? '#374151' : '#cbd5e1'}
                       strokeWidth={isActive ? 2.5 : 1.5}
                       markerEnd={`url(#${isActive ? 'arrow-marker' : 'arrow-marker-muted'})`}
-                      className="transition-all duration-300"
+                      className={draggingNodeId ? "" : "transition-all duration-300"}
                     />
                     {edge.label && (
                       <foreignObject
@@ -739,7 +971,7 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
                         <div className="flex items-center justify-center h-full">
                           <span className={`text-[9px] font-medium px-2 py-0.5 rounded border text-center leading-tight ${
                             isDark 
-                              ? 'bg-[#1e1e1e] border-zinc-700 text-zinc-400' 
+                              ? 'bg-[#202020] border-white/[0.12] text-zinc-400' 
                               : 'bg-[#f8fafc] border-slate-200 text-slate-500'
                           }`}>
                             {edge.label}
@@ -751,10 +983,10 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
                 );
               })}
 
-              {layout.nodes.map((node) => {
+              {resolvedLayout?.nodes.map((node) => {
                 const isActive = node.id === selectedId;
                 const isHovered = node.id === hoveredId;
-                const cardFill = isDark ? '#1e1e1e' : '#ffffff';
+                const cardFill = isDark ? '#202020' : '#ffffff';
                 const cardStroke = isActive ? themeColor : isHovered ? (isDark ? '#71717a' : '#94a3b8') : isDark ? '#52525b' : '#cbd5e1';
                 const labelColor = isDark ? '#ffffff' : '#1e293b';
 
@@ -762,13 +994,11 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
                   <g 
                     key={node.id} 
                     transform={`translate(${node.x}, ${node.y})`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedId(node.id);
-                    }}
+                    onMouseDown={showInteractive ? (e) => handleNodeMouseDown(e, node.id) : undefined}
+                    onTouchStart={showInteractive ? (e) => handleNodeTouchStart(e, node.id) : undefined}
                     onMouseEnter={() => setHoveredId(node.id)}
                     onMouseLeave={() => setHoveredId(null)}
-                    className="cursor-pointer"
+                    className={showInteractive ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
                     style={{
                       opacity: isHovered && !isActive ? 0.85 : 1,
                       transition: 'opacity 0.2s ease'
@@ -790,6 +1020,11 @@ function InteractiveVisualGraph({ data, theme = 'dark' }) {
       </div>
     </div>
   );
+
+  if (isMaximized) {
+    return createPortal(graphContent, document.body);
+  }
+  return graphContent;
 }
 
 function MermaidBlock({ code }) {

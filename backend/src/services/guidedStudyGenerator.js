@@ -332,16 +332,23 @@ function normalizeGeneratedBlocks(blocks = []) {
 
             if (block.inlineChallenge) {
                 normalized.inlineChallenge = {
-                    type: block.inlineChallenge.type || 'fill-in-the-blank',
+                    type: block.inlineChallenge.type || 'interactive-code',
                     question: block.inlineChallenge.question || '',
                     codeTemplate: block.inlineChallenge.codeTemplate || '',
                     expectedAnswer: block.inlineChallenge.expectedAnswer || '',
                     hint: block.inlineChallenge.hint || '',
+                    language: block.inlineChallenge.language || block.language || '',
                     options: Array.isArray(block.inlineChallenge.options) ? block.inlineChallenge.options : [],
                     explanation: block.inlineChallenge.explanation || ''
                 };
             } else {
                 normalized.inlineChallenge = null;
+            }
+
+            if (normalized.code && ['markdown', 'md'].includes((normalized.language || '').toLowerCase())) {
+                normalized.body = (normalized.body ? normalized.body + '\n\n' : '') + normalized.code;
+                normalized.code = '';
+                normalized.language = '';
             }
 
             return normalized;
@@ -406,33 +413,50 @@ async function generateGuidedSubtopicContent({ courseTitle, topic, moduleTitle, 
         }
         
         if (hasCodeChallenge) {
-            typesDesc.push(`- "fill-in-the-blank": You provide a text template, formula, or code with exactly ONE missing piece represented by "___". The user must type the exact missing string.
-    - codeTemplate: e.g. "def greet(name):\\n    print('Hello, ' + ___)"
-    - expectedAnswer: e.g. "name"
-- "guess-output": You provide working code or a step-by-step logic statement. The user must type exactly what it outputs or evaluates to.
-    - codeTemplate: e.g. "x = 5\\nprint(x * 2)"
-    - expectedAnswer: "10"`);
-            schemaFields.push(`"fill-in-the-blank" | "guess-output"`);
+            typesDesc.push(`- "interactive-code": A full interactive coding challenge where the student writes code to solve a specific programming problem. ONLY generate this type if the current topic or subtopic involves programming/coding, data structures, algorithms, databases, or frameworks in one of the following supported languages: python, javascript, typescript, cpp, c, java, go, rust, ruby, php.
+    - IMPORTANT RULE FOR FRONTEND & FRAMEWORKS (React, Next.js, HTML, CSS, etc.):
+        - You MUST NOT generate challenges that require React imports (e.g., import React, useState), HTML tags, JSX syntax, CSS classes, DOM APIs (e.g. document.querySelector), or any packages/frameworks that require browser/bundler execution (like node_modules, webpack, vite).
+        - Instead, you MUST ask the student to write pure, standard JavaScript or TypeScript utility logic, data structure transformers, state history managers/reducers, route request validation/parsing functions, or logic helpers.
+        - The code must be runnable in a standard Node.js CLI environment using plain JS/TS syntax, without any dependencies or external frameworks!
+        - For example: instead of writing a React button component with useState, ask the student to write a pure JS state reducer function or toggle logic helper and test it via stdout console.log.
+    - question: An extremely clear, comprehensive, and highly detailed programming problem specification formatted in clean Markdown. The question MUST NOT be brief or vague (do NOT write a simple 1-2 sentence description; it must be at least 3 detailed paragraphs). It MUST use markdown headings/bold text and include:
+        1. **Problem Description**: A detailed explanation of what the student needs to build, the business/technical scenario, and how the helper function should behave under the hood.
+        2. **Function Signature & Parameters**: Explicitly list the name, type, and description of each input parameter, and the type/meaning of the return value.
+        3. **Examples**: At least 2 distinct concrete examples. Show the input values, the expected return value, and a step-by-step logical explanation of how the return value was calculated. Format this using code blocks.
+        4. **Constraints & Edge Cases**: Detail the range of inputs (e.g., scoring bounds, array size, string length), handling of empty/null inputs, negative values, and other validation requirements.
+        * For example:
+          "### Problem Description\nWrite a function that validates redirect paths...\n\n### Parameters\n- \`path\` (string): The path to check...\n\n### Examples\n**Example 1:**\n- Input: \`\"dashboard\"\` -> Output: \`\"/dashboard\"\`...\n\n### Constraints\n- The input score must be between 0 and 100..."
+    - codeTemplate: Starter code for the student to complete.
+        * CRITICAL RULE: The function/method body MUST be left unimplemented (e.g. returning a default/fallback value like null, false, 0, or an empty string) and contain a clear placeholder comment (e.g. "// TODO: Write your code here" or "# TODO: Write your code here"). It MUST NOT contain the working implementation logic.
+        * The template MUST also include a test execution block at the bottom of the file that calls the student's function with sample arguments and prints the output to stdout. E.g. in JavaScript: "function validateRequest(req) {\n    // TODO: Write your request validation logic here\n    return false;\n}\n\n// Test execution - DO NOT MODIFY\nconsole.log(validateRequest({ method: 'POST', body: { name: 'Alice' } }));"
+        * Writing the complete working code inside "codeTemplate" is strictly forbidden!
+    - expectedAnswer: The exact stdout output produced by running the test execution on a CORRECT solution (e.g. "true"). The student's code running against the uncompleted starter codeTemplate MUST initially output a different value (e.g., "false") and fail, forcing the student to write the logic themselves to pass.`);
+            schemaFields.push(`"interactive-code"`);
         }
         
         challengeInstructions = `
+@rules
 INLINE CHALLENGES:
-You MUST dynamically decide how many separate blocks should contain an inline challenge based on the complexity and educational value of the content. You can choose to embed challenges in 1, 2, or 3 separate blocks of the lesson, but do not exceed 3 blocks. Keep it highly variable and natural—some lessons might have 1, others 2, and others 3 challenges distributed across separate blocks to test the student at different points of their learning!
+You MUST dynamically decide how many separate blocks should contain an inline challenge based on the complexity and educational value of the content. You can choose to embed challenges in 1, 2, or 3 separate blocks of the lesson, but do not exceed 3 blocks.
+${hasCodeChallenge ? `- Since "interactive-code" challenges are enabled, if the topic involves programming/coding, data structures, algorithms, databases, or frameworks: you MUST generate AT LEAST one "interactive-code" challenge in one of the blocks. Do not ignore it or only generate MCQs.` : ''}
 Enabled challenge types for this lesson:
 ${typesDesc.join('\n')}
 
 Rules for inlineChallenge:
 - expectedAnswer must be a short, deterministic string (no spaces padding).
 - Do not use for every block. Choose a dynamic and variable number of blocks (from 1 up to 3 blocks) to embed challenges where active recall makes sense.
+- For every "interactive-code" challenge, you MUST explicitly specify the "language" field (e.g. "javascript", "typescript", "python", "cpp", "java"). Do not leave it empty.
+- For "interactive-code" challenges, the "question" field MUST be fully self-contained and highly detailed. You MUST NOT write brief instructions or tell the student to refer to the block's body (e.g. do NOT write "write the function based on requirements above"). Instead, the "question" field itself MUST contain the complete, detailed problem description, parameters, expected return values, constraints, and examples so it can be rendered standalone in the coding workspace.
 `;
 
         challengeSchema = `
         "inlineChallenge": {
           "type": ${schemaFields.join(' | ')},
           "question": "string (question or instructions)",
-          "codeTemplate": "string (with '___' for fill-in-the-blank, or full template for guess-output)",
-          "expectedAnswer": "string (exact correct option text or exact string match)",
+          "codeTemplate": "string (with starter code for interactive-code)",
+          "expectedAnswer": "string (exact correct option text or exact string/output match)",
           "hint": "string",
+          "language": "string (one of: python, javascript, typescript, cpp, c, java, go, rust, ruby, php)",
           ${hasMcq ? `"options": ["string"],\n          "explanation": "string"` : ''}
         }`;
     }

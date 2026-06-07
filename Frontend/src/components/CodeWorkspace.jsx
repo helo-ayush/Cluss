@@ -53,7 +53,7 @@ export default function CodeWorkspace({
     editorRef.current = editor;
     setReady(true);
 
-    monaco.editor.defineTheme('studyhelper-dark', {
+    monaco.editor.defineTheme('cluss-dark', {
       base: 'vs-dark',
       inherit: true,
       rules: [
@@ -77,7 +77,7 @@ export default function CodeWorkspace({
         'editorIndentGuide.activeBackground1': '#efff5540',
       },
     });
-    monaco.editor.setTheme('studyhelper-dark');
+    monaco.editor.setTheme('cluss-dark');
   };
 
   const formatCode = async () => {
@@ -106,15 +106,6 @@ export default function CodeWorkspace({
 
           {!readOnly && (
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={formatCode}
-                disabled={!ready}
-                className="flex items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.04] px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white/62 transition hover:border-[#efff55]/35 hover:text-white disabled:opacity-35"
-              >
-                <Wand2 className="h-3.5 w-3.5" />
-                Format
-              </button>
               {starterCode && (
                 <button
                   type="button"
@@ -142,7 +133,7 @@ export default function CodeWorkspace({
         height={editorHeight}
         language={editorLanguage}
         value={value || ''}
-        theme="studyhelper-dark"
+        theme="cluss-dark"
         loading={
           <div className="flex h-full items-center justify-center bg-[#1b1b1b] text-xs font-black uppercase tracking-[0.18em] text-white/38">
             Loading editor

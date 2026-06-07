@@ -116,7 +116,9 @@ router.post('/', checkCredits('tutorChat'), async (req, res) => {
                 transcript = [
                     `Selected block title: ${contextBlock.title || 'Selected lesson block'}`,
                     contextBlock.body || '',
-                    contextBlock.code ? `Code:\n${contextBlock.code}` : '',
+                    contextBlock.code ? `Original Code:\n${contextBlock.code}` : '',
+                    contextBlock.userCode ? `Student's current edited code:\n${contextBlock.userCode}` : '',
+                    contextBlock.runOutput ? `Execution output/error:\nStdout: ${contextBlock.runOutput.stdout || 'none'}\nStderr: ${contextBlock.runOutput.stderr || 'none'}` : '',
                     contextBlock.blockSummary ? `Block summary: ${contextBlock.blockSummary}` : '',
                     lesson.summary ? `Lesson summary: ${lesson.summary}` : '',
                     Array.isArray(lesson.keyPoints) ? `Key points:\n${lesson.keyPoints.join('\n')}` : ''
@@ -157,7 +159,9 @@ router.post('/', checkCredits('tutorChat'), async (req, res) => {
                 transcript = [
                     `Selected block title: ${contextBlock.title || 'Selected lesson block'}`,
                     contextBlock.body || '',
-                    contextBlock.code ? `Code:\n${contextBlock.code}` : '',
+                    contextBlock.code ? `Original Code:\n${contextBlock.code}` : '',
+                    contextBlock.userCode ? `Student's current edited code:\n${contextBlock.userCode}` : '',
+                    contextBlock.runOutput ? `Execution output/error:\nStdout: ${contextBlock.runOutput.stdout || 'none'}\nStderr: ${contextBlock.runOutput.stderr || 'none'}` : '',
                     contextBlock.blockSummary ? `Block summary: ${contextBlock.blockSummary}` : '',
                     lesson.summary ? `Lesson summary: ${lesson.summary}` : '',
                     Array.isArray(lesson.keyPoints) ? `Key points:\n${lesson.keyPoints.join('\n')}` : ''
