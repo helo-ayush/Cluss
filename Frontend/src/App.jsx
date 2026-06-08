@@ -17,6 +17,7 @@ import PublicCourseReader from './pages/PublicCourseReader';
 import PublicCoursePlanPage from './pages/PublicCoursePlanPage';
 import BookmarksPage from './pages/BookmarksPage';
 import CreatorProfilePage from './pages/CreatorProfilePage';
+import CodePlayground from './pages/CodePlayground';
 
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/" element={<NewHome />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard/chat" element={<DashboardChatPage />} />
+        <Route path="/dashboard/code" element={<CodePlayground />} />
         <Route path="/dashboard/guided" element={<PlanLibraryPage type="guided" />} />
         <Route path="/dashboard/playlists" element={<PlanLibraryPage type="playlist" />} />
         <Route path="/dashboard/progress" element={<DashboardProgressPage />} />

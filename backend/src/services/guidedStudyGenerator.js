@@ -413,7 +413,7 @@ async function generateGuidedSubtopicContent({ courseTitle, topic, moduleTitle, 
         }
         
         if (hasCodeChallenge) {
-            typesDesc.push(`- "interactive-code": A full interactive coding challenge where the student writes code to solve a specific programming problem. ONLY generate this type if the current topic or subtopic involves programming/coding, data structures, algorithms, databases, or frameworks in one of the following supported languages: python, javascript, typescript, cpp, c, java, go, rust, ruby, php.
+            typesDesc.push(`- "interactive-code": A full interactive coding challenge where the student writes code to solve a specific programming problem. ONLY generate this type if the current topic or subtopic involves programming/coding, data structures, algorithms, databases, or frameworks in one of the following supported languages: python, javascript, typescript, cpp, c, java, go, rust, ruby, php, bash, perl, lua, r, haskell, csharp, lisp, pascal, sql.
     - IMPORTANT RULE FOR FRONTEND & FRAMEWORKS (React, Next.js, HTML, CSS, etc.):
         - You MUST NOT generate challenges that require React imports (e.g., import React, useState), HTML tags, JSX syntax, CSS classes, DOM APIs (e.g. document.querySelector), or any packages/frameworks that require browser/bundler execution (like node_modules, webpack, vite).
         - Instead, you MUST ask the student to write pure, standard JavaScript or TypeScript utility logic, data structure transformers, state history managers/reducers, route request validation/parsing functions, or logic helpers.
@@ -456,7 +456,7 @@ Rules for inlineChallenge:
           "codeTemplate": "string (with starter code for interactive-code)",
           "expectedAnswer": "string (exact correct option text or exact string/output match)",
           "hint": "string",
-          "language": "string (one of: python, javascript, typescript, cpp, c, java, go, rust, ruby, php)",
+          "language": "string (one of: python, javascript, typescript, cpp, c, java, go, rust, ruby, php, bash, perl, lua, r, haskell, csharp, lisp, pascal, sql)",
           ${hasMcq ? `"options": ["string"],\n          "explanation": "string"` : ''}
         }`;
     }

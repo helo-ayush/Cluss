@@ -6,10 +6,13 @@ import MarkdownRenderer from './MarkdownRenderer';
 import CreditCost from './CreditCost';
 import { getCostForAction } from '../config/creditCosts';
 
+import { useUsage } from '../contexts/UsageContext';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex, subtopicIndex, topicTitle, hasTutorAccess, plan }) {
   const { user } = useUser();
+  const { fetchUsage } = useUsage();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -71,6 +74,7 @@ export default function TutorChatPanel({ isOpen, onClose, courseId, moduleIndex,
 
       if (data.success) {
         setMessages(prev => [...prev, { role: 'assistant', text: data.reply }]);
+        fetchUsage(); // Update credits live!
       } else if (data.limitReached) {
         setMessages(prev => [...prev, { role: 'system', text: data.message }]);
       } else {

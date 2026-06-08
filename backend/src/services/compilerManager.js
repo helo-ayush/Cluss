@@ -1,5 +1,6 @@
 const axios = require('axios');
 
+// Compiler manager backend service
 class CompilerManager {
     constructor() {
         // Collect configured compiler URLs from environment variables
@@ -40,7 +41,7 @@ class CompilerManager {
         console.log(`[CompilerManager] Initialized with compiler instances:`, this.compilerUrls);
     }
 
-    async runCode(code, language, timeout = 3.0) {
+    async runCode(code, language, stdin = '', timeout = 3.0) {
         // Find best compiler instance
         const bestUrl = this.getBestInstance();
 
@@ -55,6 +56,7 @@ class CompilerManager {
                 this.queue.push({
                     code,
                     language,
+                    stdin,
                     timeout,
                     resolve,
                     reject,
@@ -64,7 +66,7 @@ class CompilerManager {
         }
 
         // Dispatch immediately
-        return this.executeOnInstance(bestUrl, code, language, timeout);
+        return this.executeOnInstance(bestUrl, code, language, stdin, timeout);
     }
 
     getBestInstance() {
@@ -86,7 +88,7 @@ class CompilerManager {
         return bestUrl;
     }
 
-    async executeOnInstance(url, code, language, timeout) {
+    async executeOnInstance(url, code, language, stdin, timeout) {
         this.activeRequests[url] = (this.activeRequests[url] || 0) + 1;
         console.log(`[CompilerManager] Dispatching task to ${url}. Active count: ${this.activeRequests[url]}`);
 
@@ -95,6 +97,7 @@ class CompilerManager {
             const response = await axios.post(`${url}/compile`, {
                 code,
                 language,
+                stdin,
                 timeout
             }, {
                 timeout: 30000, 
@@ -142,7 +145,7 @@ class CompilerManager {
             const nextTask = this.queue.shift();
             console.log(`[CompilerManager] Processing next task from queue. Remaining: ${this.queue.length}`);
             
-            this.executeOnInstance(bestUrl, nextTask.code, nextTask.language, nextTask.timeout)
+            this.executeOnInstance(bestUrl, nextTask.code, nextTask.language, nextTask.stdin, nextTask.timeout)
                 .then(nextTask.resolve)
                 .catch(nextTask.reject);
         }

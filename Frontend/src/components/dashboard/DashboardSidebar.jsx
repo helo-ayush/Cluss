@@ -33,6 +33,12 @@ function NavGlyph({ type, className = '' }) {
         <path d="m11 10 4 2-4 2v-4z" />
       </>
     ),
+    code: (
+      <>
+        <polyline points="16 18 22 12 16 6" />
+        <polyline points="8 6 2 12 8 18" />
+      </>
+    ),
     courses: (
       <>
         <path d="M5 8.5 12 5l7 3.5-7 3.5-7-3.5z" />
@@ -100,6 +106,12 @@ const navItems = [
     to: '/dashboard/playlists',
     match: (path) => path.startsWith('/dashboard/playlists') || path.startsWith('/playlist'),
     showPlus: true,
+  },
+  {
+    label: 'Playground',
+    icon: 'code',
+    to: '/dashboard/code',
+    match: (path) => path.startsWith('/dashboard/code'),
   },
   {
     label: 'Courses',

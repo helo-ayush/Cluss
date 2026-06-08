@@ -15,6 +15,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rustc \
     ruby \
     php-cli \
+    perl \
+    lua5.3 \
+    r-base \
+    ghc \
+    mono-mcs \
+    clisp \
+    fp-compiler \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js and npm

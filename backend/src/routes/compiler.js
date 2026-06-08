@@ -30,7 +30,7 @@ router.post('/run', requireAuth, async (req, res) => {
             });
         }
 
-        const { code, language, timeout = 3.0 } = req.body;
+        const { code, language, stdin = '', timeout = 3.0 } = req.body;
 
         if (!code || typeof code !== 'string') {
             return res.status(400).json({
@@ -52,7 +52,7 @@ router.post('/run', requireAuth, async (req, res) => {
         console.log(`[Compiler Route] User ${clerkId} running ${language} code.`);
         
         // Delegate execution to compiler manager
-        const result = await compilerManager.runCode(code, language, timeout);
+        const result = await compilerManager.runCode(code, language, stdin, timeout);
 
         return res.json({
             success: true,

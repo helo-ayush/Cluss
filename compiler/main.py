@@ -24,13 +24,14 @@ active_requests_lock = asyncio.Lock()
 class CompileRequest(BaseModel):
     code: str
     language: str
+    stdin: str = ""
     timeout: float = 3.0
 
 def set_subprocess_limits():
     """Sets CPU and memory limits on Linux for the executed subprocess."""
     if resource is not None:
-        # Limit address space (virtual memory) to 256MB
-        mem_limit = 256 * 1024 * 1024
+        # Limit address space (virtual memory) to 2GB to allow Node.js/Go/Java to boot
+        mem_limit = 2048 * 1024 * 1024
         resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         # Limit CPU time to 5 seconds (slightly longer than execution timeout)
         resource.setrlimit(resource.RLIMIT_CPU, (5, 5))
@@ -53,6 +54,7 @@ async def track_requests(request: Request, call_next):
                 active_requests -= 1
 
 @app.get("/")
+@app.head("/")
 def read_root():
     return {"status": "Compiler service is running"}
 
@@ -85,7 +87,21 @@ def compile_code(payload: CompileRequest):
         "rust": {"ext": ".rs", "compile": ["rustc", "-O", "-o", "exec", "main.rs"], "run": ["./exec"]},
         "rs": {"ext": ".rs", "compile": ["rustc", "-O", "-o", "exec", "main.rs"], "run": ["./exec"]},
         "ruby": {"ext": ".rb", "compile": None, "run": ["ruby", "main.rb"]},
-        "php": {"ext": ".php", "compile": None, "run": ["php", "main.php"]}
+        "php": {"ext": ".php", "compile": None, "run": ["php", "main.php"]},
+        "bash": {"ext": ".sh", "compile": None, "run": ["bash", "main.sh"]},
+        "sh": {"ext": ".sh", "compile": None, "run": ["bash", "main.sh"]},
+        "perl": {"ext": ".pl", "compile": None, "run": ["perl", "main.pl"]},
+        "lua": {"ext": ".lua", "compile": None, "run": ["lua5.3", "main.lua"]},
+        "r": {"ext": ".r", "compile": None, "run": ["Rscript", "main.r"]},
+        "haskell": {"ext": ".hs", "compile": ["ghc", "-o", "exec", "main.hs"], "run": ["./exec"]},
+        "hs": {"ext": ".hs", "compile": ["ghc", "-o", "exec", "main.hs"], "run": ["./exec"]},
+        "csharp": {"ext": ".cs", "compile": ["mcs", "-out:exec.exe", "main.cs"], "run": ["mono", "exec.exe"]},
+        "cs": {"ext": ".cs", "compile": ["mcs", "-out:exec.exe", "main.cs"], "run": ["mono", "exec.exe"]},
+        "lisp": {"ext": ".lisp", "compile": None, "run": ["clisp", "main.lisp"]},
+        "pascal": {"ext": ".pas", "compile": ["fpc", "-oexec", "main.pas"], "run": ["./exec"]},
+        "pas": {"ext": ".pas", "compile": ["fpc", "-oexec", "main.pas"], "run": ["./exec"]},
+        "sql": {"ext": ".sql", "compile": None, "run": ["sqlite3", ":memory:", ".read main.sql"]},
+        "sqlite": {"ext": ".sql", "compile": None, "run": ["sqlite3", ":memory:", ".read main.sql"]}
     }
 
     if lang not in lang_config:
@@ -116,8 +132,9 @@ def compile_code(payload: CompileRequest):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                timeout=10.0  # Max compilation limit 10s
-            )
+                timeout=10.0,  # Max compilation limit 10s
+                shell=(sys.platform == "win32")
+              )
             if compile_proc.returncode != 0:
                 return {
                     "stdout": "",
@@ -132,14 +149,24 @@ def compile_code(payload: CompileRequest):
         # Determine resource limits flag (only supported on Linux)
         preexec = set_subprocess_limits if (sys.platform != "win32") else None
         
+        # Determine if shell is needed on Windows
+        use_shell = False
+        if sys.platform == "win32":
+            binary = config["run"][0]
+            # Only use shell for command scripts/batch files that require cmd.exe to resolve
+            if binary in ["ts-node", "go", "rustc", "cargo", "mcs", "mono", "sqlite3"]:
+                use_shell = True
+
         run_proc = subprocess.run(
             config["run"],
             cwd=temp_dir,
+            input=payload.stdin,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             timeout=timeout,
-            preexec_fn=preexec
+            preexec_fn=preexec,
+            shell=use_shell
         )
         
         execution_time = time.perf_counter() - start_time

@@ -190,7 +190,16 @@ export const PremiumCodeWorkspace = ({
     { value: 'go', label: 'Go' },
     { value: 'rust', label: 'Rust' },
     { value: 'ruby', label: 'Ruby' },
-    { value: 'php', label: 'PHP' }
+    { value: 'php', label: 'PHP' },
+    { value: 'bash', label: 'Bash' },
+    { value: 'perl', label: 'Perl' },
+    { value: 'lua', label: 'Lua' },
+    { value: 'r', label: 'R' },
+    { value: 'haskell', label: 'Haskell' },
+    { value: 'csharp', label: 'C#' },
+    { value: 'lisp', label: 'Lisp' },
+    { value: 'pascal', label: 'Pascal' },
+    { value: 'sql', label: 'SQL' }
   ];
 
   const displayHeaderTitle = readOnly ? 'Code Example' : 'Coding Challenge';
@@ -643,7 +652,7 @@ export const PremiumCodeWorkspace = ({
               {/* Monaco Editor Container */}
               <div className={`p-0 bg-[#202020] ${isFullscreen ? 'flex-1 min-h-0' : ''}`}>
                 <Editor
-                  height={isFullscreen ? "100%" : "280px"}
+                  height={isFullscreen ? "100%" : `${Math.min(Math.max((code || '').split('\n').length * 20 + 24, 100), 500)}px`}
                   language={language}
                   theme="cluss-dark"
                   value={code}
